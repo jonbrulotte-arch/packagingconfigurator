@@ -56,6 +56,13 @@ try {
   // Column already exists — safe to ignore
 }
 
+// Migrate: add max_height to packaging (for mailer thickness constraint)
+try {
+  db.exec('ALTER TABLE packaging ADD COLUMN max_height REAL');
+} catch {
+  // Column already exists — safe to ignore
+}
+
 // Seed default settings
 const insertSetting = db.prepare(
   'INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)'

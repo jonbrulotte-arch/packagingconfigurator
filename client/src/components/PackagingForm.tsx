@@ -24,10 +24,13 @@ export default function PackagingForm({ initial, onSubmit, onCancel, isEdit }: P
     width: String(initial?.width ?? ''),
     length: String(initial?.length ?? ''),
     max_weight: String(initial?.max_weight ?? ''),
+    max_height: String(initial?.max_height ?? ''),
     packaging_weight: String(initial?.packaging_weight ?? ''),
     notes: initial?.notes ?? '',
     active: initial?.active !== undefined ? initial.active : 1,
   });
+
+  const isMailer = form.type === 'bubble_mailer' || form.type === 'poly_mailer';
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -49,6 +52,11 @@ export default function PackagingForm({ initial, onSubmit, onCancel, isEdit }: P
       setError('Max weight must be a valid number');
       return;
     }
+    const max_height = form.max_height === '' ? null : Number(form.max_height);
+    if (max_height !== null && (isNaN(max_height) || max_height <= 0)) {
+      setError('Max height must be a valid positive number');
+      return;
+    }
     const packaging_weight = form.packaging_weight === '' ? null : Number(form.packaging_weight);
     if (packaging_weight !== null && isNaN(packaging_weight)) {
       setError('Packaging weight must be a valid number');
@@ -63,6 +71,7 @@ export default function PackagingForm({ initial, onSubmit, onCancel, isEdit }: P
         width,
         length,
         max_weight,
+        max_height,
         packaging_weight,
         notes: form.notes.trim() || null,
         active: form.active,
@@ -118,6 +127,22 @@ export default function PackagingForm({ initial, onSubmit, onCancel, isEdit }: P
             />
           </div>
         ))}
+
+        {isMailer && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Max Height / Thickness (in)</label>
+            <input
+              type="number"
+              step="0.01"
+              min="0.01"
+              value={form.max_height}
+              onChange={set('max_height')}
+              placeholder="Optional"
+              className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+            />
+            <p className="mt-1 text-xs text-gray-400">Maximum stuffed thickness — used for fit checks and DIM weight instead of H</p>
+          </div>
+        )}
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Pkg Weight (lbs)</label>

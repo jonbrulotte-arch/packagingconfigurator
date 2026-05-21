@@ -16,14 +16,14 @@ router.get('/:id', (req: Request, res: Response) => {
 });
 
 router.post('/', (req: Request, res: Response) => {
-  const { name, type, height, width, length, max_weight, packaging_weight, notes, active } = req.body as Packaging;
+  const { name, type, height, width, length, max_weight, max_height, packaging_weight, notes, active } = req.body as Packaging;
   if (!name || !type || height == null || width == null || length == null) {
     return res.status(400).json({ error: 'Missing required fields' });
   }
 
   const result = db.prepare(`
-    INSERT INTO packaging (name, type, height, width, length, max_weight, packaging_weight, notes, active)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO packaging (name, type, height, width, length, max_weight, max_height, packaging_weight, notes, active)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     name,
     type,
@@ -31,6 +31,7 @@ router.post('/', (req: Request, res: Response) => {
     Number(width),
     Number(length),
     max_weight != null ? Number(max_weight) : null,
+    max_height != null ? Number(max_height) : null,
     packaging_weight != null ? Number(packaging_weight) : null,
     notes ?? null,
     active !== undefined ? Number(active) : 1
@@ -44,11 +45,12 @@ router.put('/:id', (req: Request, res: Response) => {
   const existing = db.prepare('SELECT id FROM packaging WHERE id = ?').get(id);
   if (!existing) return res.status(404).json({ error: 'Packaging not found' });
 
-  const { name, type, height, width, length, max_weight, packaging_weight, notes, active } = req.body as Packaging;
+  const { name, type, height, width, length, max_weight, max_height, packaging_weight, notes, active } = req.body as Packaging;
 
   db.prepare(`
     UPDATE packaging SET name = ?, type = ?, height = ?, width = ?, length = ?,
-    max_weight = ?, packaging_weight = ?, notes = ?, active = ?, updated_at = CURRENT_TIMESTAMP
+    max_weight = ?, max_height = ?, packaging_weight = ?, notes = ?, active = ?,
+    updated_at = CURRENT_TIMESTAMP
     WHERE id = ?
   `).run(
     name,
@@ -57,6 +59,7 @@ router.put('/:id', (req: Request, res: Response) => {
     Number(width),
     Number(length),
     max_weight != null ? Number(max_weight) : null,
+    max_height != null ? Number(max_height) : null,
     packaging_weight != null ? Number(packaging_weight) : null,
     notes ?? null,
     active !== undefined ? Number(active) : 1,

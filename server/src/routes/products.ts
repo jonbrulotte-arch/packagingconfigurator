@@ -96,7 +96,8 @@ router.post('/import', upload.single('file'), (req: Request, res: Response) => {
       const length = Number(r['upclengthinches'] ?? r['lengthin'] ?? r['length'] ?? 0);
       const weight = Number(r['upcweightpounds'] ?? r['weightlbs'] ?? r['weight'] ?? 0);
 
-      const foldable = r['foldable'] ? 1 : 0;
+      const foldableRaw = String(r['foldable'] ?? '').toLowerCase().trim();
+      const foldable = ['1', 'true', 'yes', 'y'].includes(foldableRaw) ? 1 : 0;
 
       if (!id || !name) {
         errors.push(`Row ${i + 2}: missing product ID or name`);

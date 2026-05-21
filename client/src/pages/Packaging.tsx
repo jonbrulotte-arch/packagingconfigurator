@@ -77,7 +77,7 @@ export default function Packaging() {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                {['Name', 'Type', 'H (in)', 'W (in)', 'L (in)', 'Volume (in³)', 'Pkg Wt (lbs)', 'Max Wt (lbs)', 'Status', 'Notes', ''].map(h => (
+                {['Name', 'Type', 'H (in)', 'W (in)', 'L (in)', 'Max H (in)', 'Volume (in³)', 'Pkg Wt (lbs)', 'Max Wt (lbs)', 'Status', 'Notes', ''].map(h => (
                   <th key={h} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     {h}
                   </th>
@@ -88,7 +88,7 @@ export default function Packaging() {
               {loading ? (
                 <tr><td colSpan={10} className="px-4 py-8 text-center text-gray-400">Loading…</td></tr>
               ) : items.length === 0 ? (
-                <tr><td colSpan={10} className="px-4 py-8 text-center text-gray-400">No packaging configured yet. Add boxes, mailers, etc.</td></tr>
+                <tr><td colSpan={12} className="px-4 py-8 text-center text-gray-400">No packaging configured yet. Add boxes, mailers, etc.</td></tr>
               ) : (
                 items.map((pkg, i) => (
                   <tr key={pkg.id} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
@@ -101,6 +101,11 @@ export default function Packaging() {
                     <td className="px-4 py-3 text-sm text-gray-600">{pkg.height}</td>
                     <td className="px-4 py-3 text-sm text-gray-600">{pkg.width}</td>
                     <td className="px-4 py-3 text-sm text-gray-600">{pkg.length}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">
+                      {(pkg.type === 'bubble_mailer' || pkg.type === 'poly_mailer') && pkg.max_height != null
+                        ? <span className="font-medium text-indigo-700">{pkg.max_height}</span>
+                        : <span className="text-gray-300">—</span>}
+                    </td>
                     <td className="px-4 py-3 text-sm text-gray-600">
                       {(pkg.height * pkg.width * pkg.length).toFixed(1)}
                     </td>

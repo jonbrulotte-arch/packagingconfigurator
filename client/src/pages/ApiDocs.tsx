@@ -187,8 +187,8 @@ export default function ApiDocs() {
           path="/products"
           description="Return all products ordered by ID."
           response={JSON.stringify([
-            { id: 'SKU-001', name: 'Widget A', height: 3, width: 4, length: 5, weight: 1.2 },
-            { id: 'SKU-002', name: 'Widget B', height: 5, width: 5, length: 8, weight: 2.8 },
+            { id: 'SKU-001', name: 'Widget A', height: 3, width: 4, length: 5, weight: 1.2, foldable: 0 },
+            { id: 'SKU-002', name: 'Widget B', height: 5, width: 5, length: 8, weight: 2.8, foldable: 1 },
           ], null, 2)}
         />
 
@@ -196,29 +196,29 @@ export default function ApiDocs() {
           method="GET"
           path="/products/:id"
           description="Return a single product by ID."
-          response={JSON.stringify({ id: 'SKU-001', name: 'Widget A', height: 3, width: 4, length: 5, weight: 1.2 }, null, 2)}
+          response={JSON.stringify({ id: 'SKU-001', name: 'Widget A', height: 3, width: 4, length: 5, weight: 1.2, foldable: 0 }, null, 2)}
         />
 
         <Endpoint
           method="POST"
           path="/products"
-          description="Create a new product. Product ID must be unique."
+          description="Create a new product. Product ID must be unique. foldable: 1 means the item is always shipped folded in half along its longest dimension — the longest dim is halved and thickness doubles."
           request={{
             headers: 'Content-Type: application/json',
-            body: JSON.stringify({ id: 'SKU-003', name: 'Widget C', height: 2, width: 3, length: 4, weight: 0.8 }),
+            body: JSON.stringify({ id: 'SKU-003', name: 'Widget C', height: 2, width: 3, length: 4, weight: 0.8, foldable: 0 }),
           }}
-          response={JSON.stringify({ id: 'SKU-003', name: 'Widget C', height: 2, width: 3, length: 4, weight: 0.8 }, null, 2)}
+          response={JSON.stringify({ id: 'SKU-003', name: 'Widget C', height: 2, width: 3, length: 4, weight: 0.8, foldable: 0 }, null, 2)}
         />
 
         <Endpoint
           method="PUT"
           path="/products/:id"
-          description="Update an existing product's name and dimensions. ID cannot be changed."
+          description="Update an existing product's name, dimensions, and foldable flag. ID cannot be changed."
           request={{
             headers: 'Content-Type: application/json',
-            body: JSON.stringify({ name: 'Widget C v2', height: 2.5, width: 3, length: 4, weight: 0.9 }),
+            body: JSON.stringify({ name: 'Widget C v2', height: 2.5, width: 3, length: 4, weight: 0.9, foldable: 1 }),
           }}
-          response={JSON.stringify({ id: 'SKU-003', name: 'Widget C v2', height: 2.5, width: 3, length: 4, weight: 0.9 }, null, 2)}
+          response={JSON.stringify({ id: 'SKU-003', name: 'Widget C v2', height: 2.5, width: 3, length: 4, weight: 0.9, foldable: 1 }, null, 2)}
         />
 
         <Endpoint
@@ -245,31 +245,31 @@ export default function ApiDocs() {
           path="/packaging"
           description="Return all packaging options ordered by type then name."
           response={JSON.stringify([
-            { id: 1, name: 'Small Box 6x4x3', type: 'box', height: 3, width: 4, length: 6, max_weight: 10, packaging_weight: 0.3, notes: null, active: 1 },
-            { id: 2, name: 'Bubble Mailer 9x12', type: 'bubble_mailer', height: 1, width: 9, length: 12, max_weight: 2, packaging_weight: 0.1, notes: null, active: 1 },
+            { id: 1, name: 'Small Box 6x4x3', type: 'box', height: 3, width: 4, length: 6, max_weight: 10, max_height: null, packaging_weight: 0.3, notes: null, active: 1 },
+            { id: 2, name: 'Bubble Mailer 9x12', type: 'bubble_mailer', height: 1, width: 9, length: 12, max_weight: 2, max_height: 1.5, packaging_weight: 0.1, notes: null, active: 1 },
           ], null, 2)}
         />
 
         <Endpoint
           method="POST"
           path="/packaging"
-          description="Create a new packaging option. Type must be one of: box, bubble_mailer, poly_mailer, other."
+          description="Create a new packaging option. Type must be one of: box, bubble_mailer, poly_mailer, other. max_height applies to mailers only — sets the maximum stuffed thickness used for fit checks, volume utilization, and DIM weight instead of H."
           request={{
             headers: 'Content-Type: application/json',
-            body: JSON.stringify({ name: 'Large Box 18x14x12', type: 'box', height: 12, width: 14, length: 18, max_weight: 50, packaging_weight: 1.2, notes: 'Heavy duty', active: 1 }),
+            body: JSON.stringify({ name: 'Bubble Mailer 9x12', type: 'bubble_mailer', height: 1, width: 9, length: 12, max_weight: 2, max_height: 1.5, packaging_weight: 0.1, notes: null, active: 1 }),
           }}
-          response={JSON.stringify({ id: 3, name: 'Large Box 18x14x12', type: 'box', height: 12, width: 14, length: 18, max_weight: 50, packaging_weight: 1.2, notes: 'Heavy duty', active: 1 }, null, 2)}
+          response={JSON.stringify({ id: 3, name: 'Bubble Mailer 9x12', type: 'bubble_mailer', height: 1, width: 9, length: 12, max_weight: 2, max_height: 1.5, packaging_weight: 0.1, notes: null, active: 1 }, null, 2)}
         />
 
         <Endpoint
           method="PUT"
           path="/packaging/:id"
-          description="Update an existing packaging option. All fields can be changed."
+          description="Update an existing packaging option. All fields can be changed. Set max_height to null to remove the mailer thickness constraint."
           request={{
             headers: 'Content-Type: application/json',
-            body: JSON.stringify({ name: 'Large Box 18x14x12', type: 'box', height: 12, width: 14, length: 18, max_weight: 50, packaging_weight: 1.2, notes: null, active: 0 }),
+            body: JSON.stringify({ name: 'Bubble Mailer 9x12', type: 'bubble_mailer', height: 1, width: 9, length: 12, max_weight: 2, max_height: 2.0, packaging_weight: 0.1, notes: null, active: 1 }),
           }}
-          response={JSON.stringify({ id: 3, name: 'Large Box 18x14x12', active: 0 }, null, 2)}
+          response={JSON.stringify({ id: 3, name: 'Bubble Mailer 9x12', type: 'bubble_mailer', height: 1, width: 9, length: 12, max_weight: 2, max_height: 2.0, packaging_weight: 0.1, notes: null, active: 1 }, null, 2)}
         />
 
         <Endpoint

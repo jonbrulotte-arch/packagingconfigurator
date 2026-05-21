@@ -18,6 +18,7 @@ export interface Packaging {
   width: number;
   length: number;
   max_weight: number | null;
+  max_height: number | null;
   packaging_weight: number | null;
   notes: string | null;
   active: number;

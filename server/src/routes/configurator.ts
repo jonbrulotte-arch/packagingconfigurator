@@ -31,9 +31,18 @@ function foldedProduct(p: Product): Product {
   return { ...p, height: shortest * 2, width: middle, length: longest / 2 };
 }
 
+const MAILER_TYPES = new Set(['bubble_mailer', 'poly_mailer']);
+
+// For mailers with max_height, substitute max_height for the H dimension so the
+// thickness constraint is applied during fit checks and volume calculations.
+function effectiveBoxDims(box: Packaging): [number, number, number] {
+  const h = (MAILER_TYPES.has(box.type) && box.max_height != null) ? box.max_height : box.height;
+  return sortedDims(h, box.width, box.length);
+}
+
 function productFitsInBox(product: Product, box: Packaging): boolean {
   const [pd1, pd2, pd3] = sortedDims(product.height, product.width, product.length);
-  const [bd1, bd2, bd3] = sortedDims(box.height, box.width, box.length);
+  const [bd1, bd2, bd3] = effectiveBoxDims(box);
   return bd1 >= pd1 && bd2 >= pd2 && bd3 >= pd3;
 }
 
@@ -41,10 +50,22 @@ function allItemsFitInBox(items: ResolvedItem[], box: Packaging, packEfficiency:
   if (!items.every(i => productFitsInBox(i.product, box))) return false;
   const totalQty = items.reduce((sum, i) => sum + i.quantity, 0);
   if (totalQty === 1) return true;
+
+  // For mailers with max_height: check total stacked thickness instead of volume heuristic.
+  // Items lay flat; thickness = each item's smallest dimension, and layers stack.
+  if (MAILER_TYPES.has(box.type) && box.max_height != null) {
+    const totalThickness = items.reduce((sum, i) => {
+      const [, , thickness] = sortedDims(i.product.height, i.product.width, i.product.length);
+      return sum + thickness * i.quantity;
+    }, 0);
+    return totalThickness <= box.max_height;
+  }
+
   const totalVolume = items.reduce(
     (sum, i) => sum + i.product.height * i.product.width * i.product.length * i.quantity, 0
   );
-  return totalVolume <= box.height * box.width * box.length * packEfficiency;
+  const [bd1, bd2, bd3] = effectiveBoxDims(box);
+  return totalVolume <= bd1 * bd2 * bd3 * packEfficiency;
 }
 
 function fitQuality(pct: number): ConfiguratorResult['fit_quality'] {
@@ -74,7 +95,8 @@ function analyzeShipment(
 
   for (const pkg of allPackaging) {
     if (!allItemsFitInBox(effectiveItems, pkg, packEfficiency)) continue;
-    const boxVolume = pkg.height * pkg.width * pkg.length;
+    const [ed1, ed2, ed3] = effectiveBoxDims(pkg);
+    const boxVolume = ed1 * ed2 * ed3;
     const dimWeight = boxVolume / dimDivisor;
     const pkgWeight = pkg.packaging_weight ?? 0;
     const totalWeight = totalActualWeight + pkgWeight;

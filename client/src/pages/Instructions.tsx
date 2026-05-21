@@ -90,6 +90,7 @@ Volume unchanged  →  2 × 1 × 12 × 9 = 1 × 12 × 18 = 216 in³`}
                 ['Width', 'UPC Width (Inches)', 'Width (in), Width'],
                 ['Length', 'UPC Length (Inches)', 'Length (in), Length'],
                 ['Weight', 'UPC Weight (Pounds)', 'Weight (lbs), Weight'],
+                ['Foldable', 'Foldable', '(optional) 1, true, yes, or y to enable'],
               ].map(([field, primary, fallback]) => (
                 <tr key={field} className="even:bg-gray-50">
                   <td className="px-3 py-2 font-medium text-gray-800">{field}</td>
@@ -116,6 +117,14 @@ Volume unchanged  →  2 × 1 × 12 × 9 = 1 × 12 × 18 = 216 in³`}
             <strong>Dimensions (H × W × L)</strong> — interior usable dimensions in inches.
           </li>
           <li>
+            <strong>Max Height / Thickness (in)</strong> — mailers only. Because a mailer's actual
+            size when filled is determined by how thick the contents are, this field sets the
+            maximum stuffed thickness the mailer can accommodate. When set, this value replaces the
+            H dimension in all fit checks, volume utilization, and DIM weight calculations — giving
+            you accurate results that reflect the mailer's real constraints rather than a nominal
+            height. See below for details.
+          </li>
+          <li>
             <strong>Max Weight</strong> — optional. If set, the Configurator will raise an
             overweight flag when combined product weight exceeds this value.
           </li>
@@ -124,6 +133,26 @@ Volume unchanged  →  2 × 1 × 12 × 9 = 1 × 12 × 18 = 216 in³`}
             Use this to temporarily remove options without deleting them.
           </li>
         </ul>
+
+        <SubSection title="Mailer thickness vs. box height">
+          <p>
+            Boxes have fixed rigid walls — their H × W × L dimensions are the usable interior.
+            Mailers (bubble mailers, poly mailers) are flexible: the opening is defined by W × L,
+            but the height/thickness of the filled mailer depends entirely on what goes inside.
+          </p>
+          <Callout color="blue" label="How Max Height is used for mailers">
+            <ul className="mt-1 space-y-1 list-disc list-inside text-sm">
+              <li><strong>Fit check (single item):</strong> product dimensions are compared against [Max Height, W, L] sorted — Max Height acts as the height constraint.</li>
+              <li><strong>Fit check (multiple items):</strong> total stacked thickness (sum of each item's thinnest dimension × quantity) must be ≤ Max Height.</li>
+              <li><strong>Volume utilization:</strong> calculated using Max Height × W × L as the effective interior volume.</li>
+              <li><strong>DIM weight:</strong> calculated using Max Height × W × L — reflects the actual carrier-measured size when the mailer is packed.</li>
+            </ul>
+          </Callout>
+          <p className="mt-2">
+            Leaving Max Height blank for a mailer falls back to using the H dimension — useful
+            if you prefer to treat the mailer like a rigid container.
+          </p>
+        </SubSection>
       </Section>
 
       {/* ── CONFIGURATOR ── */}
