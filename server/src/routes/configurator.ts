@@ -99,17 +99,18 @@ function analyzeShipment(
     const boxVolume = ed1 * ed2 * ed3;
     const dimWeight = boxVolume / dimDivisor;
     const pkgWeight = pkg.packaging_weight ?? 0;
-    const totalWeight = totalActualWeight + pkgWeight;
+    const actualWeight = totalActualWeight + pkgWeight;
+    const billedWeight = Math.max(actualWeight, dimWeight);
     const volumeUtilization = (totalProductVolume / boxVolume) * 100;
 
     results.push({
       packaging: pkg,
       products_weight: Math.round(totalActualWeight * 1000) / 1000,
       packaging_weight: pkgWeight,
-      total_weight: Math.round(totalWeight * 1000) / 1000,
+      total_weight: Math.round(billedWeight * 1000) / 1000,
       dim_weight: Math.round(dimWeight * 1000) / 1000,
-      weight_flag: dimWeight > totalWeight,
-      max_weight_flag: pkg.max_weight != null && totalWeight > pkg.max_weight,
+      weight_flag: dimWeight > actualWeight,
+      max_weight_flag: pkg.max_weight != null && actualWeight > pkg.max_weight,
       volume_utilization: Math.round(volumeUtilization * 10) / 10,
       fit_quality: fitQuality(volumeUtilization),
       products_fit: true,
