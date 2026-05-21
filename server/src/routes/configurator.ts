@@ -100,14 +100,14 @@ function analyzeShipment(
     const dimWeight = boxVolume / dimDivisor;
     const pkgWeight = pkg.packaging_weight ?? 0;
     const actualWeight = totalActualWeight + pkgWeight;
-    const billedWeight = Math.max(actualWeight, dimWeight);
+    const billedWeight = Math.ceil(Math.max(actualWeight, dimWeight));
     const volumeUtilization = (totalProductVolume / boxVolume) * 100;
 
     results.push({
       packaging: pkg,
       products_weight: Math.round(totalActualWeight * 1000) / 1000,
       packaging_weight: pkgWeight,
-      total_weight: Math.round(billedWeight * 1000) / 1000,
+      total_weight: billedWeight,
       dim_weight: Math.round(dimWeight * 1000) / 1000,
       weight_flag: dimWeight > actualWeight,
       max_weight_flag: pkg.max_weight != null && actualWeight > pkg.max_weight,
