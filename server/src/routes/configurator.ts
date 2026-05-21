@@ -74,7 +74,7 @@ router.post('/analyze', (req: Request, res: Response) => {
     const totalProductVolume = products.reduce((sum, p) => sum + p.height * p.width * p.length, 0);
     const volumeUtilization = (totalProductVolume / boxVolume) * 100;
 
-    const weightFlag = totalActualWeight > dimWeight;
+    const weightFlag = dimWeight > totalActualWeight;
     const maxWeightFlag = pkg.max_weight != null && totalActualWeight > pkg.max_weight;
 
     results.push({

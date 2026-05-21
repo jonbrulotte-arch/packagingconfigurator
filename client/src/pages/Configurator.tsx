@@ -198,8 +198,8 @@ export default function Configurator() {
                         <div className="flex items-start gap-2 text-sm bg-amber-50 border border-amber-200 rounded px-3 py-2">
                           <span className="text-amber-500 font-bold mt-0.5">⚠</span>
                           <span className="text-amber-800">
-                            <strong>Weight flag:</strong> Actual weight ({r.actual_weight.toFixed(3)} lbs) exceeds
-                            dimensional weight ({r.dim_weight.toFixed(2)} lbs). Carrier will charge by actual weight.
+                            <strong>Dimensional weight flag:</strong> Dimensional weight ({r.dim_weight.toFixed(2)} lbs) exceeds
+                            actual weight ({r.actual_weight.toFixed(3)} lbs). Carrier will bill by dimensional weight.
                           </span>
                         </div>
                       )}
