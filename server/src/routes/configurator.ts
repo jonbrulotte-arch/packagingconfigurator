@@ -170,6 +170,64 @@ router.post('/analyze', (req: Request, res: Response) => {
   });
 });
 
+router.post('/export', (req: Request, res: Response) => {
+  const { items, results, settings } = req.body as {
+    items: { product: Product; quantity: number }[];
+    results: ConfiguratorResult[];
+    settings: { dim_divisor: number; pack_efficiency: number };
+  };
+  if (!Array.isArray(items) || !Array.isArray(results))
+    return res.status(400).json({ error: 'Invalid payload' });
+
+  const wb = XLSX.utils.book_new();
+
+  // Sheet 1 — Products
+  const productRows = [
+    ['Part Number', 'Item Name', 'H (in)', 'W (in)', 'L (in)', 'Unit Wt (lbs)', 'Qty', 'Line Wt (lbs)'],
+    ...items.map(({ product: p, quantity: qty }) => [
+      p.id, p.name, p.height, p.width, p.length, p.weight, qty,
+      Math.round(p.weight * qty * 1000) / 1000,
+    ]),
+    [],
+    ['', '', '', '', '', '', 'Total:', Math.round(items.reduce((s, i) => s + i.product.weight * i.quantity, 0) * 1000) / 1000],
+  ];
+  const ws1 = XLSX.utils.aoa_to_sheet(productRows);
+  ws1['!cols'] = [{ wch: 16 }, { wch: 28 }, { wch: 8 }, { wch: 8 }, { wch: 8 }, { wch: 14 }, { wch: 6 }, { wch: 14 }];
+  XLSX.utils.book_append_sheet(wb, ws1, 'Products');
+
+  // Sheet 2 — Packaging Options
+  const pkgRows = [
+    ['Rank', 'Packaging', 'Type', 'H (in)', 'W (in)', 'L (in)', 'Volume (in³)',
+     'Utilization (%)', 'Fit Quality', 'Products Wt (lbs)', 'Pkg Wt (lbs)',
+     'Total Billed Wt (lbs)', `DIM Wt (lbs, ÷${settings?.dim_divisor ?? 139})`,
+     'DIM Flag', 'Overweight Flag'],
+    ...results.map((r, i) => [
+      i + 1,
+      r.packaging.name,
+      r.packaging.type.replace(/_/g, ' '),
+      r.packaging.height, r.packaging.width, r.packaging.length,
+      Math.round(r.packaging.height * r.packaging.width * r.packaging.length * 10) / 10,
+      r.volume_utilization,
+      r.fit_quality.charAt(0).toUpperCase() + r.fit_quality.slice(1),
+      r.products_weight,
+      r.packaging_weight,
+      r.total_weight,
+      r.dim_weight,
+      r.weight_flag ? 'YES' : 'No',
+      r.max_weight_flag ? 'YES' : 'No',
+    ]),
+  ];
+  const ws2 = XLSX.utils.aoa_to_sheet(pkgRows);
+  ws2['!cols'] = [{ wch: 6 }, { wch: 28 }, { wch: 14 }, { wch: 7 }, { wch: 7 }, { wch: 7 },
+    { wch: 12 }, { wch: 14 }, { wch: 11 }, { wch: 17 }, { wch: 12 }, { wch: 18 }, { wch: 20 }, { wch: 10 }, { wch: 14 }];
+  XLSX.utils.book_append_sheet(wb, ws2, 'Packaging Options');
+
+  const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+  res.setHeader('Content-Disposition', 'attachment; filename="configurator-results.xlsx"');
+  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  res.send(buf);
+});
+
 // ── Bulk configurator ─────────────────────────────────────────────────────────
 
 router.get('/bulk-template', (_req, res) => {

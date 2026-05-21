@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { AnalyzeResponse, ConfiguratorResult, RequestItem } from '../types';
-import { analyzeProducts, importConfiguratorFile, downloadConfiguratorTemplate } from '../api';
+import { analyzeProducts, importConfiguratorFile, downloadConfiguratorTemplate, exportResults } from '../api';
 
 const FIT_COLORS: Record<ConfiguratorResult['fit_quality'], string> = {
   exact: 'bg-green-100 text-green-800 border-green-200',
@@ -57,10 +57,23 @@ export default function Configurator() {
   const [rows, setRows] = useState<Row[]>(initial.rows);
   const [loading, setLoading] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [error, setError] = useState('');
   const [importErrors, setImportErrors] = useState<string[]>([]);
   const [response, setResponse] = useState<AnalyzeResponse | null>(initial.response);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  const handleExport = async () => {
+    if (!response) return;
+    setExporting(true);
+    try {
+      await exportResults({ items: response.items, results: response.results, settings: response.settings });
+    } catch {
+      setError('Export failed');
+    } finally {
+      setExporting(false);
+    }
+  };
 
   // Persist rows and last result to localStorage on every change
   useEffect(() => {
@@ -320,11 +333,25 @@ export default function Configurator() {
 
           {/* Results */}
           <div>
-            <h2 className="text-base font-semibold text-gray-900 mb-3">
-              {response.results.length === 0
-                ? 'No Packaging Options Found'
-                : `${response.results.length} Compatible Option${response.results.length !== 1 ? 's' : ''} (best fit first)`}
-            </h2>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-base font-semibold text-gray-900">
+                {response.results.length === 0
+                  ? 'No Packaging Options Found'
+                  : `${response.results.length} Compatible Option${response.results.length !== 1 ? 's' : ''} (best fit first)`}
+              </h2>
+              {response.results.length > 0 && (
+                <button
+                  onClick={handleExport}
+                  disabled={exporting}
+                  className="inline-flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  </svg>
+                  {exporting ? 'Exporting…' : 'Export to Excel'}
+                </button>
+              )}
+            </div>
 
             {response.results.length === 0 && (
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-5 text-sm text-amber-800">

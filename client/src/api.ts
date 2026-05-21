@@ -58,6 +58,22 @@ export const analyzeProducts = (items: RequestItem[]) =>
     body: JSON.stringify({ items }),
   });
 
+export const exportResults = async (payload: Pick<AnalyzeResponse, 'items' | 'results' | 'settings'>) => {
+  const res = await fetch('/api/configurator/export', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error('Export failed');
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'configurator-results.xlsx';
+  a.click();
+  URL.revokeObjectURL(url);
+};
+
 export const importConfiguratorFile = async (
   file: File
 ): Promise<{ items: RequestItem[]; errors: string[] }> => {
