@@ -31,12 +31,10 @@ function foldedProduct(p: Product): Product {
   return { ...p, height: shortest * 2, width: middle, length: longest / 2 };
 }
 
-const MAILER_TYPES = new Set(['bubble_mailer', 'poly_mailer']);
-
-// For mailers with max_height, substitute max_height for the H dimension so the
+// For packaging with max_height set, substitute max_height for the H dimension so the
 // thickness constraint is applied during fit checks and volume calculations.
 function effectiveBoxDims(box: Packaging): [number, number, number] {
-  const h = (MAILER_TYPES.has(box.type) && box.max_height != null) ? box.max_height : box.height;
+  const h = box.max_height != null ? box.max_height : box.height;
   return sortedDims(h, box.width, box.length);
 }
 
@@ -51,9 +49,9 @@ function allItemsFitInBox(items: ResolvedItem[], box: Packaging, packEfficiency:
   const totalQty = items.reduce((sum, i) => sum + i.quantity, 0);
   if (totalQty === 1) return true;
 
-  // For mailers with max_height: check total stacked thickness instead of volume heuristic.
+  // For packaging with max_height: check total stacked thickness instead of volume heuristic.
   // Items lay flat; thickness = each item's smallest dimension, and layers stack.
-  if (MAILER_TYPES.has(box.type) && box.max_height != null) {
+  if (box.max_height != null) {
     const totalThickness = items.reduce((sum, i) => {
       const [, , thickness] = sortedDims(i.product.height, i.product.width, i.product.length);
       return sum + thickness * i.quantity;
@@ -169,10 +167,10 @@ function analyzeShipment(
     const [ed1, ed2, ed3] = effectiveBoxDims(pkg);
     const boxVolume = ed1 * ed2 * ed3;
 
-    // For mailers, DIM is measured on the actual stacked product height, not max capacity.
-    // Carriers measure the package after sealing — thickness equals the product's smallest dimension.
+    // For packaging with max_height, DIM uses actual stacked product thickness, not max capacity.
+    // Carriers measure the sealed package — thickness equals the product's smallest dimension.
     let dimVolume = boxVolume;
-    if (MAILER_TYPES.has(pkg.type) && pkg.max_height != null) {
+    if (pkg.max_height != null) {
       const actualThickness = effectiveItems.reduce((sum, i) => {
         const [, , t] = sortedDims(i.product.height, i.product.width, i.product.length);
         return sum + t * i.quantity;
