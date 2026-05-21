@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Packaging as PkgType } from '../types';
-import { getPackaging, createPackaging, updatePackaging, deletePackaging } from '../api';
+import { getPackaging, createPackaging, updatePackaging, deletePackaging, downloadPackagingTemplate, exportPackaging, importPackaging } from '../api';
 import Modal from '../components/Modal';
 import PackagingForm from '../components/PackagingForm';
 
@@ -22,8 +22,11 @@ export default function Packaging() {
   const [items, setItems] = useState<PkgType[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [importMsg, setImportMsg] = useState('');
+  const [importError, setImportError] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<PkgType | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const load = async () => {
     try {
@@ -55,6 +58,24 @@ export default function Packaging() {
     load();
   };
 
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImportMsg('');
+    setImportError('');
+    setError('');
+    try {
+      const result = await importPackaging(file);
+      setImportMsg(`Imported ${result.imported} packaging option${result.imported !== 1 ? 's' : ''}.`);
+      if (result.errors.length > 0) setImportError(result.errors.join('\n'));
+      load();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Import failed');
+    } finally {
+      if (fileRef.current) fileRef.current.value = '';
+    }
+  };
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
@@ -62,14 +83,47 @@ export default function Packaging() {
           <h1 className="text-2xl font-bold text-gray-900">Packaging Options</h1>
           <p className="text-sm text-gray-500 mt-1">{items.length} option{items.length !== 1 ? 's' : ''}</p>
         </div>
-        <button
-          onClick={() => setModalOpen(true)}
-          className="px-4 py-2 text-sm bg-brand-600 text-white rounded hover:bg-brand-700"
-        >
-          + Add Packaging
-        </button>
+        <div className="flex gap-3">
+          <button
+            onClick={downloadPackagingTemplate}
+            className="px-4 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50 flex items-center gap-2"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            Download Template
+          </button>
+          <label className="cursor-pointer px-4 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50 flex items-center gap-2">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l4-4m0 0l4 4m-4-4v12" />
+            </svg>
+            Import Excel
+            <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" onChange={handleImport} className="hidden" />
+          </label>
+          <button
+            onClick={exportPackaging}
+            className="px-4 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50 flex items-center gap-2"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            Export
+          </button>
+          <button
+            onClick={() => setModalOpen(true)}
+            className="px-4 py-2 text-sm bg-brand-600 text-white rounded hover:bg-brand-700"
+          >
+            + Add Packaging
+          </button>
+        </div>
       </div>
 
+      {importMsg && (
+        <div className="mb-4 px-4 py-3 bg-green-50 border border-green-200 rounded text-sm text-green-800">
+          {importMsg}
+          {importError && <pre className="mt-1 text-red-600 whitespace-pre-wrap text-xs">{importError}</pre>}
+        </div>
+      )}
       {error && <div className="mb-4 px-4 py-3 bg-red-50 border border-red-200 rounded text-sm text-red-800">{error}</div>}
 
       <div className="bg-white rounded-lg shadow overflow-hidden">
@@ -131,6 +185,14 @@ export default function Packaging() {
             </tbody>
           </table>
         </div>
+      </div>
+
+      <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded text-xs text-blue-700">
+        <strong>Excel Import Format:</strong> Required columns: <code>Name</code>, <code>Type</code> (box / bubble_mailer / poly_mailer / other),{' '}
+        <code>Height (Inches)</code>, <code>Width (Inches)</code>, <code>Length (Inches)</code>.{' '}
+        Optional: <code>Max Height (Inches)</code> (mailers), <code>Max Weight (Pounds)</code>,{' '}
+        <code>Packaging Weight (Pounds)</code>, <code>Notes</code>, <code>Active</code> (1 or 0).{' '}
+        Existing options are updated by Name.
       </div>
 
       {modalOpen && (

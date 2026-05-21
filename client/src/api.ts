@@ -52,6 +52,16 @@ export const updatePackaging = (id: number, data: Omit<Packaging, 'id'>) =>
 export const deletePackaging = (id: number) =>
   request<{ success: boolean }>(`/packaging/${id}`, { method: 'DELETE' });
 
+export const downloadPackagingTemplate = () => { window.location.href = '/api/packaging/template'; };
+
+export const exportPackaging = () => { window.location.href = '/api/packaging/export'; };
+
+export const importPackaging = async (file: File): Promise<{ imported: number; errors: string[] }> => {
+  const fd = new FormData();
+  fd.append('file', file);
+  return request('/packaging/import', { method: 'POST', body: fd });
+};
+
 // Configurator
 export const analyzeProducts = (items: RequestItem[]) =>
   request<AnalyzeResponse>('/configurator/analyze', {
