@@ -537,7 +537,7 @@ export default function Configurator() {
                     </div>
                   </div>
 
-                  <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 text-sm">
+                  <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
                     <div className="bg-gray-50 rounded p-3">
                       <p className="text-xs text-gray-500 mb-1">Products Weight</p>
                       <p className="font-semibold">{r.products_weight.toFixed(3)} lbs</p>
@@ -548,13 +548,9 @@ export default function Configurator() {
                         {r.packaging_weight > 0 ? `${r.packaging_weight.toFixed(3)} lbs` : '—'}
                       </p>
                     </div>
-                    <div className="bg-gray-50 rounded p-3">
-                      <p className="text-xs text-gray-500 mb-1">Actual Weight</p>
-                      <p className="font-semibold">{(r.products_weight + r.packaging_weight).toFixed(3)} lbs</p>
-                    </div>
                     <div className="bg-gray-50 rounded p-3 border border-gray-300">
-                      <p className="text-xs text-gray-500 mb-1">Total Billed Weight</p>
-                      <p className="font-bold text-gray-900">{r.total_weight} lbs</p>
+                      <p className="text-xs text-gray-500 mb-1">Actual Weight</p>
+                      <p className="font-bold text-gray-900">{(r.products_weight + r.packaging_weight).toFixed(3)} lbs</p>
                     </div>
                     <div className={`rounded p-3 ${r.weight_flag ? 'bg-amber-50' : 'bg-gray-50'}`}>
                       <p className="text-xs text-gray-500 mb-1">Dim Weight</p>
@@ -601,8 +597,8 @@ export default function Configurator() {
                           <span className="text-amber-500 font-bold mt-0.5">⚠</span>
                           <span className="text-amber-800">
                             <strong>Dimensional weight flag:</strong> Dimensional weight ({r.dim_weight} lbs) exceeds
-                            total actual weight ({(r.products_weight + r.packaging_weight).toFixed(2)} lbs).
-                            Carrier will bill by dimensional weight.
+                            actual weight ({(r.products_weight + r.packaging_weight).toFixed(2)} lbs).
+                            Carriers that apply DIM to this package size will bill by dimensional weight — see Shipping Methods above.
                           </span>
                         </div>
                       )}
