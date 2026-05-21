@@ -63,6 +63,9 @@ try {
   // Column already exists — safe to ignore
 }
 
+// Ensure name is unique so the bulk import upsert can use ON CONFLICT(name)
+db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_packaging_name ON packaging(name)');
+
 // Seed default settings
 const insertSetting = db.prepare(
   'INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)'

@@ -132,11 +132,6 @@ router.post('/import', upload.single('file'), (req: Request, res: Response) => {
     return { imported, errors };
   });
 
-  // Name must be UNIQUE for upsert to work — add constraint if missing
-  try {
-    db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_packaging_name ON packaging(name)');
-  } catch { /* index may already exist */ }
-
   const result = importMany(rawRows);
   res.json(result);
 });
