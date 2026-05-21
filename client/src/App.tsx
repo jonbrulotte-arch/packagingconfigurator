@@ -6,6 +6,7 @@ import Configurator from './pages/Configurator';
 import Settings from './pages/Settings';
 import Instructions from './pages/Instructions';
 import BulkConfigurator from './pages/BulkConfigurator';
+import ApiDocs from './pages/ApiDocs';
 
 export default function App() {
   return (
@@ -19,6 +20,7 @@ export default function App() {
           <Route path="/bulk" element={<BulkConfigurator />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/instructions" element={<Instructions />} />
+          <Route path="/api-docs" element={<ApiDocs />} />
         </Route>
       </Routes>
     </BrowserRouter>

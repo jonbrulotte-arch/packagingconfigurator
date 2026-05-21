@@ -7,6 +7,7 @@ const navItems = [
   { to: '/packaging', label: 'Packaging' },
   { to: '/settings', label: 'Settings' },
   { to: '/instructions', label: 'Instructions' },
+  { to: '/api-docs', label: 'API Docs' },
 ];
 
 export default function Layout() {

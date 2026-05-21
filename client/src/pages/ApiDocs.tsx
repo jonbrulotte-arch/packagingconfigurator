@@ -1,0 +1,334 @@
+import { useState } from 'react';
+
+const BASE = window.location.origin;
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="space-y-4">
+      <h2 className="text-lg font-semibold text-gray-900 border-b border-gray-200 pb-2">{title}</h2>
+      {children}
+    </section>
+  );
+}
+
+function Endpoint({
+  method, path, description, request, response, note,
+}: {
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE';
+  path: string;
+  description: string;
+  request?: { headers?: string; body?: string };
+  response: string;
+  note?: string;
+}) {
+  const [tab, setTab] = useState<'curl' | 'response'>('curl');
+
+  const METHOD_COLORS: Record<string, string> = {
+    GET: 'bg-green-100 text-green-800',
+    POST: 'bg-blue-100 text-blue-800',
+    PUT: 'bg-amber-100 text-amber-800',
+    DELETE: 'bg-red-100 text-red-800',
+  };
+
+  const curlLines: string[] = [`curl -X ${method} "${BASE}/api${path}"`];
+  if (request?.headers) curlLines.push(`  -H "${request.headers}"`);
+  if (request?.body) curlLines.push(`  -d '${request.body}'`);
+  const curl = curlLines.join(' \\\n');
+
+  return (
+    <div className="bg-white rounded-lg shadow border border-gray-200 overflow-hidden">
+      <div className="px-5 py-3 flex items-start gap-3">
+        <span className={`mt-0.5 flex-shrink-0 text-xs font-bold px-2 py-0.5 rounded ${METHOD_COLORS[method]}`}>
+          {method}
+        </span>
+        <div className="flex-1 min-w-0">
+          <code className="text-sm font-mono text-gray-800">/api{path}</code>
+          <p className="text-sm text-gray-500 mt-0.5">{description}</p>
+          {note && <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1 mt-2">{note}</p>}
+        </div>
+      </div>
+      <div className="border-t border-gray-100">
+        <div className="flex border-b border-gray-100">
+          {(['curl', 'response'] as const).map(t => (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              className={`px-4 py-2 text-xs font-medium ${tab === t ? 'bg-gray-900 text-white' : 'text-gray-500 hover:text-gray-700'}`}
+            >
+              {t === 'curl' ? 'Example Request' : 'Example Response'}
+            </button>
+          ))}
+        </div>
+        <pre className="bg-gray-900 text-green-300 text-xs px-5 py-4 overflow-x-auto whitespace-pre-wrap leading-relaxed">
+          {tab === 'curl' ? curl : response}
+        </pre>
+      </div>
+    </div>
+  );
+}
+
+export default function ApiDocs() {
+  return (
+    <div className="max-w-4xl space-y-10">
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900">API Reference</h1>
+        <p className="text-sm text-gray-500 mt-2">
+          All features of this tool are available as a JSON REST API. Any external system — warehouse
+          software, ERP, scripts, or automation — can query or drive the configurator directly without
+          using the UI.
+        </p>
+      </div>
+
+      {/* Base URL */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg px-5 py-4 space-y-2">
+        <p className="text-sm font-semibold text-blue-900">Base URL</p>
+        <code className="block text-sm font-mono text-blue-800">{BASE}/api</code>
+        <p className="text-xs text-blue-700">
+          All endpoints are relative to this base. Requests with a body must include{' '}
+          <code>Content-Type: application/json</code>. File upload endpoints use{' '}
+          <code>multipart/form-data</code>.
+        </p>
+      </div>
+
+      {/* ── CONFIGURATOR ── */}
+      <Section title="Configurator">
+        <Endpoint
+          method="POST"
+          path="/configurator/analyze"
+          description="Analyze one or more products and return ranked packaging recommendations."
+          request={{
+            headers: 'Content-Type: application/json',
+            body: JSON.stringify({ items: [{ product_id: 'SKU-001', quantity: 2 }, { product_id: 'SKU-002', quantity: 1 }] }),
+          }}
+          response={JSON.stringify({
+            items: [
+              { product: { id: 'SKU-001', name: 'Widget A', height: 3, width: 4, length: 5, weight: 1.2 }, quantity: 2 },
+            ],
+            total_actual_weight: 2.4,
+            total_item_count: 2,
+            settings: { dim_divisor: 139, pack_efficiency: 0.7 },
+            results: [
+              {
+                packaging: { id: 1, name: 'Medium Box 10x8x6', type: 'box', height: 6, width: 8, length: 10, max_weight: 20, packaging_weight: 0.5 },
+                products_weight: 2.4,
+                packaging_weight: 0.5,
+                total_weight: 2.9,
+                dim_weight: 3.45,
+                weight_flag: true,
+                max_weight_flag: false,
+                volume_utilization: 45.0,
+                fit_quality: 'loose',
+              },
+            ],
+          }, null, 2)}
+        />
+
+        <Endpoint
+          method="POST"
+          path="/configurator/bulk"
+          description="Upload an Excel/CSV file with multiple shipments grouped by Order ID. Returns packaging recommendations for all shipments in one response."
+          request={{ headers: 'Content-Type: multipart/form-data' }}
+          response={JSON.stringify({
+            shipments: [
+              {
+                id: 'ORD-001',
+                items: [{ product: { id: 'SKU-001', name: 'Widget A' }, quantity: 2 }],
+                total_item_count: 2,
+                total_actual_weight: 2.4,
+                best: { packaging: { name: 'Medium Box 10x8x6' }, fit_quality: 'good', total_weight: 2.9, dim_weight: 3.45, weight_flag: true, max_weight_flag: false },
+                results: ['... full ranked list ...'],
+                error: null,
+              },
+            ],
+            parse_errors: [],
+            summary: { total: 1, matched: 1, flagged: 1, errors: 0 },
+            settings: { dim_divisor: 139, pack_efficiency: 0.7 },
+          }, null, 2)}
+          note='File field name must be "file". Columns required: Order ID, Part Number, Quantity.'
+        />
+
+        <Endpoint
+          method="GET"
+          path="/configurator/settings"
+          description="Retrieve current configurator settings (DIM divisor, packing efficiency, unit labels)."
+          response={JSON.stringify({ dim_divisor: '139', pack_efficiency: '0.70', weight_unit: 'lbs', dim_unit: 'in' }, null, 2)}
+        />
+
+        <Endpoint
+          method="PUT"
+          path="/configurator/settings"
+          description="Update configurator settings. All fields are optional — only supplied fields are changed."
+          request={{
+            headers: 'Content-Type: application/json',
+            body: JSON.stringify({ dim_divisor: 166, pack_efficiency: 0.65 }),
+          }}
+          response={JSON.stringify({ dim_divisor: '166', pack_efficiency: '0.65', weight_unit: 'lbs', dim_unit: 'in' }, null, 2)}
+        />
+
+        <Endpoint
+          method="GET"
+          path="/configurator/template"
+          description="Download the single-shipment Excel template (Product ID + Quantity columns)."
+          response="→ Binary .xlsx file download (configurator-template.xlsx)"
+        />
+
+        <Endpoint
+          method="GET"
+          path="/configurator/bulk-template"
+          description="Download the bulk shipment Excel template (Order ID + Part Number + Quantity columns)."
+          response="→ Binary .xlsx file download (bulk-configurator-template.xlsx)"
+        />
+      </Section>
+
+      {/* ── PRODUCTS ── */}
+      <Section title="Products">
+        <Endpoint
+          method="GET"
+          path="/products"
+          description="Return all products ordered by ID."
+          response={JSON.stringify([
+            { id: 'SKU-001', name: 'Widget A', height: 3, width: 4, length: 5, weight: 1.2 },
+            { id: 'SKU-002', name: 'Widget B', height: 5, width: 5, length: 8, weight: 2.8 },
+          ], null, 2)}
+        />
+
+        <Endpoint
+          method="GET"
+          path="/products/:id"
+          description="Return a single product by ID."
+          response={JSON.stringify({ id: 'SKU-001', name: 'Widget A', height: 3, width: 4, length: 5, weight: 1.2 }, null, 2)}
+        />
+
+        <Endpoint
+          method="POST"
+          path="/products"
+          description="Create a new product. Product ID must be unique."
+          request={{
+            headers: 'Content-Type: application/json',
+            body: JSON.stringify({ id: 'SKU-003', name: 'Widget C', height: 2, width: 3, length: 4, weight: 0.8 }),
+          }}
+          response={JSON.stringify({ id: 'SKU-003', name: 'Widget C', height: 2, width: 3, length: 4, weight: 0.8 }, null, 2)}
+        />
+
+        <Endpoint
+          method="PUT"
+          path="/products/:id"
+          description="Update an existing product's name and dimensions. ID cannot be changed."
+          request={{
+            headers: 'Content-Type: application/json',
+            body: JSON.stringify({ name: 'Widget C v2', height: 2.5, width: 3, length: 4, weight: 0.9 }),
+          }}
+          response={JSON.stringify({ id: 'SKU-003', name: 'Widget C v2', height: 2.5, width: 3, length: 4, weight: 0.9 }, null, 2)}
+        />
+
+        <Endpoint
+          method="DELETE"
+          path="/products/:id"
+          description="Delete a product by ID."
+          response={JSON.stringify({ success: true }, null, 2)}
+        />
+
+        <Endpoint
+          method="POST"
+          path="/products/import"
+          description="Upload an Excel/CSV file to bulk upsert products. Existing products are updated by Part Number; new ones are created."
+          request={{ headers: 'Content-Type: multipart/form-data' }}
+          response={JSON.stringify({ imported: 42, errors: ['Row 7: missing Part Number — skipped'] }, null, 2)}
+          note='File field name must be "file". Required columns: Part Number, Item Name, UPC Height (Inches), UPC Width (Inches), UPC Length (Inches), UPC Weight (Pounds).'
+        />
+      </Section>
+
+      {/* ── PACKAGING ── */}
+      <Section title="Packaging">
+        <Endpoint
+          method="GET"
+          path="/packaging"
+          description="Return all packaging options ordered by type then name."
+          response={JSON.stringify([
+            { id: 1, name: 'Small Box 6x4x3', type: 'box', height: 3, width: 4, length: 6, max_weight: 10, packaging_weight: 0.3, notes: null, active: 1 },
+            { id: 2, name: 'Bubble Mailer 9x12', type: 'bubble_mailer', height: 1, width: 9, length: 12, max_weight: 2, packaging_weight: 0.1, notes: null, active: 1 },
+          ], null, 2)}
+        />
+
+        <Endpoint
+          method="POST"
+          path="/packaging"
+          description="Create a new packaging option. Type must be one of: box, bubble_mailer, poly_mailer, other."
+          request={{
+            headers: 'Content-Type: application/json',
+            body: JSON.stringify({ name: 'Large Box 18x14x12', type: 'box', height: 12, width: 14, length: 18, max_weight: 50, packaging_weight: 1.2, notes: 'Heavy duty', active: 1 }),
+          }}
+          response={JSON.stringify({ id: 3, name: 'Large Box 18x14x12', type: 'box', height: 12, width: 14, length: 18, max_weight: 50, packaging_weight: 1.2, notes: 'Heavy duty', active: 1 }, null, 2)}
+        />
+
+        <Endpoint
+          method="PUT"
+          path="/packaging/:id"
+          description="Update an existing packaging option. All fields can be changed."
+          request={{
+            headers: 'Content-Type: application/json',
+            body: JSON.stringify({ name: 'Large Box 18x14x12', type: 'box', height: 12, width: 14, length: 18, max_weight: 50, packaging_weight: 1.2, notes: null, active: 0 }),
+          }}
+          response={JSON.stringify({ id: 3, name: 'Large Box 18x14x12', active: 0 }, null, 2)}
+        />
+
+        <Endpoint
+          method="DELETE"
+          path="/packaging/:id"
+          description="Delete a packaging option by ID."
+          response={JSON.stringify({ success: true }, null, 2)}
+        />
+      </Section>
+
+      {/* ── FIT QUALITY ── */}
+      <Section title="Fit Quality Reference">
+        <div className="bg-white rounded-lg shadow border border-gray-200 overflow-hidden">
+          <table className="min-w-full text-sm">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Value</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Volume Utilization</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Meaning</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Flag</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {[
+                ['exact', '≥ 90%', 'Products fill nearly all available space', 'No'],
+                ['good', '60 – 89%', 'Efficient use with room for padding', 'No'],
+                ['loose', '35 – 59%', 'Packaging significantly larger than needed', '⚠ Yes'],
+                ['large', '< 35%', 'Box much larger than products', '⚠ Yes'],
+              ].map(([val, range, meaning, flag]) => (
+                <tr key={val} className="even:bg-gray-50">
+                  <td className="px-4 py-3 font-mono text-brand-700 font-semibold">{val}</td>
+                  <td className="px-4 py-3 font-mono text-xs">{range}</td>
+                  <td className="px-4 py-3 text-gray-600">{meaning}</td>
+                  <td className="px-4 py-3 text-xs font-medium">{flag === 'No' ? <span className="text-gray-400">No</span> : <span className="text-amber-600">{flag}</span>}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Section>
+
+      {/* ── ERROR FORMAT ── */}
+      <Section title="Error Responses">
+        <p className="text-sm text-gray-600">
+          All errors return a non-2xx HTTP status code and a JSON body with an <code>error</code> field.
+        </p>
+        <div className="bg-white rounded-lg shadow border border-gray-200 overflow-hidden">
+          <pre className="bg-gray-900 text-green-300 text-xs px-5 py-4 overflow-x-auto whitespace-pre-wrap">
+            {`HTTP 404
+${JSON.stringify({ error: 'Products not found: SKU-999' }, null, 2)}
+
+HTTP 400
+${JSON.stringify({ error: 'items must be a non-empty array' }, null, 2)}
+
+HTTP 409
+${JSON.stringify({ error: 'Product ID already exists' }, null, 2)}`}
+          </pre>
+        </div>
+      </Section>
+    </div>
+  );
+}
