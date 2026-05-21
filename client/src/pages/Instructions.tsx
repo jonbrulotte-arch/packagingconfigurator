@@ -164,7 +164,7 @@ product sorted: [9,  6, 4]
               {[
                 ['Exact Fit', '≥ 90 %', 'Products fill nearly all available space'],
                 ['Good Fit', '60 – 89 %', 'Efficient use with room for padding'],
-                ['Snug Fit', '35 – 59 %', 'Noticeably larger than needed'],
+                ['Loose Fit ⚠', '35 – 59 %', 'Packaging significantly larger than needed — flagged for review'],
                 ['Oversized', '< 35 %', 'Box is much larger than the products'],
               ].map(([label, range, meaning]) => (
                 <tr key={label} className="even:bg-gray-50">

@@ -42,7 +42,7 @@ function allItemsFitInBox(items: ResolvedItem[], box: Packaging, packEfficiency:
 function fitQuality(pct: number): ConfiguratorResult['fit_quality'] {
   if (pct >= 90) return 'exact';
   if (pct >= 60) return 'good';
-  if (pct >= 35) return 'snug';
+  if (pct >= 35) return 'loose';
   return 'large';
 }
 

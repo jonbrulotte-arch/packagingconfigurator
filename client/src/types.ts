@@ -31,7 +31,7 @@ export interface ConfiguratorResult {
   weight_flag: boolean;
   max_weight_flag: boolean;
   volume_utilization: number;
-  fit_quality: 'exact' | 'good' | 'snug' | 'large';
+  fit_quality: 'exact' | 'good' | 'loose' | 'large';
   products_fit: boolean;
 }
 

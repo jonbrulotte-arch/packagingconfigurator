@@ -5,14 +5,14 @@ import { analyzeProducts, importConfiguratorFile, downloadConfiguratorTemplate, 
 const FIT_COLORS: Record<ConfiguratorResult['fit_quality'], string> = {
   exact: 'bg-green-100 text-green-800 border-green-200',
   good: 'bg-blue-100 text-blue-800 border-blue-200',
-  snug: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+  loose: 'bg-amber-100 text-amber-800 border-amber-200',
   large: 'bg-gray-100 text-gray-700 border-gray-200',
 };
 
 const FIT_LABELS: Record<ConfiguratorResult['fit_quality'], string> = {
   exact: 'Exact Fit',
   good: 'Good Fit',
-  snug: 'Snug Fit',
+  loose: 'Loose Fit',
   large: 'Oversized',
 };
 
@@ -367,7 +367,7 @@ export default function Configurator() {
                   className={`bg-white rounded-lg shadow border-l-4 p-5 ${
                     i === 0
                       ? 'border-l-green-500'
-                      : r.weight_flag || r.max_weight_flag
+                      : r.weight_flag || r.max_weight_flag || r.fit_quality === 'loose' || r.fit_quality === 'large'
                       ? 'border-l-amber-400'
                       : 'border-l-gray-200'
                   }`}
@@ -432,8 +432,17 @@ export default function Configurator() {
                     </div>
                   </div>
 
-                  {(r.weight_flag || r.max_weight_flag) && (
+                  {(r.weight_flag || r.max_weight_flag || r.fit_quality === 'loose' || r.fit_quality === 'large') && (
                     <div className="mt-3 space-y-2">
+                      {(r.fit_quality === 'loose' || r.fit_quality === 'large') && (
+                        <div className="flex items-start gap-2 text-sm bg-amber-50 border border-amber-200 rounded px-3 py-2">
+                          <span className="text-amber-500 font-bold mt-0.5">⚠</span>
+                          <span className="text-amber-800">
+                            <strong>Loose Fit:</strong> Only {r.volume_utilization}% of this box is used.
+                            Consider a smaller packaging option to better protect the product and reduce dimensional weight charges.
+                          </span>
+                        </div>
+                      )}
                       {r.weight_flag && (
                         <div className="flex items-start gap-2 text-sm bg-amber-50 border border-amber-200 rounded px-3 py-2">
                           <span className="text-amber-500 font-bold mt-0.5">⚠</span>

@@ -5,11 +5,11 @@ import { bulkAnalyze, downloadBulkTemplate, exportBulkResults } from '../api';
 const FIT_COLORS: Record<ConfiguratorResult['fit_quality'], string> = {
   exact: 'bg-green-100 text-green-800',
   good: 'bg-blue-100 text-blue-800',
-  snug: 'bg-yellow-100 text-yellow-800',
+  loose: 'bg-amber-100 text-amber-800',
   large: 'bg-gray-100 text-gray-600',
 };
 const FIT_LABELS: Record<ConfiguratorResult['fit_quality'], string> = {
-  exact: 'Exact', good: 'Good', snug: 'Snug', large: 'Oversized',
+  exact: 'Exact', good: 'Good', loose: 'Loose Fit', large: 'Oversized',
 };
 const TYPE_LABELS: Record<string, string> = {
   box: 'Box', bubble_mailer: 'Bubble Mailer', poly_mailer: 'Poly Mailer', other: 'Other',
@@ -18,7 +18,7 @@ const TYPE_LABELS: Record<string, string> = {
 function rowStatus(s: BulkShipmentResult): 'error' | 'flagged' | 'ok' | 'no-match' {
   if (s.error) return 'error';
   if (!s.best) return 'no-match';
-  if (s.best.weight_flag || s.best.max_weight_flag) return 'flagged';
+  if (s.best.weight_flag || s.best.max_weight_flag || s.best.fit_quality === 'loose' || s.best.fit_quality === 'large') return 'flagged';
   return 'ok';
 }
 
@@ -187,6 +187,7 @@ export default function BulkConfigurator() {
                       <span className={`text-xs px-2 py-0.5 rounded font-medium ${FIT_COLORS[shipment.best.fit_quality]}`}>
                         {FIT_LABELS[shipment.best.fit_quality]}
                       </span>
+                      {(shipment.best.fit_quality === 'loose' || shipment.best.fit_quality === 'large') && <span className="text-xs text-amber-600 font-semibold">⚠ Loose</span>}
                       {shipment.best.weight_flag && <span className="text-xs text-amber-600 font-semibold">⚠ DIM</span>}
                       {shipment.best.max_weight_flag && <span className="text-xs text-red-600 font-semibold">✕ OVW</span>}
                     </span>
@@ -269,6 +270,7 @@ export default function BulkConfigurator() {
                                   {r.weight_flag && ' ⚠'}
                                 </span>
                                 {r.max_weight_flag && <span className="text-red-600 font-semibold">✕ Overweight</span>}
+                                {(r.fit_quality === 'loose' || r.fit_quality === 'large') && <span className="text-amber-600 font-semibold">⚠ Loose Fit ({r.volume_utilization}% used)</span>}
                               </div>
                             </div>
                           ))}
