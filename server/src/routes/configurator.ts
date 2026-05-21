@@ -4,6 +4,11 @@ import { Product, Packaging, ConfiguratorResult } from '../types';
 
 const router = Router();
 
+interface RequestItem {
+  product_id: string;
+  quantity: number;
+}
+
 function sortedDims(h: number, w: number, l: number): [number, number, number] {
   return [h, w, l].sort((a, b) => b - a) as [number, number, number];
 }
@@ -14,16 +19,26 @@ function productFitsInBox(product: Product, box: Packaging): boolean {
   return bd1 >= pd1 && bd2 >= pd2 && bd3 >= pd3;
 }
 
-function allProductsFitInBox(products: Product[], box: Packaging, packEfficiency: number): boolean {
-  // Every individual product must be able to fit in the box
-  if (!products.every(p => productFitsInBox(p, box))) return false;
+function allItemsFitInBox(
+  items: { product: Product; quantity: number }[],
+  box: Packaging,
+  packEfficiency: number
+): boolean {
+  // Every unique product must individually fit inside the box
+  if (!items.every(i => productFitsInBox(i.product, box))) return false;
 
-  if (products.length === 1) return true;
+  const totalQty = items.reduce((sum, i) => sum + i.quantity, 0);
 
-  // For multiple products: total volume must fit within box * packing efficiency
-  const totalProductVolume = products.reduce((sum, p) => sum + p.height * p.width * p.length, 0);
+  // Single unit: dimension check alone is sufficient
+  if (totalQty === 1) return true;
+
+  // Multiple units/products: use volume heuristic
+  const totalVolume = items.reduce(
+    (sum, i) => sum + i.product.height * i.product.width * i.product.length * i.quantity,
+    0
+  );
   const boxVolume = box.height * box.width * box.length;
-  return totalProductVolume <= boxVolume * packEfficiency;
+  return totalVolume <= boxVolume * packEfficiency;
 }
 
 function fitQuality(utilizationPct: number): ConfiguratorResult['fit_quality'] {
@@ -34,46 +49,67 @@ function fitQuality(utilizationPct: number): ConfiguratorResult['fit_quality'] {
 }
 
 router.post('/analyze', (req: Request, res: Response) => {
-  const { product_ids } = req.body as { product_ids: string[] };
+  const { items } = req.body as { items: RequestItem[] };
 
-  if (!Array.isArray(product_ids) || product_ids.length === 0) {
-    return res.status(400).json({ error: 'product_ids must be a non-empty array' });
+  if (!Array.isArray(items) || items.length === 0) {
+    return res.status(400).json({ error: 'items must be a non-empty array' });
   }
 
-  const getSettings = db.prepare('SELECT key, value FROM settings');
-  const settingsRows = getSettings.all() as { key: string; value: string }[];
+  for (const item of items) {
+    if (!item.product_id || !item.quantity || item.quantity < 1) {
+      return res.status(400).json({ error: 'Each item needs a product_id and a quantity ≥ 1' });
+    }
+  }
+
+  const settingsRows = db.prepare('SELECT key, value FROM settings').all() as { key: string; value: string }[];
   const settings = Object.fromEntries(settingsRows.map(r => [r.key, r.value]));
   const dimDivisor = Number(settings.dim_divisor ?? 139);
   const packEfficiency = Number(settings.pack_efficiency ?? 0.70);
 
-  const placeholders = product_ids.map(() => '?').join(',');
+  const uniqueIds = [...new Set(items.map(i => i.product_id))];
+  const placeholders = uniqueIds.map(() => '?').join(',');
   const products = db
     .prepare(`SELECT * FROM products WHERE id IN (${placeholders})`)
-    .all(...product_ids) as Product[];
+    .all(...uniqueIds) as Product[];
 
-  const foundIds = new Set(products.map(p => p.id));
-  const notFound = product_ids.filter(id => !foundIds.has(id));
-
+  const productMap = new Map(products.map(p => [p.id, p]));
+  const notFound = uniqueIds.filter(id => !productMap.has(id));
   if (notFound.length > 0) {
     return res.status(404).json({ error: `Products not found: ${notFound.join(', ')}` });
   }
+
+  // Merge duplicate product IDs by summing their quantities
+  const mergedMap = new Map<string, number>();
+  for (const item of items) {
+    mergedMap.set(item.product_id, (mergedMap.get(item.product_id) ?? 0) + item.quantity);
+  }
+  const resolvedItems = Array.from(mergedMap.entries()).map(([id, qty]) => ({
+    product: productMap.get(id)!,
+    quantity: qty,
+  }));
+
+  const totalActualWeight = resolvedItems.reduce(
+    (sum, i) => sum + i.product.weight * i.quantity,
+    0
+  );
+  const totalItemCount = resolvedItems.reduce((sum, i) => sum + i.quantity, 0);
 
   const allPackaging = db
     .prepare('SELECT * FROM packaging WHERE active = 1 ORDER BY height * width * length ASC')
     .all() as Packaging[];
 
-  const totalActualWeight = products.reduce((sum, p) => sum + p.weight, 0);
-
   const results: ConfiguratorResult[] = [];
 
   for (const pkg of allPackaging) {
-    if (!allProductsFitInBox(products, pkg, packEfficiency)) continue;
+    if (!allItemsFitInBox(resolvedItems, pkg, packEfficiency)) continue;
 
     const boxVolume = pkg.height * pkg.width * pkg.length;
     const dimWeight = boxVolume / dimDivisor;
-    const totalProductVolume = products.reduce((sum, p) => sum + p.height * p.width * p.length, 0);
+    const totalProductVolume = resolvedItems.reduce(
+      (sum, i) => sum + i.product.height * i.product.width * i.product.length * i.quantity,
+      0
+    );
     const volumeUtilization = (totalProductVolume / boxVolume) * 100;
-
     const weightFlag = dimWeight > totalActualWeight;
     const maxWeightFlag = pkg.max_weight != null && totalActualWeight > pkg.max_weight;
 
@@ -89,12 +125,12 @@ router.post('/analyze', (req: Request, res: Response) => {
     });
   }
 
-  // Sort by volume utilization descending (best fit first = least waste)
   results.sort((a, b) => b.volume_utilization - a.volume_utilization);
 
   res.json({
-    products,
+    items: resolvedItems,
     total_actual_weight: Math.round(totalActualWeight * 100) / 100,
+    total_item_count: totalItemCount,
     settings: { dim_divisor: dimDivisor, pack_efficiency: packEfficiency },
     results,
   });
@@ -102,8 +138,7 @@ router.post('/analyze', (req: Request, res: Response) => {
 
 router.get('/settings', (_req: Request, res: Response) => {
   const rows = db.prepare('SELECT key, value FROM settings').all() as { key: string; value: string }[];
-  const settings = Object.fromEntries(rows.map(r => [r.key, r.value]));
-  res.json(settings);
+  res.json(Object.fromEntries(rows.map(r => [r.key, r.value])));
 });
 
 router.put('/settings', (req: Request, res: Response) => {

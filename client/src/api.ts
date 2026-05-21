@@ -1,4 +1,4 @@
-import { Product, Packaging, AnalyzeResponse, Settings } from './types';
+import { Product, Packaging, AnalyzeResponse, Settings, RequestItem } from './types';
 
 const BASE = '/api';
 
@@ -51,11 +51,11 @@ export const deletePackaging = (id: number) =>
   request<{ success: boolean }>(`/packaging/${id}`, { method: 'DELETE' });
 
 // Configurator
-export const analyzeProducts = (product_ids: string[]) =>
+export const analyzeProducts = (items: RequestItem[]) =>
   request<AnalyzeResponse>('/configurator/analyze', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ product_ids }),
+    body: JSON.stringify({ items }),
   });
 
 // Settings

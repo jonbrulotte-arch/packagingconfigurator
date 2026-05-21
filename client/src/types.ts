@@ -32,9 +32,20 @@ export interface ConfiguratorResult {
   products_fit: boolean;
 }
 
+export interface RequestItem {
+  product_id: string;
+  quantity: number;
+}
+
+export interface ResolvedItem {
+  product: Product;
+  quantity: number;
+}
+
 export interface AnalyzeResponse {
-  products: Product[];
+  items: ResolvedItem[];
   total_actual_weight: number;
+  total_item_count: number;
   settings: { dim_divisor: number; pack_efficiency: number };
   results: ConfiguratorResult[];
 }
