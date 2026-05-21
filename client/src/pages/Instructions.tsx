@@ -39,6 +39,33 @@ export default function Instructions() {
           <p>
             Click <strong>+ Add Product</strong> and fill in all six fields. The Product ID is your
             SKU or internal code — it must be unique and is used when querying the Configurator.
+            Check <strong>Foldable</strong> if the item can be folded in half — see below.
+          </p>
+        </SubSection>
+
+        <SubSection title="Foldable products">
+          <p>
+            Some items — garments, poly mailers, flexible pouches, flat soft goods — can be folded
+            in half before packing. Checking <strong>Foldable</strong> on a product tells the
+            Configurator to always use the folded dimensions when evaluating packaging, which
+            unlocks smaller options that would otherwise be rejected.
+          </p>
+          <Callout color="blue" label="How the fold is modelled">
+            Folding in half along the longest dimension produces two stacked layers:
+            <Code>
+              {`Original:  H × W × L  (e.g. 1" × 12" × 18")
+Folded:   2H × W × (L÷2)  →  2" × 12" × 9"
+
+Longest dimension halved  →  fits in a shorter/smaller box
+Thickness (shortest dim) doubled  →  two layers now stacked
+Volume unchanged  →  2 × 1 × 12 × 9 = 1 × 12 × 18 = 216 in³`}
+            </Code>
+            The fit check and volume utilization both use the folded dimensions. Weight is
+            unaffected — folding does not change how much the item weighs.
+          </Callout>
+          <p className="mt-2">
+            Results that include foldable products show an indigo <strong>↕ items folded</strong> badge
+            so it is always clear when smaller packaging was made possible by folding.
           </p>
         </SubSection>
         <SubSection title="Excel / spreadsheet import">
@@ -142,6 +169,11 @@ product sorted: [9,  6, 4]
           </Callout>
           <p className="mt-3 text-sm text-gray-700">
             Packaging that fails either check does not appear in the results at all.
+          </p>
+          <p className="mt-2 text-sm text-gray-700">
+            <strong>Foldable products</strong> use their folded dimensions for both checks above —
+            the longest dimension is halved and the thickness (shortest dimension) is doubled before
+            any comparison is made. See the Products Tab section for details.
           </p>
         </SubSection>
 
