@@ -135,6 +135,7 @@ export default function SettingsPage() {
     pack_efficiency: '0.70',
     weight_unit: 'lbs',
     dim_unit: 'in',
+    ltl_threshold: '150',
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -216,6 +217,23 @@ export default function SettingsPage() {
           <p className="mt-1 text-xs text-gray-500">
             For multiple products, the combined volume must fit within this fraction of the box volume.
             0.70 (70%) is a practical default for irregular shapes.
+          </p>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            LTL Freight Threshold (lbs)
+          </label>
+          <input
+            type="number"
+            min="1"
+            step="1"
+            value={settings.ltl_threshold}
+            onChange={e => setSettings(s => ({ ...s, ltl_threshold: e.target.value }))}
+            className="w-40 border border-gray-300 rounded px-3 py-2 text-sm"
+          />
+          <p className="mt-1 text-xs text-gray-500">
+            Shipments at or above this weight are flagged as LTL Freight. Standard industry threshold is 150 lbs.
           </p>
         </div>
 

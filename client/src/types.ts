@@ -72,8 +72,10 @@ export interface AnalyzeResponse {
   items: ResolvedItem[];
   total_actual_weight: number;
   total_item_count: number;
-  settings: { dim_divisor: number; pack_efficiency: number };
+  settings: { dim_divisor: number; pack_efficiency: number; ltl_threshold: number };
   results: ConfiguratorResult[];
+  ltl_required: boolean;
+  ltl_shipping: ShippingMatch[];
 }
 
 export interface BulkShipmentResult {
@@ -83,14 +85,16 @@ export interface BulkShipmentResult {
   total_actual_weight: number;
   results: ConfiguratorResult[];
   best: ConfiguratorResult | null;
+  ltl_required: boolean;
+  ltl_shipping: ShippingMatch[];
   error: string | null;
 }
 
 export interface BulkAnalyzeResponse {
   shipments: BulkShipmentResult[];
   parse_errors: string[];
-  settings: { dim_divisor: number; pack_efficiency: number };
-  summary: { total: number; matched: number; flagged: number; errors: number };
+  settings: { dim_divisor: number; pack_efficiency: number; ltl_threshold: number };
+  summary: { total: number; matched: number; flagged: number; ltl: number; errors: number };
 }
 
 export interface Settings {
@@ -98,4 +102,5 @@ export interface Settings {
   pack_efficiency: string;
   weight_unit: string;
   dim_unit: string;
+  ltl_threshold: string;
 }

@@ -336,12 +336,45 @@ export default function Configurator() {
             </div>
           </div>
 
+          {/* LTL Freight banner */}
+          {response.ltl_required && (
+            <div className="bg-red-50 border-2 border-red-400 rounded-lg p-5">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-9 h-9 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+                  <svg className="w-5 h-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-red-800">LTL Freight Required</h3>
+                  <p className="text-sm text-red-700">
+                    Shipment weight ({response.total_actual_weight.toFixed(3)} lbs) exceeds the LTL threshold ({response.settings.ltl_threshold} lbs).
+                    This shipment must ship via Less-Than-Truckload freight carrier.
+                  </p>
+                </div>
+              </div>
+              {response.ltl_shipping.length > 0 && (
+                <div className="mt-3 pt-3 border-t border-red-200">
+                  <p className="text-xs font-semibold text-red-600 uppercase mb-2">Matching Freight Methods</p>
+                  <div className="flex flex-wrap gap-2">
+                    {response.ltl_shipping.map(sm => (
+                      <span key={sm.method_id}
+                        className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1.5 bg-red-100 border border-red-300 text-red-800 rounded font-medium">
+                        {sm.method_name} · {sm.billed_weight} lbs
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Results */}
           <div>
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-base font-semibold text-gray-900">
                 {response.results.length === 0
-                  ? 'No Packaging Options Found'
+                  ? (response.ltl_required ? 'No Standard Packaging Options' : 'No Packaging Options Found')
                   : `${response.results.length} Compatible Option${response.results.length !== 1 ? 's' : ''} (best fit first)`}
               </h2>
               {response.results.length > 0 && (
@@ -358,10 +391,15 @@ export default function Configurator() {
               )}
             </div>
 
-            {response.results.length === 0 && (
+            {response.results.length === 0 && !response.ltl_required && (
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-5 text-sm text-amber-800">
                 No active packaging options can fit all selected products at the requested quantities.
                 Try adding larger boxes or splitting into multiple shipments.
+              </div>
+            )}
+            {response.results.length === 0 && response.ltl_required && (
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-sm text-gray-600">
+                No standard parcel packaging is configured for this size/weight. Ship as LTL freight using the method above.
               </div>
             )}
 

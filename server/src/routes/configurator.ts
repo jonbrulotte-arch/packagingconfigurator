@@ -79,6 +79,14 @@ function loadActiveShippingMethods(): ShippingMethod[] {
   return db.prepare('SELECT * FROM shipping_methods WHERE active = 1 ORDER BY sort_order, min_weight, id').all() as ShippingMethod[];
 }
 
+// LTL freight: no DIM billing, match methods by actual weight only
+function computeLtlShipping(actualWeight: number, methods: ShippingMethod[]): ShippingMatch[] {
+  const billed = Math.ceil(actualWeight);
+  return methods
+    .filter(m => billed >= m.min_weight && (m.max_weight == null || billed <= m.max_weight))
+    .map(m => ({ method_id: m.id, method_name: m.name, billed_weight: billed, dim_applied: false }));
+}
+
 function computeShipping(
   boxVolume: number,
   actualWeight: number,
@@ -219,6 +227,7 @@ router.post('/analyze', (req: Request, res: Response) => {
   const s = Object.fromEntries(settingsRows.map(r => [r.key, r.value]));
   const dimDivisor = Number(s.dim_divisor ?? 139);
   const packEfficiency = Number(s.pack_efficiency ?? 0.70);
+  const ltlThreshold = Number(s.ltl_threshold ?? 150);
 
   const uniqueIds = [...new Set(items.map(i => i.product_id))];
   const products = db
@@ -229,18 +238,24 @@ router.post('/analyze', (req: Request, res: Response) => {
   if (notFound.length > 0) return res.status(404).json({ error: `Products not found: ${notFound.join(', ')}` });
 
   const resolvedItems = mergeItems(items, productMap);
+  const totalActualWeight = Math.round(resolvedItems.reduce((sum, i) => sum + i.product.weight * i.quantity, 0) * 1000) / 1000;
   const allPackaging = db
     .prepare('SELECT * FROM packaging WHERE active = 1 ORDER BY height * width * length ASC')
     .all() as Packaging[];
   const shippingMethods = loadActiveShippingMethods();
   const results = analyzeShipment(resolvedItems, allPackaging, dimDivisor, packEfficiency, shippingMethods);
 
+  const ltlRequired = totalActualWeight >= ltlThreshold;
+  const ltlShipping = ltlRequired ? computeLtlShipping(totalActualWeight, shippingMethods) : [];
+
   res.json({
     items: resolvedItems,
-    total_actual_weight: Math.round(resolvedItems.reduce((s, i) => s + i.product.weight * i.quantity, 0) * 1000) / 1000,
+    total_actual_weight: totalActualWeight,
     total_item_count: resolvedItems.reduce((s, i) => s + i.quantity, 0),
-    settings: { dim_divisor: dimDivisor, pack_efficiency: packEfficiency },
+    settings: { dim_divisor: dimDivisor, pack_efficiency: packEfficiency, ltl_threshold: ltlThreshold },
     results,
+    ltl_required: ltlRequired,
+    ltl_shipping: ltlShipping,
   });
 });
 
@@ -359,6 +374,7 @@ router.post('/bulk', upload.single('file'), (req: Request, res: Response) => {
   const s = Object.fromEntries(settingsRows.map(r => [r.key, r.value]));
   const dimDivisor = Number(s.dim_divisor ?? 139);
   const packEfficiency = Number(s.pack_efficiency ?? 0.70);
+  const ltlThreshold = Number(s.ltl_threshold ?? 150);
 
   const allPackaging = db
     .prepare('SELECT * FROM packaging WHERE active = 1 ORDER BY height * width * length ASC')
@@ -367,22 +383,26 @@ router.post('/bulk', upload.single('file'), (req: Request, res: Response) => {
 
   // Analyze each shipment
   const shipments = [];
-  let matched = 0, flagged = 0, errors = 0;
+  let matched = 0, flagged = 0, ltl = 0, errors = 0;
 
   for (const [orderId, items] of orderMap.entries()) {
     const missingIds = [...new Set(items.map(i => i.product_id))].filter(id => !productMap.has(id));
     if (missingIds.length > 0) {
-      shipments.push({ id: orderId, items: [], total_item_count: 0, total_actual_weight: 0, results: [], best: null, error: `Products not found: ${missingIds.join(', ')}` });
+      shipments.push({ id: orderId, items: [], total_item_count: 0, total_actual_weight: 0, results: [], best: null, ltl_required: false, ltl_shipping: [], error: `Products not found: ${missingIds.join(', ')}` });
       errors++;
       continue;
     }
 
     const resolvedItems = mergeItems(items, productMap);
     const totalActualWeight = resolvedItems.reduce((sum, i) => sum + i.product.weight * i.quantity, 0);
+    const ltlRequired = totalActualWeight >= ltlThreshold;
+    const ltlShipping = ltlRequired ? computeLtlShipping(totalActualWeight, shippingMethods) : [];
     const results = analyzeShipment(resolvedItems, allPackaging, dimDivisor, packEfficiency, shippingMethods);
     const best = results[0] ?? null;
 
-    if (best) {
+    if (ltlRequired) {
+      ltl++;
+    } else if (best) {
       matched++;
       if (best.weight_flag || best.max_weight_flag) flagged++;
     } else {
@@ -396,6 +416,8 @@ router.post('/bulk', upload.single('file'), (req: Request, res: Response) => {
       total_actual_weight: Math.round(totalActualWeight * 1000) / 1000,
       results,
       best,
+      ltl_required: ltlRequired,
+      ltl_shipping: ltlShipping,
       error: null,
     });
   }
@@ -403,8 +425,8 @@ router.post('/bulk', upload.single('file'), (req: Request, res: Response) => {
   res.json({
     shipments,
     parse_errors: parseErrors,
-    settings: { dim_divisor: dimDivisor, pack_efficiency: packEfficiency },
-    summary: { total: orderMap.size, matched, flagged, errors },
+    settings: { dim_divisor: dimDivisor, pack_efficiency: packEfficiency, ltl_threshold: ltlThreshold },
+    summary: { total: orderMap.size, matched, flagged, ltl, errors },
   });
 });
 
@@ -467,13 +489,14 @@ router.get('/settings', (_req, res) => {
 });
 
 router.put('/settings', (req: Request, res: Response) => {
-  const { dim_divisor, pack_efficiency, weight_unit, dim_unit } = req.body;
+  const { dim_divisor, pack_efficiency, weight_unit, dim_unit, ltl_threshold } = req.body;
   const upsert = db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)');
   db.transaction(() => {
     if (dim_divisor != null) upsert.run('dim_divisor', String(Number(dim_divisor)));
     if (pack_efficiency != null) upsert.run('pack_efficiency', String(Number(pack_efficiency)));
     if (weight_unit) upsert.run('weight_unit', weight_unit);
     if (dim_unit) upsert.run('dim_unit', dim_unit);
+    if (ltl_threshold != null) upsert.run('ltl_threshold', String(Number(ltl_threshold)));
   })();
   const rows = db.prepare('SELECT key, value FROM settings').all() as { key: string; value: string }[];
   res.json(Object.fromEntries(rows.map(r => [r.key, r.value])));

@@ -95,5 +95,6 @@ insertSetting.run('dim_divisor', '139');
 insertSetting.run('pack_efficiency', '0.70');
 insertSetting.run('weight_unit', 'lbs');
 insertSetting.run('dim_unit', 'in');
+insertSetting.run('ltl_threshold', '150');
 
 export default db;

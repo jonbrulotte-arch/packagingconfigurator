@@ -15,24 +15,27 @@ const TYPE_LABELS: Record<string, string> = {
   box: 'Box', bubble_mailer: 'Bubble Mailer', poly_mailer: 'Poly Mailer', other: 'Other',
 };
 
-function rowStatus(s: BulkShipmentResult): 'error' | 'flagged' | 'ok' | 'no-match' {
+function rowStatus(s: BulkShipmentResult): 'error' | 'ltl' | 'flagged' | 'ok' | 'no-match' {
   if (s.error) return 'error';
+  if (s.ltl_required) return 'ltl';
   if (!s.best) return 'no-match';
   if (s.best.weight_flag || s.best.max_weight_flag || s.best.fit_quality === 'loose' || s.best.fit_quality === 'large') return 'flagged';
   return 'ok';
 }
 
 const STATUS_STYLE = {
-  ok:       'border-l-green-400',
-  flagged:  'border-l-amber-400',
+  ok:         'border-l-green-400',
+  flagged:    'border-l-amber-400',
+  ltl:        'border-l-red-500',
   'no-match': 'border-l-gray-300',
-  error:    'border-l-red-400',
+  error:      'border-l-red-400',
 };
 const STATUS_ICON = {
-  ok:       <span className="text-green-600 font-bold">✓</span>,
-  flagged:  <span className="text-amber-500 font-bold">⚠</span>,
+  ok:         <span className="text-green-600 font-bold">✓</span>,
+  flagged:    <span className="text-amber-500 font-bold">⚠</span>,
+  ltl:        <span className="text-red-600 font-bold text-xs font-mono">LTL</span>,
   'no-match': <span className="text-gray-400">—</span>,
-  error:    <span className="text-red-500 font-bold">✕</span>,
+  error:      <span className="text-red-500 font-bold">✕</span>,
 };
 
 export default function BulkConfigurator() {
@@ -143,12 +146,13 @@ export default function BulkConfigurator() {
 
       {/* Summary bar */}
       {response && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">
           {[
             { label: 'Total Shipments', value: response.summary.total, color: 'text-gray-900' },
             { label: 'Matched', value: response.summary.matched, color: 'text-green-700' },
             { label: 'Flagged', value: response.summary.flagged, color: 'text-amber-600' },
-            { label: 'No Match / Error', value: response.summary.errors, color: 'text-red-600' },
+            { label: 'LTL Freight', value: response.summary.ltl ?? 0, color: 'text-red-600' },
+            { label: 'No Match / Error', value: response.summary.errors, color: 'text-red-400' },
           ].map(({ label, value, color }) => (
             <div key={label} className="bg-white rounded-lg shadow p-4 text-center">
               <p className={`text-2xl font-bold ${color}`}>{value}</p>
@@ -240,12 +244,35 @@ export default function BulkConfigurator() {
                       </div>
                     </div>
 
+                    {/* LTL Freight */}
+                    {shipment.ltl_required && (
+                      <div className="bg-red-50 border border-red-300 rounded px-4 py-3">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-xs font-bold bg-red-600 text-white px-2 py-0.5 rounded">LTL FREIGHT</span>
+                          <span className="text-sm font-semibold text-red-800">
+                            {shipment.total_actual_weight.toFixed(3)} lbs — exceeds LTL threshold
+                          </span>
+                        </div>
+                        <p className="text-xs text-red-700">This shipment must ship via LTL freight carrier.</p>
+                        {shipment.ltl_shipping.length > 0 && (
+                          <div className="mt-2 flex flex-wrap gap-1.5">
+                            {shipment.ltl_shipping.map(sm => (
+                              <span key={sm.method_id}
+                                className="text-xs px-2 py-0.5 bg-red-100 border border-red-300 text-red-800 rounded font-medium">
+                                {sm.method_name} · {sm.billed_weight} lbs
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
                     {/* Packaging options */}
-                    {shipment.results.length === 0 ? (
+                    {shipment.results.length === 0 && !shipment.ltl_required ? (
                       <div className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-2">
                         No active packaging can fit all products in this shipment.
                       </div>
-                    ) : (
+                    ) : shipment.results.length > 0 ? (
                       <div>
                         <p className="text-xs font-semibold text-gray-500 uppercase mb-2">
                           {shipment.results.length} compatible option{shipment.results.length !== 1 ? 's' : ''} (best fit first)
@@ -296,7 +323,7 @@ export default function BulkConfigurator() {
                           ))}
                         </div>
                       </div>
-                    )}
+                    ) : null}
                   </div>
                 )}
               </div>
