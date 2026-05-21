@@ -77,7 +77,7 @@ export default function Packaging() {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                {['Name', 'Type', 'H (in)', 'W (in)', 'L (in)', 'Volume (in³)', 'Max Wt (lbs)', 'Status', 'Notes', ''].map(h => (
+                {['Name', 'Type', 'H (in)', 'W (in)', 'L (in)', 'Volume (in³)', 'Pkg Wt (lbs)', 'Max Wt (lbs)', 'Status', 'Notes', ''].map(h => (
                   <th key={h} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     {h}
                   </th>
@@ -105,6 +105,9 @@ export default function Packaging() {
                       {(pkg.height * pkg.width * pkg.length).toFixed(1)}
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-600">
+                      {pkg.packaging_weight != null ? pkg.packaging_weight : '—'}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-600">
                       {pkg.max_weight != null ? pkg.max_weight : '—'}
                     </td>
                     <td className="px-4 py-3 text-sm">
@@ -113,7 +116,7 @@ export default function Packaging() {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-500 max-w-xs truncate">{pkg.notes ?? '—'}</td>
-                    <td className="px-4 py-3 text-sm text-right whitespace-nowrap">
+                    <td className="px-4 py-3 text-sm text-right whitespace-nowrap" colSpan={1}>
                       <button onClick={() => setEditTarget(pkg)} className="text-brand-600 hover:text-brand-800 mr-3">Edit</button>
                       <button onClick={() => handleDelete(pkg.id, pkg.name)} className="text-red-500 hover:text-red-700">Delete</button>
                     </td>

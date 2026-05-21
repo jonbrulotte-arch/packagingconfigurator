@@ -42,6 +42,13 @@ db.exec(`
   );
 `);
 
+// Migrate: add packaging_weight if it doesn't exist yet
+try {
+  db.exec('ALTER TABLE packaging ADD COLUMN packaging_weight REAL');
+} catch {
+  // Column already exists — safe to ignore
+}
+
 // Seed default settings
 const insertSetting = db.prepare(
   'INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)'

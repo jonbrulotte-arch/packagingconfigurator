@@ -105,17 +105,21 @@ router.post('/analyze', (req: Request, res: Response) => {
 
     const boxVolume = pkg.height * pkg.width * pkg.length;
     const dimWeight = boxVolume / dimDivisor;
+    const pkgWeight = pkg.packaging_weight ?? 0;
+    const totalWeight = totalActualWeight + pkgWeight;
     const totalProductVolume = resolvedItems.reduce(
       (sum, i) => sum + i.product.height * i.product.width * i.product.length * i.quantity,
       0
     );
     const volumeUtilization = (totalProductVolume / boxVolume) * 100;
-    const weightFlag = dimWeight > totalActualWeight;
-    const maxWeightFlag = pkg.max_weight != null && totalActualWeight > pkg.max_weight;
+    const weightFlag = dimWeight > totalWeight;
+    const maxWeightFlag = pkg.max_weight != null && totalWeight > pkg.max_weight;
 
     results.push({
       packaging: pkg,
-      actual_weight: totalActualWeight,
+      products_weight: totalActualWeight,
+      packaging_weight: pkgWeight,
+      total_weight: Math.round(totalWeight * 1000) / 1000,
       dim_weight: dimWeight,
       weight_flag: weightFlag,
       max_weight_flag: maxWeightFlag,
@@ -129,7 +133,7 @@ router.post('/analyze', (req: Request, res: Response) => {
 
   res.json({
     items: resolvedItems,
-    total_actual_weight: Math.round(totalActualWeight * 100) / 100,
+    total_actual_weight: Math.round(totalActualWeight * 1000) / 1000,
     total_item_count: totalItemCount,
     settings: { dim_divisor: dimDivisor, pack_efficiency: packEfficiency },
     results,

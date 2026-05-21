@@ -24,6 +24,7 @@ export default function PackagingForm({ initial, onSubmit, onCancel, isEdit }: P
     width: String(initial?.width ?? ''),
     length: String(initial?.length ?? ''),
     max_weight: String(initial?.max_weight ?? ''),
+    packaging_weight: String(initial?.packaging_weight ?? ''),
     notes: initial?.notes ?? '',
     active: initial?.active !== undefined ? initial.active : 1,
   });
@@ -48,6 +49,11 @@ export default function PackagingForm({ initial, onSubmit, onCancel, isEdit }: P
       setError('Max weight must be a valid number');
       return;
     }
+    const packaging_weight = form.packaging_weight === '' ? null : Number(form.packaging_weight);
+    if (packaging_weight !== null && isNaN(packaging_weight)) {
+      setError('Packaging weight must be a valid number');
+      return;
+    }
     setLoading(true);
     try {
       await onSubmit({
@@ -57,6 +63,7 @@ export default function PackagingForm({ initial, onSubmit, onCancel, isEdit }: P
         width,
         length,
         max_weight,
+        packaging_weight,
         notes: form.notes.trim() || null,
         active: form.active,
       });
@@ -111,6 +118,20 @@ export default function PackagingForm({ initial, onSubmit, onCancel, isEdit }: P
             />
           </div>
         ))}
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Pkg Weight (lbs)</label>
+          <input
+            type="number"
+            step="0.001"
+            min="0"
+            value={form.packaging_weight}
+            onChange={set('packaging_weight')}
+            placeholder="Optional"
+            className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+          />
+          <p className="mt-1 text-xs text-gray-400">Added to product weight when calculating billed weight</p>
+        </div>
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Max Weight (lbs)</label>

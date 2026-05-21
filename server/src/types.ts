@@ -17,6 +17,7 @@ export interface Packaging {
   width: number;
   length: number;
   max_weight: number | null;
+  packaging_weight: number | null;
   notes: string | null;
   active: number;
   created_at?: string;
@@ -25,7 +26,9 @@ export interface Packaging {
 
 export interface ConfiguratorResult {
   packaging: Packaging;
-  actual_weight: number;
+  products_weight: number;
+  packaging_weight: number;
+  total_weight: number;
   dim_weight: number;
   weight_flag: boolean;
   max_weight_flag: boolean;
