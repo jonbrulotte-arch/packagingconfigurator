@@ -7,6 +7,11 @@ const router = Router();
 const sessions = new Map<string, number>();
 const SESSION_TTL_MS = 24 * 60 * 60 * 1000;
 
+// One-time recovery token printed to console at startup — regenerated on every restart
+const recoveryToken = randomBytes(16).toString('hex');
+console.log(`\n[Auth] Emergency recovery token: ${recoveryToken}`);
+console.log(`       POST /api/auth/emergency-reset?token=${recoveryToken}  to clear the admin password.\n`);
+
 function sha256(input: string): string {
   return createHash('sha256').update(input).digest('hex');
 }
@@ -83,6 +88,17 @@ router.post('/remove-password', (req: Request, res: Response) => {
   db.prepare('DELETE FROM settings WHERE key = ?').run('admin_password_hash');
   sessions.clear();
   res.json({ success: true });
+});
+
+// Emergency password reset using the startup console token
+router.post('/emergency-reset', (req: Request, res: Response) => {
+  const { token } = req.query as { token?: string };
+  if (!token || token !== recoveryToken) {
+    return res.status(401).json({ error: 'Invalid or missing recovery token' });
+  }
+  db.prepare('DELETE FROM settings WHERE key = ?').run('admin_password_hash');
+  sessions.clear();
+  res.json({ success: true, message: 'Admin password cleared. Access admin pages without a password.' });
 });
 
 export default router;

@@ -6,6 +6,7 @@ export interface Product {
   length: number;
   weight: number;
   foldable: number;
+  ships_in_own_packaging: number;
   created_at?: string;
   updated_at?: string;
 }
@@ -65,4 +66,15 @@ export interface ShippingMatch {
   method_name: string;
   billed_weight: number;
   dim_applied: boolean;
+}
+
+export interface StandaloneResult {
+  product: Product;
+  quantity: number;
+  products_weight: number;
+  unit_dim_weight: number;
+  unit_billed_weight: number;
+  total_billed_weight: number;
+  weight_flag: boolean;
+  shipping: ShippingMatch[];
 }

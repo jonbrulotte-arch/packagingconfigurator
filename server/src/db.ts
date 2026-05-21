@@ -56,6 +56,13 @@ try {
   // Column already exists — safe to ignore
 }
 
+// Migrate: add ships_in_own_packaging flag to products
+try {
+  db.exec('ALTER TABLE products ADD COLUMN ships_in_own_packaging INTEGER NOT NULL DEFAULT 0');
+} catch {
+  // Column already exists — safe to ignore
+}
+
 // Migrate: add max_height to packaging (for mailer thickness constraint)
 try {
   db.exec('ALTER TABLE packaging ADD COLUMN max_height REAL');

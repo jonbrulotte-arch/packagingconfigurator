@@ -109,7 +109,7 @@ export default function Products() {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                {['Product ID', 'Name', 'H (in)', 'W (in)', 'L (in)', 'Weight (lbs)', 'Volume (in³)', 'Foldable', ''].map(h => (
+                {['Product ID', 'Name', 'H (in)', 'W (in)', 'L (in)', 'Weight (lbs)', 'Volume (in³)', 'Foldable', 'Ships Own', ''].map(h => (
                   <th key={h} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     {h}
                   </th>
@@ -118,9 +118,9 @@ export default function Products() {
             </thead>
             <tbody className="divide-y divide-gray-200">
               {loading ? (
-                <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-400">Loading…</td></tr>
+                <tr><td colSpan={9} className="px-4 py-8 text-center text-gray-400">Loading…</td></tr>
               ) : products.length === 0 ? (
-                <tr><td colSpan={9} className="px-4 py-8 text-center text-gray-400">No products yet. Add one or import an Excel file.</td></tr>
+                <tr><td colSpan={10} className="px-4 py-8 text-center text-gray-400">No products yet. Add one or import an Excel file.</td></tr>
               ) : (
                 products.map((p, i) => (
                   <tr key={p.id} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
@@ -137,6 +137,15 @@ export default function Products() {
                       {p.foldable ? (
                         <span className="inline-flex items-center gap-1 text-xs font-medium text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded">
                           ↕ Yes
+                        </span>
+                      ) : (
+                        <span className="text-gray-300">—</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-center">
+                      {p.ships_in_own_packaging ? (
+                        <span className="inline-flex items-center gap-1 text-xs font-medium text-teal-700 bg-teal-50 border border-teal-200 px-2 py-0.5 rounded">
+                          ✦ Yes
                         </span>
                       ) : (
                         <span className="text-gray-300">—</span>
@@ -165,9 +174,10 @@ export default function Products() {
       </div>
 
       <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded text-xs text-blue-700">
-        <strong>Excel Import Format:</strong> Columns should be labeled{' '}
+        <strong>Excel Import Format:</strong> Columns:{' '}
         <code>Part Number</code>, <code>Item Name</code>, <code>UPC Height (Inches)</code>,{' '}
-        <code>UPC Width (Inches)</code>, <code>UPC Length (Inches)</code>, <code>UPC Weight (Pounds)</code>.{' '}
+        <code>UPC Width (Inches)</code>, <code>UPC Length (Inches)</code>, <code>UPC Weight (Pounds)</code>,{' '}
+        <code>Foldable</code> (0/1), <code>Ships In Own Packaging</code> (0/1).{' '}
         Existing products are updated by Part Number.
       </div>
 

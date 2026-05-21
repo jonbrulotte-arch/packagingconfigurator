@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { AnalyzeResponse, ConfiguratorResult, RequestItem } from '../types';
+import { AnalyzeResponse, ConfiguratorResult, RequestItem, StandaloneResult } from '../types';
 import { analyzeProducts, importConfiguratorFile, downloadConfiguratorTemplate, exportResults } from '../api';
 
 const FIT_COLORS: Record<ConfiguratorResult['fit_quality'], string> = {
@@ -318,6 +318,9 @@ export default function Configurator() {
                         {!!p.foldable && (
                           <span className="ml-2 text-xs font-medium text-indigo-700 bg-indigo-50 border border-indigo-200 px-1.5 py-0.5 rounded">↕ folded</span>
                         )}
+                        {!!p.ships_in_own_packaging && (
+                          <span className="ml-2 text-xs font-medium text-teal-700 bg-teal-50 border border-teal-200 px-1.5 py-0.5 rounded">✦ ships own</span>
+                        )}
                       </td>
                       <td className="py-2 pr-4 font-mono">{p.height} × {p.width} × {p.length}</td>
                       <td className="py-2 pr-4 font-mono">{p.weight}</td>
@@ -369,7 +372,96 @@ export default function Configurator() {
             </div>
           )}
 
+          {/* Ships in Own Packaging */}
+          {response.standalone_items?.length > 0 && (
+            <div>
+              <h2 className="text-base font-semibold text-gray-900 mb-3">
+                Ships in Own Packaging — {response.standalone_items.length} product{response.standalone_items.length !== 1 ? 's' : ''}
+              </h2>
+              <div className="space-y-4">
+                {response.standalone_items.map((sr: StandaloneResult) => (
+                  <div key={sr.product.id} className="bg-white rounded-lg shadow border-l-4 border-l-teal-500 p-5">
+                    <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
+                      <div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-xs font-bold bg-teal-600 text-white px-2 py-0.5 rounded">SHIPS OWN PKG</span>
+                          <h3 className="font-semibold text-gray-900">{sr.product.name}</h3>
+                          <span className="text-xs text-gray-500 font-mono">{sr.product.id}</span>
+                        </div>
+                        <p className="text-sm text-gray-500 mt-1 font-mono">
+                          {sr.product.height}" H × {sr.product.width}" W × {sr.product.length}" L · {sr.product.weight} lbs/unit
+                        </p>
+                      </div>
+                      {sr.quantity > 1 && (
+                        <div className="text-right text-sm">
+                          <p className="text-gray-500">Quantity</p>
+                          <p className="text-xl font-bold text-gray-900">{sr.quantity}</p>
+                        </div>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
+                      <div className="bg-gray-50 rounded p-3">
+                        <p className="text-xs text-gray-500 mb-1">Products Weight</p>
+                        <p className="font-semibold">{sr.products_weight.toFixed(3)} lbs</p>
+                      </div>
+                      <div className={`rounded p-3 ${sr.weight_flag ? 'bg-amber-50' : 'bg-gray-50'}`}>
+                        <p className="text-xs text-gray-500 mb-1">DIM Weight (per unit)</p>
+                        <p className={`font-semibold ${sr.weight_flag ? 'text-amber-700' : ''}`}>
+                          {sr.unit_dim_weight} lbs
+                        </p>
+                      </div>
+                      <div className="bg-gray-50 rounded p-3 border border-gray-300">
+                        <p className="text-xs text-gray-500 mb-1">Billed Weight (per unit)</p>
+                        <p className="font-bold text-gray-900">{sr.unit_billed_weight} lbs</p>
+                      </div>
+                      {sr.quantity > 1 && (
+                        <div className="bg-gray-50 rounded p-3 border border-gray-300">
+                          <p className="text-xs text-gray-500 mb-1">Total Billed ({sr.quantity} units)</p>
+                          <p className="font-bold text-gray-900">{sr.total_billed_weight} lbs</p>
+                        </div>
+                      )}
+                    </div>
+                    {sr.weight_flag && (
+                      <div className="mt-3 flex items-start gap-2 text-sm bg-amber-50 border border-amber-200 rounded px-3 py-2">
+                        <span className="text-amber-500 font-bold mt-0.5">⚠</span>
+                        <span className="text-amber-800">
+                          <strong>Dimensional weight applies:</strong> DIM weight ({sr.unit_dim_weight} lbs) exceeds actual weight ({sr.product.weight} lbs). Carrier will bill by dimensional weight.
+                        </span>
+                      </div>
+                    )}
+                    {sr.shipping && sr.shipping.length > 0 && (
+                      <div className="mt-3 pt-3 border-t border-gray-100">
+                        <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Shipping Methods (per unit)</p>
+                        <div className="flex flex-wrap gap-2">
+                          {sr.shipping.map(sm => (
+                            <div key={sm.method_id}
+                              className="inline-flex items-center gap-1.5 rounded px-2.5 py-1.5 border text-xs bg-indigo-50 border-indigo-200"
+                            >
+                              <span className="font-semibold text-gray-800">{sm.method_name}</span>
+                              <span className="text-gray-400">·</span>
+                              <span className={`font-medium ${sm.dim_applied ? 'text-amber-600' : 'text-indigo-700'}`}>
+                                {sm.billed_weight} lbs
+                              </span>
+                              {sm.dim_applied && (
+                                <span className="bg-amber-100 text-amber-700 font-semibold px-1 rounded text-[10px]">DIM</span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Results */}
+          {(() => {
+            const packagedItemCount = response.items.filter(i => !i.product.ships_in_own_packaging).reduce((sum, i) => sum + i.quantity, 0);
+            const hasPackagedItems = packagedItemCount > 0;
+            if (!hasPackagedItems) return null;
+            return (
           <div>
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-base font-semibold text-gray-900">
@@ -546,6 +638,8 @@ export default function Configurator() {
               ))}
             </div>
           </div>
+            );
+          })()}
         </div>
       )}
     </div>

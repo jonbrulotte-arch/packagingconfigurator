@@ -1,4 +1,4 @@
-import { Product, Packaging, AnalyzeResponse, BulkAnalyzeResponse, BulkShipmentResult, Settings, RequestItem, ShippingMethod } from './types';
+import { Product, Packaging, AnalyzeResponse, BulkAnalyzeResponse, BulkShipmentResult, Settings, RequestItem, ShippingMethod, BackupEntry } from './types';
 
 const BASE = '/api';
 
@@ -204,6 +204,15 @@ export const removePassword = async (currentPassword: string): Promise<{ success
   localStorage.removeItem(TOKEN_KEY);
   return { success: true };
 };
+
+// Backups
+export const listBackups = () => request<BackupEntry[]>('/backup');
+export const createBackup = () => request<BackupEntry>('/backup', { method: 'POST' });
+export const downloadBackup = (filename: string) => { window.location.href = `/api/backup/download/${encodeURIComponent(filename)}`; };
+export const restoreBackup = (filename: string) =>
+  request<{ success: boolean; message: string }>(`/backup/restore/${encodeURIComponent(filename)}`, { method: 'POST' });
+export const deleteBackup = (filename: string) =>
+  request<{ success: boolean }>(`/backup/${encodeURIComponent(filename)}`, { method: 'DELETE' });
 
 // Settings
 export const getSettings = () => request<Settings>('/configurator/settings');

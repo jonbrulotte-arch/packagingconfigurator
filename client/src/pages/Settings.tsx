@@ -1,7 +1,136 @@
 import { useState, useEffect } from 'react';
-import { Settings } from '../types';
-import { getSettings, updateSettings, setPassword, removePassword } from '../api';
+import { Settings, BackupEntry } from '../types';
+import { getSettings, updateSettings, setPassword, removePassword, listBackups, createBackup, downloadBackup, restoreBackup, deleteBackup } from '../api';
 import { useAuth } from '../contexts/AuthContext';
+
+function BackupSection() {
+  const [backups, setBackups] = useState<BackupEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [creating, setCreating] = useState(false);
+  const [msg, setMsg] = useState('');
+  const [err, setErr] = useState('');
+
+  const load = async () => {
+    try {
+      setBackups(await listBackups());
+    } catch {
+      setErr('Failed to load backups');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const handleCreate = async () => {
+    setCreating(true); setMsg(''); setErr('');
+    try {
+      await createBackup();
+      setMsg('Backup created.');
+      setTimeout(() => setMsg(''), 3000);
+      load();
+    } catch {
+      setErr('Backup failed');
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const handleRestore = async (filename: string) => {
+    if (!confirm(`Restore database from "${filename}"?\n\nThis will replace ALL current data (products, packaging, shipping methods, settings) with the backup and restart the server.`)) return;
+    setMsg(''); setErr('');
+    try {
+      const result = await restoreBackup(filename);
+      setMsg(result.message + ' Page will reload shortly.');
+      setTimeout(() => window.location.reload(), 3000);
+    } catch {
+      setErr('Restore failed');
+    }
+  };
+
+  const handleDelete = async (filename: string) => {
+    if (!confirm(`Delete backup "${filename}"?`)) return;
+    setMsg(''); setErr('');
+    try {
+      await deleteBackup(filename);
+      load();
+    } catch {
+      setErr('Delete failed');
+    }
+  };
+
+  const formatSize = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
+  const formatDate = (iso: string) => {
+    try {
+      return new Date(iso).toLocaleString();
+    } catch {
+      return iso;
+    }
+  };
+
+  return (
+    <div className="bg-white rounded-lg shadow p-6">
+      <div className="flex items-center justify-between mb-1">
+        <h2 className="text-base font-semibold text-gray-900">Database Backups</h2>
+        <button
+          onClick={handleCreate}
+          disabled={creating}
+          className="px-4 py-2 bg-brand-600 text-white text-sm font-medium rounded hover:bg-brand-700 disabled:opacity-50"
+        >
+          {creating ? 'Creating…' : 'Create Backup Now'}
+        </button>
+      </div>
+      <p className="text-sm text-gray-500 mb-4">
+        Backups are created automatically every 6 hours. A safety copy is saved before any restore.
+      </p>
+
+      {msg && <div className="mb-3 px-3 py-2 bg-green-50 border border-green-200 rounded text-sm text-green-800">{msg}</div>}
+      {err && <div className="mb-3 px-3 py-2 bg-red-50 border border-red-200 rounded text-sm text-red-800">{err}</div>}
+
+      {loading ? (
+        <p className="text-sm text-gray-400">Loading…</p>
+      ) : backups.length === 0 ? (
+        <p className="text-sm text-gray-400">No backups yet. Click "Create Backup Now" to make one.</p>
+      ) : (
+        <div className="divide-y divide-gray-100 border border-gray-200 rounded overflow-hidden">
+          {backups.map(b => (
+            <div key={b.filename} className="flex items-center gap-3 px-4 py-3 text-sm hover:bg-gray-50">
+              <div className="flex-1 min-w-0">
+                <p className="font-mono text-xs text-gray-700 truncate">{b.filename}</p>
+                <p className="text-xs text-gray-400 mt-0.5">{formatDate(b.created_at)} · {formatSize(b.size)}</p>
+              </div>
+              <div className="flex gap-2 flex-shrink-0">
+                <button
+                  onClick={() => downloadBackup(b.filename)}
+                  className="text-xs px-2.5 py-1 border border-gray-300 rounded hover:bg-gray-100 text-gray-600"
+                >
+                  Download
+                </button>
+                <button
+                  onClick={() => handleRestore(b.filename)}
+                  className="text-xs px-2.5 py-1 border border-amber-300 rounded hover:bg-amber-50 text-amber-700 font-medium"
+                >
+                  Restore
+                </button>
+                <button
+                  onClick={() => handleDelete(b.filename)}
+                  className="text-xs px-2.5 py-1 border border-red-200 rounded hover:bg-red-50 text-red-500"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function PasswordSection() {
   const { isProtected, refresh } = useAuth();
@@ -266,6 +395,7 @@ export default function SettingsPage() {
       </form>
 
       <PasswordSection />
+      <BackupSection />
     </div>
   );
 }

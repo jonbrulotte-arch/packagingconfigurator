@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import multer from 'multer';
 import * as XLSX from 'xlsx';
 import db from '../db';
-import { Product, Packaging, ConfiguratorResult, ShippingMethod, ShippingMatch } from '../types';
+import { Product, Packaging, ConfiguratorResult, ShippingMethod, ShippingMatch, StandaloneResult } from '../types';
 
 const upload = multer({ storage: multer.memoryStorage() });
 const router = Router();
@@ -115,6 +115,28 @@ function computeShipping(
     }
   }
   return matches;
+}
+
+function computeStandaloneResult(
+  product: Product,
+  quantity: number,
+  dimDivisor: number,
+  shippingMethods: ShippingMethod[]
+): StandaloneResult {
+  const productVolume = product.height * product.width * product.length;
+  const unitDimWeight = Math.ceil(productVolume / dimDivisor);
+  const unitActualWeight = product.weight;
+  const unitBilledWeight = Math.max(Math.ceil(unitActualWeight), unitDimWeight);
+  return {
+    product,
+    quantity,
+    products_weight: Math.round(unitActualWeight * quantity * 1000) / 1000,
+    unit_dim_weight: unitDimWeight,
+    unit_billed_weight: unitBilledWeight,
+    total_billed_weight: unitBilledWeight * quantity,
+    weight_flag: unitDimWeight > Math.ceil(unitActualWeight),
+    shipping: computeShipping(productVolume, unitActualWeight, dimDivisor, shippingMethods),
+  };
 }
 
 function analyzeShipment(
@@ -237,23 +259,32 @@ router.post('/analyze', (req: Request, res: Response) => {
   const notFound = uniqueIds.filter(id => !productMap.has(id));
   if (notFound.length > 0) return res.status(404).json({ error: `Products not found: ${notFound.join(', ')}` });
 
-  const resolvedItems = mergeItems(items, productMap);
-  const totalActualWeight = Math.round(resolvedItems.reduce((sum, i) => sum + i.product.weight * i.quantity, 0) * 1000) / 1000;
+  const allItems = mergeItems(items, productMap);
+  const standaloneItems = allItems.filter(i => i.product.ships_in_own_packaging);
+  const packagedItems = allItems.filter(i => !i.product.ships_in_own_packaging);
+
+  const totalActualWeight = Math.round(allItems.reduce((sum, i) => sum + i.product.weight * i.quantity, 0) * 1000) / 1000;
   const allPackaging = db
     .prepare('SELECT * FROM packaging WHERE active = 1 ORDER BY height * width * length ASC')
     .all() as Packaging[];
   const shippingMethods = loadActiveShippingMethods();
-  const results = analyzeShipment(resolvedItems, allPackaging, dimDivisor, packEfficiency, shippingMethods);
+  const results = packagedItems.length > 0
+    ? analyzeShipment(packagedItems, allPackaging, dimDivisor, packEfficiency, shippingMethods)
+    : [];
+  const standaloneResults = standaloneItems.map(si =>
+    computeStandaloneResult(si.product, si.quantity, dimDivisor, shippingMethods)
+  );
 
   const ltlRequired = totalActualWeight >= ltlThreshold;
   const ltlShipping = ltlRequired ? computeLtlShipping(totalActualWeight, shippingMethods) : [];
 
   res.json({
-    items: resolvedItems,
+    items: allItems,
     total_actual_weight: totalActualWeight,
-    total_item_count: resolvedItems.reduce((s, i) => s + i.quantity, 0),
+    total_item_count: allItems.reduce((s, i) => s + i.quantity, 0),
     settings: { dim_divisor: dimDivisor, pack_efficiency: packEfficiency, ltl_threshold: ltlThreshold },
     results,
+    standalone_items: standaloneResults,
     ltl_required: ltlRequired,
     ltl_shipping: ltlShipping,
   });
@@ -388,33 +419,43 @@ router.post('/bulk', upload.single('file'), (req: Request, res: Response) => {
   for (const [orderId, items] of orderMap.entries()) {
     const missingIds = [...new Set(items.map(i => i.product_id))].filter(id => !productMap.has(id));
     if (missingIds.length > 0) {
-      shipments.push({ id: orderId, items: [], total_item_count: 0, total_actual_weight: 0, results: [], best: null, ltl_required: false, ltl_shipping: [], error: `Products not found: ${missingIds.join(', ')}` });
+      shipments.push({ id: orderId, items: [], total_item_count: 0, total_actual_weight: 0, results: [], standalone_items: [], best: null, ltl_required: false, ltl_shipping: [], error: `Products not found: ${missingIds.join(', ')}` });
       errors++;
       continue;
     }
 
-    const resolvedItems = mergeItems(items, productMap);
-    const totalActualWeight = resolvedItems.reduce((sum, i) => sum + i.product.weight * i.quantity, 0);
+    const allResolvedItems = mergeItems(items, productMap);
+    const standaloneItems = allResolvedItems.filter(i => i.product.ships_in_own_packaging);
+    const packagedItems = allResolvedItems.filter(i => !i.product.ships_in_own_packaging);
+
+    const totalActualWeight = allResolvedItems.reduce((sum, i) => sum + i.product.weight * i.quantity, 0);
     const ltlRequired = totalActualWeight >= ltlThreshold;
     const ltlShipping = ltlRequired ? computeLtlShipping(totalActualWeight, shippingMethods) : [];
-    const results = analyzeShipment(resolvedItems, allPackaging, dimDivisor, packEfficiency, shippingMethods);
+    const results = packagedItems.length > 0
+      ? analyzeShipment(packagedItems, allPackaging, dimDivisor, packEfficiency, shippingMethods)
+      : [];
+    const standaloneResults = standaloneItems.map(si =>
+      computeStandaloneResult(si.product, si.quantity, dimDivisor, shippingMethods)
+    );
     const best = results[0] ?? null;
+    const allItemsAreStandalone = packagedItems.length === 0 && standaloneItems.length > 0;
 
     if (ltlRequired) {
       ltl++;
-    } else if (best) {
+    } else if (allItemsAreStandalone || best) {
       matched++;
-      if (best.weight_flag || best.max_weight_flag) flagged++;
+      if (best && (best.weight_flag || best.max_weight_flag)) flagged++;
     } else {
       errors++;
     }
 
     shipments.push({
       id: orderId,
-      items: resolvedItems,
-      total_item_count: resolvedItems.reduce((sum, i) => sum + i.quantity, 0),
+      items: allResolvedItems,
+      total_item_count: allResolvedItems.reduce((sum, i) => sum + i.quantity, 0),
       total_actual_weight: Math.round(totalActualWeight * 1000) / 1000,
       results,
+      standalone_items: standaloneResults,
       best,
       ltl_required: ltlRequired,
       ltl_shipping: ltlShipping,

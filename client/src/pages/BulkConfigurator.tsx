@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { BulkAnalyzeResponse, BulkShipmentResult, ConfiguratorResult } from '../types';
+import { BulkAnalyzeResponse, BulkShipmentResult, ConfiguratorResult, StandaloneResult } from '../types';
 import { bulkAnalyze, downloadBulkTemplate, exportBulkResults } from '../api';
 
 const FIT_COLORS: Record<ConfiguratorResult['fit_quality'], string> = {
@@ -18,6 +18,9 @@ const TYPE_LABELS: Record<string, string> = {
 function rowStatus(s: BulkShipmentResult): 'error' | 'ltl' | 'flagged' | 'ok' | 'no-match' {
   if (s.error) return 'error';
   if (s.ltl_required) return 'ltl';
+  // All items ship in own packaging — no box needed
+  const packaged = s.items.filter(i => !i.product.ships_in_own_packaging);
+  if (!s.best && packaged.length === 0 && (s.standalone_items?.length ?? 0) > 0) return 'ok';
   if (!s.best) return 'no-match';
   if (s.best.weight_flag || s.best.max_weight_flag || s.best.fit_quality === 'loose' || s.best.fit_quality === 'large') return 'flagged';
   return 'ok';
@@ -198,7 +201,12 @@ export default function BulkConfigurator() {
                     </span>
                   )}
 
-                  {!shipment.error && !shipment.best && (
+                  {!shipment.error && !shipment.best && (shipment.standalone_items?.length ?? 0) > 0 && (
+                    <span className="text-sm text-teal-600 font-medium flex-shrink-0">
+                      {shipment.standalone_items.length} ship{shipment.standalone_items.length === 1 ? 's' : ''} own pkg
+                    </span>
+                  )}
+                  {!shipment.error && !shipment.best && !(shipment.standalone_items?.length) && (
                     <span className="text-sm text-gray-400 flex-shrink-0">No packaging found</span>
                   )}
 
@@ -243,6 +251,51 @@ export default function BulkConfigurator() {
                         </table>
                       </div>
                     </div>
+
+                    {/* Ships in Own Packaging */}
+                    {(shipment.standalone_items?.length ?? 0) > 0 && (
+                      <div>
+                        <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Ships in Own Packaging</p>
+                        <div className="space-y-2">
+                          {shipment.standalone_items.map((sr: StandaloneResult) => (
+                            <div key={sr.product.id} className="rounded border border-teal-200 bg-teal-50 px-4 py-3">
+                              <div className="flex flex-wrap items-center gap-2 mb-1">
+                                <span className="text-xs font-bold bg-teal-600 text-white px-2 py-0.5 rounded">OWN PKG</span>
+                                <span className="font-medium text-sm text-gray-900">{sr.product.name}</span>
+                                <span className="text-xs text-gray-500 font-mono">{sr.product.id}</span>
+                                <span className="text-xs font-mono text-gray-400 ml-auto">
+                                  {sr.product.height}"×{sr.product.width}"×{sr.product.length}" · {sr.product.weight} lbs/unit
+                                </span>
+                              </div>
+                              <div className="flex flex-wrap gap-4 text-xs text-gray-600">
+                                <span>Qty: <strong>{sr.quantity}</strong></span>
+                                <span>Products: <strong>{sr.products_weight.toFixed(3)} lbs</strong></span>
+                                <span className={sr.weight_flag ? 'text-amber-700 font-semibold' : ''}>
+                                  DIM/unit: <strong>{sr.unit_dim_weight} lbs</strong>{sr.weight_flag && ' ⚠'}
+                                </span>
+                                <span>Billed/unit: <strong>{sr.unit_billed_weight} lbs</strong></span>
+                                {sr.quantity > 1 && <span>Total billed: <strong>{sr.total_billed_weight} lbs</strong></span>}
+                              </div>
+                              {sr.shipping && sr.shipping.length > 0 && (
+                                <div className="mt-2 flex flex-wrap gap-1.5">
+                                  {sr.shipping.map(sm => (
+                                    <span key={sm.method_id}
+                                      className="inline-flex items-center gap-1 text-xs rounded px-2 py-0.5 border bg-indigo-50 border-indigo-200"
+                                    >
+                                      <span className="font-semibold text-gray-700">{sm.method_name}</span>
+                                      <span className={`font-medium ${sm.dim_applied ? 'text-amber-600' : 'text-indigo-700'}`}>
+                                        · {sm.billed_weight} lbs
+                                      </span>
+                                      {sm.dim_applied && <span className="bg-amber-100 text-amber-700 font-semibold px-0.5 rounded text-[9px]">DIM</span>}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
 
                     {/* LTL Freight */}
                     {shipment.ltl_required && (

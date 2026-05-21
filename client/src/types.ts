@@ -6,8 +6,15 @@ export interface Product {
   length: number;
   weight: number;
   foldable: number;
+  ships_in_own_packaging: number;
   created_at?: string;
   updated_at?: string;
+}
+
+export interface BackupEntry {
+  filename: string;
+  size: number;
+  created_at: string;
 }
 
 export interface Packaging {
@@ -43,6 +50,17 @@ export interface ShippingMatch {
   dim_applied: boolean;
 }
 
+export interface StandaloneResult {
+  product: Product;
+  quantity: number;
+  products_weight: number;
+  unit_dim_weight: number;
+  unit_billed_weight: number;
+  total_billed_weight: number;
+  weight_flag: boolean;
+  shipping: ShippingMatch[];
+}
+
 export interface ConfiguratorResult {
   packaging: Packaging;
   products_weight: number;
@@ -74,6 +92,7 @@ export interface AnalyzeResponse {
   total_item_count: number;
   settings: { dim_divisor: number; pack_efficiency: number; ltl_threshold: number };
   results: ConfiguratorResult[];
+  standalone_items: StandaloneResult[];
   ltl_required: boolean;
   ltl_shipping: ShippingMatch[];
 }
@@ -84,6 +103,7 @@ export interface BulkShipmentResult {
   total_item_count: number;
   total_actual_weight: number;
   results: ConfiguratorResult[];
+  standalone_items: StandaloneResult[];
   best: ConfiguratorResult | null;
   ltl_required: boolean;
   ltl_shipping: ShippingMatch[];

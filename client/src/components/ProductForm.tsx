@@ -19,6 +19,7 @@ export default function ProductForm({ initial, onSubmit, onCancel, isEdit }: Pro
     length: String(initial?.length ?? ''),
     weight: String(initial?.weight ?? ''),
     foldable: !!(initial?.foldable),
+    ships_in_own_packaging: !!(initial?.ships_in_own_packaging),
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -47,6 +48,7 @@ export default function ProductForm({ initial, onSubmit, onCancel, isEdit }: Pro
         length: nums[2],
         weight: nums[3],
         foldable: form.foldable ? 1 : 0,
+        ships_in_own_packaging: form.ships_in_own_packaging ? 1 : 0,
       });
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to save');
@@ -123,6 +125,22 @@ export default function ProductForm({ initial, onSubmit, onCancel, isEdit }: Pro
           <p className="text-xs text-gray-500 mt-0.5">
             Item can be folded in half along its longest dimension. The longest dimension is halved
             and thickness doubles when shipped — always applied to optimize package size.
+          </p>
+        </div>
+      </label>
+
+      <label className="flex items-start gap-3 cursor-pointer select-none">
+        <input
+          type="checkbox"
+          checked={form.ships_in_own_packaging}
+          onChange={setCheck('ships_in_own_packaging')}
+          className="mt-0.5 h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+        />
+        <div>
+          <span className="text-sm font-medium text-gray-700">Ships in Own Packaging</span>
+          <p className="text-xs text-gray-500 mt-0.5">
+            Product ships in its own retail or manufacturer packaging (e.g., appliances, large equipment).
+            DIM weight is calculated using the product's own dimensions — no outer box is selected.
           </p>
         </div>
       </label>
