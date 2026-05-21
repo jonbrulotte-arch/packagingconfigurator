@@ -126,6 +126,65 @@ export const exportBulkResults = async (shipments: BulkShipmentResult[]) => {
   URL.revokeObjectURL(url);
 };
 
+// Auth
+const TOKEN_KEY = 'admin_session_token';
+
+export function getSessionToken(): string | null {
+  return localStorage.getItem(TOKEN_KEY);
+}
+
+function authHeaders(): Record<string, string> {
+  const t = getSessionToken();
+  return t ? { 'x-session-token': t } : {};
+}
+
+export const getAuthStatus = () => request<{ protected: boolean }>('/auth/status');
+
+export const verifySession = () =>
+  fetch('/api/auth/verify', { headers: authHeaders() })
+    .then(r => r.json() as Promise<{ authenticated: boolean }>);
+
+export const login = async (password: string): Promise<{ success: boolean; error?: string }> => {
+  const res = await fetch('/api/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ password }),
+  });
+  const body = await res.json();
+  if (!res.ok) return { success: false, error: body.error };
+  if (body.token) localStorage.setItem(TOKEN_KEY, body.token);
+  return { success: true };
+};
+
+export const logout = async () => {
+  await fetch('/api/auth/logout', { method: 'POST', headers: authHeaders() });
+  localStorage.removeItem(TOKEN_KEY);
+};
+
+export const setPassword = async (newPassword: string, currentPassword?: string): Promise<{ success: boolean; error?: string }> => {
+  const res = await fetch('/api/auth/set-password', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify({ newPassword, currentPassword }),
+  });
+  const body = await res.json();
+  if (!res.ok) return { success: false, error: body.error };
+  localStorage.removeItem(TOKEN_KEY);
+  return { success: true };
+};
+
+export const removePassword = async (currentPassword: string): Promise<{ success: boolean; error?: string }> => {
+  const res = await fetch('/api/auth/remove-password', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify({ currentPassword }),
+  });
+  const body = await res.json();
+  if (!res.ok) return { success: false, error: body.error };
+  localStorage.removeItem(TOKEN_KEY);
+  return { success: true };
+};
+
 // Settings
 export const getSettings = () => request<Settings>('/configurator/settings');
 export const updateSettings = (data: Partial<Settings>) =>
