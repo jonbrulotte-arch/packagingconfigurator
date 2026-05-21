@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { AnalyzeResponse, ConfiguratorResult, RequestItem } from '../types';
 import { analyzeProducts, importConfiguratorFile, downloadConfiguratorTemplate } from '../api';
 
@@ -29,17 +29,47 @@ interface Row {
   quantity: string;
 }
 
+const STORAGE_KEY = 'configurator_session';
+
 let nextId = 1;
 const makeRow = (): Row => ({ id: String(nextId++), product_id: '', quantity: '1' });
 
+function loadSession(): { rows: Row[]; response: AnalyzeResponse | null } {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return { rows: [makeRow()], response: null };
+    const parsed = JSON.parse(raw);
+    const rows: Row[] = Array.isArray(parsed.rows) && parsed.rows.length > 0
+      ? parsed.rows.map((r: { product_id: string; quantity: string }) => ({
+          id: String(nextId++),
+          product_id: r.product_id ?? '',
+          quantity: r.quantity ?? '1',
+        }))
+      : [makeRow()];
+    return { rows, response: parsed.response ?? null };
+  } catch {
+    return { rows: [makeRow()], response: null };
+  }
+}
+
 export default function Configurator() {
-  const [rows, setRows] = useState<Row[]>([makeRow()]);
+  const initial = loadSession();
+  const [rows, setRows] = useState<Row[]>(initial.rows);
   const [loading, setLoading] = useState(false);
   const [importing, setImporting] = useState(false);
   const [error, setError] = useState('');
   const [importErrors, setImportErrors] = useState<string[]>([]);
-  const [response, setResponse] = useState<AnalyzeResponse | null>(null);
+  const [response, setResponse] = useState<AnalyzeResponse | null>(initial.response);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  // Persist rows and last result to localStorage on every change
+  useEffect(() => {
+    const payload = {
+      rows: rows.map(({ product_id, quantity }) => ({ product_id, quantity })),
+      response,
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+  }, [rows, response]);
 
   const updateRow = (id: string, field: keyof Omit<Row, 'id'>, value: string) =>
     setRows(rs => rs.map(r => (r.id === id ? { ...r, [field]: value } : r)));
@@ -93,6 +123,7 @@ export default function Configurator() {
     setResponse(null);
     setError('');
     setImportErrors([]);
+    localStorage.removeItem(STORAGE_KEY);
   };
 
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
