@@ -1,4 +1,4 @@
-import { Product, Packaging, AnalyzeResponse, BulkAnalyzeResponse, BulkShipmentResult, Settings, RequestItem, ShippingMethod, ShippingRate } from './types';
+import { Product, Packaging, AnalyzeResponse, BulkAnalyzeResponse, BulkShipmentResult, Settings, RequestItem, ShippingMethod } from './types';
 
 const BASE = '/api';
 
@@ -129,14 +129,14 @@ export const exportBulkResults = async (shipments: BulkShipmentResult[]) => {
 // Shipping Methods
 export const getShippingMethods = () => request<ShippingMethod[]>('/shipping');
 
-export const createShippingMethod = (data: Omit<ShippingMethod, 'id' | 'rates'>) =>
+export const createShippingMethod = (data: Omit<ShippingMethod, 'id'>) =>
   request<ShippingMethod>('/shipping', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
 
-export const updateShippingMethod = (id: number, data: Omit<ShippingMethod, 'id' | 'rates'>) =>
+export const updateShippingMethod = (id: number, data: Omit<ShippingMethod, 'id'>) =>
   request<ShippingMethod>(`/shipping/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
@@ -145,16 +145,6 @@ export const updateShippingMethod = (id: number, data: Omit<ShippingMethod, 'id'
 
 export const deleteShippingMethod = (id: number) =>
   request<{ success: boolean }>(`/shipping/${id}`, { method: 'DELETE' });
-
-export const addShippingRate = (methodId: number, data: Pick<ShippingRate, 'max_weight' | 'label'>) =>
-  request<ShippingRate>(`/shipping/${methodId}/rates`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
-  });
-
-export const deleteShippingRate = (rateId: number) =>
-  request<{ success: boolean }>(`/shipping/rates/${rateId}`, { method: 'DELETE' });
 
 // Auth
 const TOKEN_KEY = 'admin_session_token';

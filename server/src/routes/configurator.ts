@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import multer from 'multer';
 import * as XLSX from 'xlsx';
 import db from '../db';
-import { Product, Packaging, ConfiguratorResult, ShippingMethod, ShippingRate, ShippingMethodWithRates, ShippingMatch } from '../types';
+import { Product, Packaging, ConfiguratorResult, ShippingMethod, ShippingMatch } from '../types';
 
 const upload = multer({ storage: multer.memoryStorage() });
 const router = Router();
@@ -75,40 +75,38 @@ function fitQuality(pct: number): ConfiguratorResult['fit_quality'] {
   return 'large';
 }
 
-function loadActiveShippingMethods(): ShippingMethodWithRates[] {
-  const methods = db.prepare('SELECT * FROM shipping_methods WHERE active = 1 ORDER BY sort_order, id').all() as ShippingMethod[];
-  const rates = db.prepare('SELECT * FROM shipping_rates ORDER BY max_weight').all() as ShippingRate[];
-  const byMethod = new Map<number, ShippingRate[]>();
-  for (const r of rates) {
-    if (!byMethod.has(r.method_id)) byMethod.set(r.method_id, []);
-    byMethod.get(r.method_id)!.push(r);
-  }
-  return methods.map(m => ({ ...m, rates: byMethod.get(m.id) ?? [] }));
+function loadActiveShippingMethods(): ShippingMethod[] {
+  return db.prepare('SELECT * FROM shipping_methods WHERE active = 1 ORDER BY sort_order, min_weight, id').all() as ShippingMethod[];
 }
 
 function computeShipping(
   boxVolume: number,
   actualWeight: number,
   globalDimDivisor: number,
-  methods: ShippingMethodWithRates[]
+  methods: ShippingMethod[]
 ): ShippingMatch[] {
-  return methods.map(m => {
+  const matches: ShippingMatch[] = [];
+  for (const m of methods) {
     const effectiveDivisor = m.dim_divisor ?? globalDimDivisor;
     const carrierDimWeight = Math.ceil(boxVolume / effectiveDivisor);
-    // DIM applies unless a threshold is set AND the package is at or below it
+    // DIM only applies if no threshold is set OR the package volume exceeds the threshold
     const dimApplies = m.dim_threshold == null || boxVolume > m.dim_threshold;
     const carrierBilled = dimApplies
       ? Math.max(Math.ceil(actualWeight), carrierDimWeight)
       : Math.ceil(actualWeight);
-    const matchedRate = m.rates.find(r => carrierBilled <= r.max_weight);
-    return {
-      method_id: m.id,
-      method_name: m.name,
-      billed_weight: carrierBilled,
-      dim_applied: dimApplies && carrierDimWeight > Math.ceil(actualWeight),
-      tier_label: matchedRate?.label ?? null,
-    };
-  });
+    // Only include this method if the billed weight falls within its weight range
+    const withinMin = carrierBilled >= m.min_weight;
+    const withinMax = m.max_weight == null || carrierBilled <= m.max_weight;
+    if (withinMin && withinMax) {
+      matches.push({
+        method_id: m.id,
+        method_name: m.name,
+        billed_weight: carrierBilled,
+        dim_applied: dimApplies && carrierDimWeight > Math.ceil(actualWeight),
+      });
+    }
+  }
+  return matches;
 }
 
 function analyzeShipment(
@@ -116,7 +114,7 @@ function analyzeShipment(
   allPackaging: Packaging[],
   dimDivisor: number,
   packEfficiency: number,
-  shippingMethods: ShippingMethodWithRates[] = []
+  shippingMethods: ShippingMethod[] = []
 ): ConfiguratorResult[] {
   const hasFoldedItems = items.some(i => i.product.foldable);
   // Apply fold transformations before all fit/volume calculations
@@ -235,7 +233,6 @@ router.post('/analyze', (req: Request, res: Response) => {
     .prepare('SELECT * FROM packaging WHERE active = 1 ORDER BY height * width * length ASC')
     .all() as Packaging[];
   const shippingMethods = loadActiveShippingMethods();
-
   const results = analyzeShipment(resolvedItems, allPackaging, dimDivisor, packEfficiency, shippingMethods);
 
   res.json({

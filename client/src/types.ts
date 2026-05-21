@@ -27,19 +27,12 @@ export interface Packaging {
 export interface ShippingMethod {
   id: number;
   name: string;
+  min_weight: number;
+  max_weight: number | null;
   dim_divisor: number | null;
   dim_threshold: number | null;
   active: number;
   notes: string | null;
-  sort_order: number;
-  rates: ShippingRate[];
-}
-
-export interface ShippingRate {
-  id: number;
-  method_id: number;
-  max_weight: number;
-  label: string;
   sort_order: number;
 }
 
@@ -48,7 +41,6 @@ export interface ShippingMatch {
   method_name: string;
   billed_weight: number;
   dim_applied: boolean;
-  tier_label: string | null;
 }
 
 export interface ConfiguratorResult {

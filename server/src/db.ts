@@ -66,11 +66,13 @@ try {
 // Ensure name is unique so the bulk import upsert can use ON CONFLICT(name)
 db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_packaging_name ON packaging(name)');
 
-// Shipping methods and per-carrier weight tiers
+// Shipping methods (each is a discrete service with a weight range)
 db.exec(`
   CREATE TABLE IF NOT EXISTS shipping_methods (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL UNIQUE,
+    min_weight REAL NOT NULL DEFAULT 0,
+    max_weight REAL,
     dim_divisor REAL,
     dim_threshold REAL,
     active INTEGER NOT NULL DEFAULT 1,
@@ -79,15 +81,11 @@ db.exec(`
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
-
-  CREATE TABLE IF NOT EXISTS shipping_rates (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    method_id INTEGER NOT NULL REFERENCES shipping_methods(id) ON DELETE CASCADE,
-    max_weight REAL NOT NULL,
-    label TEXT NOT NULL,
-    sort_order INTEGER NOT NULL DEFAULT 0
-  );
 `);
+
+// Migrate: add min_weight / max_weight if upgrading from the rates-based schema
+try { db.exec('ALTER TABLE shipping_methods ADD COLUMN min_weight REAL NOT NULL DEFAULT 0'); } catch {}
+try { db.exec('ALTER TABLE shipping_methods ADD COLUMN max_weight REAL'); } catch {}
 
 // Seed default settings
 const insertSetting = db.prepare(

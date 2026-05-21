@@ -281,16 +281,10 @@ export default function BulkConfigurator() {
                                 <div className="mt-2 flex flex-wrap gap-1.5">
                                   {r.shipping.map(sm => (
                                     <span key={sm.method_id}
-                                      className={`inline-flex items-center gap-1 text-xs rounded px-2 py-0.5 border ${
-                                        sm.tier_label ? 'bg-indigo-50 border-indigo-200' : 'bg-gray-50 border-gray-200'
-                                      }`}
+                                      className="inline-flex items-center gap-1 text-xs rounded px-2 py-0.5 border bg-indigo-50 border-indigo-200"
                                     >
                                       <span className="font-semibold text-gray-700">{sm.method_name}</span>
-                                      {sm.tier_label
-                                        ? <span className="text-indigo-700">· {sm.tier_label}</span>
-                                        : <span className="text-gray-400 italic">no tier</span>
-                                      }
-                                      <span className={`font-medium ${sm.dim_applied ? 'text-amber-600' : 'text-gray-500'}`}>
+                                      <span className={`font-medium ${sm.dim_applied ? 'text-amber-600' : 'text-indigo-700'}`}>
                                         · {sm.billed_weight} lbs
                                       </span>
                                       {sm.dim_applied && <span className="bg-amber-100 text-amber-700 font-semibold px-0.5 rounded text-[9px]">DIM</span>}
