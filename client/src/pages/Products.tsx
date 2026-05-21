@@ -8,6 +8,7 @@ export default function Products() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [filter, setFilter] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Product | null>(null);
   const [importMsg, setImportMsg] = useState('');
@@ -68,7 +69,11 @@ export default function Products() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Products</h1>
-          <p className="text-sm text-gray-500 mt-1">{products.length} product{products.length !== 1 ? 's' : ''}</p>
+          <p className="text-sm text-gray-500 mt-1">
+            {filter
+              ? `${products.filter(p => p.id.toLowerCase().includes(filter.toLowerCase()) || p.name.toLowerCase().includes(filter.toLowerCase())).length} of ${products.length} product${products.length !== 1 ? 's' : ''}`
+              : `${products.length} product${products.length !== 1 ? 's' : ''}`}
+          </p>
         </div>
         <div className="flex gap-3">
           <button
@@ -93,6 +98,32 @@ export default function Products() {
           >
             + Add Product
           </button>
+        </div>
+      </div>
+
+      <div className="mb-4 flex items-center gap-2 max-w-sm">
+        <div className="relative flex-1">
+          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
+          </svg>
+          <input
+            type="text"
+            value={filter}
+            onChange={e => setFilter(e.target.value)}
+            placeholder="Filter by ID or name…"
+            className="w-full pl-9 pr-8 py-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-brand-500"
+          />
+          {filter && (
+            <button
+              onClick={() => setFilter('')}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              title="Clear filter"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
         </div>
       </div>
 
@@ -121,8 +152,12 @@ export default function Products() {
                 <tr><td colSpan={9} className="px-4 py-8 text-center text-gray-400">Loading…</td></tr>
               ) : products.length === 0 ? (
                 <tr><td colSpan={10} className="px-4 py-8 text-center text-gray-400">No products yet. Add one or import an Excel file.</td></tr>
+              ) : filter && !products.some(p => p.id.toLowerCase().includes(filter.toLowerCase()) || p.name.toLowerCase().includes(filter.toLowerCase())) ? (
+                <tr><td colSpan={10} className="px-4 py-8 text-center text-gray-400">No products match "{filter}".</td></tr>
               ) : (
-                products.map((p, i) => (
+                products
+                  .filter(p => !filter || p.id.toLowerCase().includes(filter.toLowerCase()) || p.name.toLowerCase().includes(filter.toLowerCase()))
+                  .map((p, i) => (
                   <tr key={p.id} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
                     <td className="px-4 py-3 text-sm font-mono font-medium text-brand-700">{p.id}</td>
                     <td className="px-4 py-3 text-sm text-gray-900">{p.name}</td>
