@@ -79,16 +79,22 @@ function loadActiveShippingMethods(): ShippingMethod[] {
   return db.prepare('SELECT * FROM shipping_methods WHERE active = 1 ORDER BY sort_order, min_weight, id').all() as ShippingMethod[];
 }
 
+// Carriers bill in whole pounds for packages ≥ 1 lb; below 1 lb keep the decimal.
+function roundWeight(w: number): number {
+  if (w >= 1) return Math.ceil(w);
+  return Math.round(w * 1000) / 1000;
+}
+
 // LTL freight: no DIM billing, match methods by actual weight only
 function computeLtlShipping(actualWeight: number, methods: ShippingMethod[]): ShippingMatch[] {
-  const billed = Math.ceil(actualWeight);
+  const billed = roundWeight(actualWeight);
   return methods
     .filter(m => billed >= m.min_weight && (m.max_weight == null || billed <= m.max_weight))
     .map(m => ({ method_id: m.id, method_name: m.name, billed_weight: billed, dim_applied: false }));
 }
 
 function computeShipping(
-  boxVolume: number,
+  dimVolume: number,
   actualWeight: number,
   globalDimDivisor: number,
   methods: ShippingMethod[]
@@ -96,12 +102,12 @@ function computeShipping(
   const matches: ShippingMatch[] = [];
   for (const m of methods) {
     const effectiveDivisor = m.dim_divisor ?? globalDimDivisor;
-    const carrierDimWeight = Math.ceil(boxVolume / effectiveDivisor);
+    const carrierDimWeight = roundWeight(dimVolume / effectiveDivisor);
     // DIM only applies if no threshold is set OR the package volume exceeds the threshold
-    const dimApplies = m.dim_threshold == null || boxVolume > m.dim_threshold;
+    const dimApplies = m.dim_threshold == null || dimVolume > m.dim_threshold;
     const carrierBilled = dimApplies
-      ? Math.max(Math.ceil(actualWeight), carrierDimWeight)
-      : Math.ceil(actualWeight);
+      ? roundWeight(Math.max(actualWeight, carrierDimWeight))
+      : roundWeight(actualWeight);
     // Only include this method if the billed weight falls within its weight range
     const withinMin = carrierBilled >= m.min_weight;
     const withinMax = m.max_weight == null || carrierBilled <= m.max_weight;
@@ -110,7 +116,7 @@ function computeShipping(
         method_id: m.id,
         method_name: m.name,
         billed_weight: carrierBilled,
-        dim_applied: dimApplies && carrierDimWeight > Math.ceil(actualWeight),
+        dim_applied: dimApplies && carrierDimWeight > actualWeight,
       });
     }
   }
@@ -124,9 +130,9 @@ function computeStandaloneResult(
   shippingMethods: ShippingMethod[]
 ): StandaloneResult {
   const productVolume = product.height * product.width * product.length;
-  const unitDimWeight = Math.ceil(productVolume / dimDivisor);
+  const unitDimWeight = roundWeight(productVolume / dimDivisor);
   const unitActualWeight = product.weight;
-  const unitBilledWeight = Math.max(Math.ceil(unitActualWeight), unitDimWeight);
+  const unitBilledWeight = roundWeight(Math.max(unitActualWeight, unitDimWeight));
   return {
     product,
     quantity,
@@ -134,7 +140,7 @@ function computeStandaloneResult(
     unit_dim_weight: unitDimWeight,
     unit_billed_weight: unitBilledWeight,
     total_billed_weight: unitBilledWeight * quantity,
-    weight_flag: unitDimWeight > Math.ceil(unitActualWeight),
+    weight_flag: unitDimWeight > unitActualWeight,
     shipping: computeShipping(productVolume, unitActualWeight, dimDivisor, shippingMethods),
   };
 }
@@ -162,10 +168,22 @@ function analyzeShipment(
     if (!allItemsFitInBox(effectiveItems, pkg, packEfficiency)) continue;
     const [ed1, ed2, ed3] = effectiveBoxDims(pkg);
     const boxVolume = ed1 * ed2 * ed3;
-    const dimWeight = Math.ceil(boxVolume / dimDivisor);
+
+    // For mailers, DIM is measured on the actual stacked product height, not max capacity.
+    // Carriers measure the package after sealing — thickness equals the product's smallest dimension.
+    let dimVolume = boxVolume;
+    if (MAILER_TYPES.has(pkg.type) && pkg.max_height != null) {
+      const actualThickness = effectiveItems.reduce((sum, i) => {
+        const [, , t] = sortedDims(i.product.height, i.product.width, i.product.length);
+        return sum + t * i.quantity;
+      }, 0);
+      dimVolume = ed1 * ed2 * actualThickness;
+    }
+
+    const dimWeight = roundWeight(dimVolume / dimDivisor);
     const pkgWeight = pkg.packaging_weight ?? 0;
     const actualWeight = totalActualWeight + pkgWeight;
-    const billedWeight = Math.max(Math.ceil(actualWeight), dimWeight);
+    const billedWeight = roundWeight(Math.max(actualWeight, dimWeight));
     const volumeUtilization = (totalProductVolume / boxVolume) * 100;
 
     results.push({
@@ -173,14 +191,14 @@ function analyzeShipment(
       products_weight: Math.round(totalActualWeight * 1000) / 1000,
       packaging_weight: pkgWeight,
       total_weight: billedWeight,
-      dim_weight: Math.round(dimWeight * 1000) / 1000,
+      dim_weight: dimWeight,
       weight_flag: dimWeight > actualWeight,
       max_weight_flag: pkg.max_weight != null && actualWeight > pkg.max_weight,
       volume_utilization: Math.round(volumeUtilization * 10) / 10,
       fit_quality: fitQuality(volumeUtilization),
       products_fit: true,
       has_folded_items: hasFoldedItems,
-      shipping: computeShipping(boxVolume, actualWeight, dimDivisor, shippingMethods),
+      shipping: computeShipping(dimVolume, actualWeight, dimDivisor, shippingMethods),
     });
   }
 

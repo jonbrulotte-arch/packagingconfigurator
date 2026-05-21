@@ -563,19 +563,6 @@ export default function Configurator() {
                       </p>
                     </div>
                   </div>
-                  <div className="mt-2 grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
-                    <div className="bg-gray-50 rounded p-3">
-                      <p className="text-xs text-gray-500 mb-1">Box Volume</p>
-                      <p className="font-semibold">
-                        {(r.packaging.height * r.packaging.width * r.packaging.length).toFixed(1)} in³
-                      </p>
-                    </div>
-                    <div className="bg-gray-50 rounded p-3">
-                      <p className="text-xs text-gray-500 mb-1">DIM Divisor</p>
-                      <p className="font-semibold">{response.settings.dim_divisor}</p>
-                    </div>
-                  </div>
-
                   {r.shipping && r.shipping.length > 0 && (
                     <div className="mt-3 pt-3 border-t border-gray-100">
                       <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Shipping Methods</p>
