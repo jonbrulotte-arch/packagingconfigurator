@@ -341,8 +341,9 @@ router.post('/bulk-export', (req: Request, res: Response) => {
 
   const headers = [
     'Order ID', 'Items', 'Total Units', 'Products Weight (lbs)',
-    'Packaging Weight (lbs)', 'Total Billed Weight (lbs)',
-    'Recommended Packaging', 'Fit Quality', 'Volume Utilization (%)',
+    'Shipping Weight (Pounds)', 'Total Billed Weight (lbs)',
+    'Recommended Packaging', 'Shipping Height (Inches)', 'Shipping Length (Inches)', 'Shipping Width (Inches)',
+    'Fit Quality', 'Volume Utilization (%)',
     'Dim Weight (lbs)', 'Dim Weight Flag', 'Overweight Flag', 'Error',
   ];
 
@@ -359,6 +360,9 @@ router.post('/bulk-export', (req: Request, res: Response) => {
       best ? best.packaging_weight : '',
       best ? best.total_weight : '',
       best ? best.packaging.name : '',
+      best ? best.packaging.height : '',
+      best ? best.packaging.length : '',
+      best ? best.packaging.width : '',
       best ? best.fit_quality : '',
       best ? best.volume_utilization : '',
       best ? best.dim_weight : '',
