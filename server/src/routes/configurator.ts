@@ -169,13 +169,15 @@ function analyzeShipment(
 
     // For packaging with max_height, DIM uses actual stacked product thickness, not max capacity.
     // Carriers measure the sealed package — thickness equals the product's smallest dimension.
+    // For bubble/poly mailers, the mailer material (pkg.height) is also part of the sealed thickness.
     let dimVolume = boxVolume;
     if (pkg.max_height != null) {
-      const actualThickness = effectiveItems.reduce((sum, i) => {
+      const productThickness = effectiveItems.reduce((sum, i) => {
         const [, , t] = sortedDims(i.product.height, i.product.width, i.product.length);
         return sum + t * i.quantity;
       }, 0);
-      dimVolume = ed1 * ed2 * actualThickness;
+      const mailerMaterial = (pkg.type === 'bubble_mailer' || pkg.type === 'poly_mailer') ? pkg.height : 0;
+      dimVolume = ed1 * ed2 * (productThickness + mailerMaterial);
     }
 
     const dimWeight = roundWeight(dimVolume / dimDivisor);
