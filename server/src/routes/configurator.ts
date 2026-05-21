@@ -1,6 +1,10 @@
 import { Router, Request, Response } from 'express';
+import multer from 'multer';
+import * as XLSX from 'xlsx';
 import db from '../db';
 import { Product, Packaging, ConfiguratorResult } from '../types';
+
+const upload = multer({ storage: multer.memoryStorage() });
 
 const router = Router();
 
@@ -47,6 +51,64 @@ function fitQuality(utilizationPct: number): ConfiguratorResult['fit_quality'] {
   if (utilizationPct >= 35) return 'snug';
   return 'large';
 }
+
+router.get('/template', (_req: Request, res: Response) => {
+  const wb = XLSX.utils.book_new();
+  const rows = [
+    ['Product ID', 'Quantity'],
+    ['SKU-001', 1],
+    ['SKU-002', 3],
+    ['SKU-003', 2],
+  ];
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+
+  // Column widths
+  ws['!cols'] = [{ wch: 20 }, { wch: 10 }];
+
+  XLSX.utils.book_append_sheet(wb, ws, 'Shipment');
+  const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+
+  res.setHeader('Content-Disposition', 'attachment; filename="configurator-template.xlsx"');
+  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  res.send(buf);
+});
+
+router.post('/import', upload.single('file'), (req: Request, res: Response) => {
+  if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+
+  const workbook = XLSX.read(req.file.buffer, { type: 'buffer' });
+  const sheet = workbook.Sheets[workbook.SheetNames[0]];
+  const rawRows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet);
+
+  if (rawRows.length === 0) return res.status(400).json({ error: 'Spreadsheet is empty' });
+
+  const normalize = (key: string) => key.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+  const items: RequestItem[] = [];
+  const errors: string[] = [];
+
+  for (let i = 0; i < rawRows.length; i++) {
+    const normalized: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(rawRows[i])) normalized[normalize(k)] = v;
+
+    const productId = String(normalized['productid'] ?? normalized['id'] ?? normalized['sku'] ?? '').trim();
+    const rawQty = normalized['quantity'] ?? normalized['qty'] ?? normalized['amount'] ?? 1;
+    const quantity = Math.round(Number(rawQty));
+
+    if (!productId) {
+      errors.push(`Row ${i + 2}: missing Product ID — skipped`);
+      continue;
+    }
+    if (isNaN(quantity) || quantity < 1) {
+      errors.push(`Row ${i + 2}: invalid quantity "${rawQty}" for "${productId}" — skipped`);
+      continue;
+    }
+
+    items.push({ product_id: productId, quantity });
+  }
+
+  res.json({ items, errors });
+});
 
 router.post('/analyze', (req: Request, res: Response) => {
   const { items } = req.body as { items: RequestItem[] };

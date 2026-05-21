@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { AnalyzeResponse, ConfiguratorResult, RequestItem } from '../types';
-import { analyzeProducts } from '../api';
+import { analyzeProducts, importConfiguratorFile, downloadConfiguratorTemplate } from '../api';
 
 const FIT_COLORS: Record<ConfiguratorResult['fit_quality'], string> = {
   exact: 'bg-green-100 text-green-800 border-green-200',
@@ -35,8 +35,11 @@ const makeRow = (): Row => ({ id: String(nextId++), product_id: '', quantity: '1
 export default function Configurator() {
   const [rows, setRows] = useState<Row[]>([makeRow()]);
   const [loading, setLoading] = useState(false);
+  const [importing, setImporting] = useState(false);
   const [error, setError] = useState('');
+  const [importErrors, setImportErrors] = useState<string[]>([]);
   const [response, setResponse] = useState<AnalyzeResponse | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const updateRow = (id: string, field: keyof Omit<Row, 'id'>, value: string) =>
     setRows(rs => rs.map(r => (r.id === id ? { ...r, [field]: value } : r)));
@@ -89,6 +92,34 @@ export default function Configurator() {
     setRows([makeRow()]);
     setResponse(null);
     setError('');
+    setImportErrors([]);
+  };
+
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImportErrors([]);
+    setError('');
+    setImporting(true);
+    try {
+      const result = await importConfiguratorFile(file);
+      if (result.items.length === 0) {
+        setError('No valid rows found in the spreadsheet.');
+        return;
+      }
+      setRows(result.items.map(item => ({
+        id: String(nextId++),
+        product_id: item.product_id,
+        quantity: String(item.quantity),
+      })));
+      setResponse(null);
+      if (result.errors.length > 0) setImportErrors(result.errors);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Import failed');
+    } finally {
+      setImporting(false);
+      if (fileRef.current) fileRef.current.value = '';
+    }
   };
 
   return (
@@ -143,15 +174,52 @@ export default function Configurator() {
           </div>
         </div>
 
-        <button
-          onClick={addRow}
-          className="text-sm text-brand-600 hover:text-brand-800 flex items-center gap-1 mt-3"
-        >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          Add product
-        </button>
+        <div className="flex items-center justify-between mt-3">
+          <button
+            onClick={addRow}
+            className="text-sm text-brand-600 hover:text-brand-800 flex items-center gap-1"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            Add product
+          </button>
+
+          <div className="flex items-center gap-3">
+            <button
+              onClick={downloadConfiguratorTemplate}
+              className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1"
+              title="Download Excel template"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
+              Download template
+            </button>
+            <label className={`cursor-pointer text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1 ${importing ? 'opacity-50 pointer-events-none' : ''}`}>
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l4-4m0 0l4 4m-4-4v12" />
+              </svg>
+              {importing ? 'Importing…' : 'Import from Excel'}
+              <input
+                ref={fileRef}
+                type="file"
+                accept=".xlsx,.xls,.csv"
+                onChange={handleImport}
+                className="hidden"
+              />
+            </label>
+          </div>
+        </div>
+
+        {importErrors.length > 0 && (
+          <div className="mt-3 bg-amber-50 border border-amber-200 rounded px-3 py-2">
+            <p className="text-xs font-medium text-amber-800 mb-1">Some rows were skipped:</p>
+            <ul className="text-xs text-amber-700 space-y-0.5 list-disc list-inside">
+              {importErrors.map((e, i) => <li key={i}>{e}</li>)}
+            </ul>
+          </div>
+        )}
 
         {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
 

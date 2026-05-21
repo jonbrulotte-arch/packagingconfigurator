@@ -58,6 +58,18 @@ export const analyzeProducts = (items: RequestItem[]) =>
     body: JSON.stringify({ items }),
   });
 
+export const importConfiguratorFile = async (
+  file: File
+): Promise<{ items: RequestItem[]; errors: string[] }> => {
+  const fd = new FormData();
+  fd.append('file', file);
+  return request('/configurator/import', { method: 'POST', body: fd });
+};
+
+export const downloadConfiguratorTemplate = () => {
+  window.location.href = '/api/configurator/template';
+};
+
 // Settings
 export const getSettings = () => request<Settings>('/configurator/settings');
 export const updateSettings = (data: Partial<Settings>) =>
