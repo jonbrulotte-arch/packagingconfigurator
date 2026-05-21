@@ -1,10 +1,11 @@
 import { NavLink, Outlet } from 'react-router-dom';
 
 const navItems = [
+  { to: '/configurator', label: 'Configurator' },
   { to: '/products', label: 'Products' },
   { to: '/packaging', label: 'Packaging' },
-  { to: '/configurator', label: 'Configurator' },
   { to: '/settings', label: 'Settings' },
+  { to: '/instructions', label: 'Instructions' },
 ];
 
 export default function Layout() {
