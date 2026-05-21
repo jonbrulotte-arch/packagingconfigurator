@@ -420,12 +420,12 @@ export default function Configurator() {
                     </div>
                     <div className="bg-gray-50 rounded p-3 border border-gray-300">
                       <p className="text-xs text-gray-500 mb-1">Total Billed Weight</p>
-                      <p className="font-bold text-gray-900">{r.total_weight.toFixed(3)} lbs</p>
+                      <p className="font-bold text-gray-900">{r.total_weight} lbs</p>
                     </div>
                     <div className={`rounded p-3 ${r.weight_flag ? 'bg-amber-50' : 'bg-gray-50'}`}>
                       <p className="text-xs text-gray-500 mb-1">Dim Weight</p>
                       <p className={`font-semibold ${r.weight_flag ? 'text-amber-700' : ''}`}>
-                        {r.dim_weight.toFixed(2)} lbs
+                        {r.dim_weight} lbs
                       </p>
                     </div>
                   </div>
@@ -457,8 +457,9 @@ export default function Configurator() {
                         <div className="flex items-start gap-2 text-sm bg-amber-50 border border-amber-200 rounded px-3 py-2">
                           <span className="text-amber-500 font-bold mt-0.5">⚠</span>
                           <span className="text-amber-800">
-                            <strong>Dimensional weight flag:</strong> Dimensional weight ({r.dim_weight.toFixed(2)} lbs) exceeds
-                            total billed weight ({r.total_weight.toFixed(3)} lbs). Carrier will bill by dimensional weight.
+                            <strong>Dimensional weight flag:</strong> Dimensional weight ({r.dim_weight} lbs) exceeds
+                            total actual weight ({(r.products_weight + r.packaging_weight).toFixed(2)} lbs).
+                            Carrier will bill by dimensional weight.
                           </span>
                         </div>
                       )}
@@ -466,7 +467,7 @@ export default function Configurator() {
                         <div className="flex items-start gap-2 text-sm bg-red-50 border border-red-200 rounded px-3 py-2">
                           <span className="text-red-500 font-bold mt-0.5">✕</span>
                           <span className="text-red-800">
-                            <strong>Overweight:</strong> Total weight including packaging ({r.total_weight.toFixed(3)} lbs) exceeds
+                            <strong>Overweight:</strong> Actual weight ({(r.products_weight + r.packaging_weight).toFixed(2)} lbs) exceeds
                             this packaging's max weight ({r.packaging.max_weight} lbs).
                           </span>
                         </div>

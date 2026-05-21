@@ -97,10 +97,10 @@ function analyzeShipment(
     if (!allItemsFitInBox(effectiveItems, pkg, packEfficiency)) continue;
     const [ed1, ed2, ed3] = effectiveBoxDims(pkg);
     const boxVolume = ed1 * ed2 * ed3;
-    const dimWeight = boxVolume / dimDivisor;
+    const dimWeight = Math.ceil(boxVolume / dimDivisor);
     const pkgWeight = pkg.packaging_weight ?? 0;
     const actualWeight = totalActualWeight + pkgWeight;
-    const billedWeight = Math.ceil(Math.max(actualWeight, dimWeight));
+    const billedWeight = Math.max(Math.ceil(actualWeight), dimWeight);
     const volumeUtilization = (totalProductVolume / boxVolume) * 100;
 
     results.push({
