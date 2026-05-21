@@ -180,25 +180,22 @@ router.post('/export', (req: Request, res: Response) => {
     return res.status(400).json({ error: 'Invalid payload' });
 
   const wb = XLSX.utils.book_new();
+  const totalWeight = Math.round(items.reduce((s, i) => s + i.product.weight * i.quantity, 0) * 1000) / 1000;
 
-  // Sheet 1 — Products
-  const productRows = [
+  const rows = [
+    // Products section
+    ['PRODUCTS'],
     ['Part Number', 'Item Name', 'H (in)', 'W (in)', 'L (in)', 'Unit Wt (lbs)', 'Qty', 'Line Wt (lbs)'],
     ...items.map(({ product: p, quantity: qty }) => [
       p.id, p.name, p.height, p.width, p.length, p.weight, qty,
       Math.round(p.weight * qty * 1000) / 1000,
     ]),
+    ['', '', '', '', '', '', 'Total:', totalWeight],
     [],
-    ['', '', '', '', '', '', 'Total:', Math.round(items.reduce((s, i) => s + i.product.weight * i.quantity, 0) * 1000) / 1000],
-  ];
-  const ws1 = XLSX.utils.aoa_to_sheet(productRows);
-  ws1['!cols'] = [{ wch: 16 }, { wch: 28 }, { wch: 8 }, { wch: 8 }, { wch: 8 }, { wch: 14 }, { wch: 6 }, { wch: 14 }];
-  XLSX.utils.book_append_sheet(wb, ws1, 'Products');
-
-  // Sheet 2 — Packaging Options
-  const pkgRows = [
+    // Packaging options section
+    ['PACKAGING OPTIONS'],
     ['Rank', 'Packaging', 'Type', 'H (in)', 'W (in)', 'L (in)', 'Volume (in³)',
-     'Utilization (%)', 'Fit Quality', 'Products Wt (lbs)', 'Pkg Wt (lbs)',
+     'Utilization (%)', 'Fit Quality', 'Products Wt (lbs)', 'Shipping Weight (Pounds)',
      'Total Billed Wt (lbs)', `DIM Wt (lbs, ÷${settings?.dim_divisor ?? 139})`,
      'DIM Flag', 'Overweight Flag'],
     ...results.map((r, i) => [
@@ -217,10 +214,11 @@ router.post('/export', (req: Request, res: Response) => {
       r.max_weight_flag ? 'YES' : 'No',
     ]),
   ];
-  const ws2 = XLSX.utils.aoa_to_sheet(pkgRows);
-  ws2['!cols'] = [{ wch: 6 }, { wch: 28 }, { wch: 14 }, { wch: 7 }, { wch: 7 }, { wch: 7 },
-    { wch: 12 }, { wch: 14 }, { wch: 11 }, { wch: 17 }, { wch: 12 }, { wch: 18 }, { wch: 20 }, { wch: 10 }, { wch: 14 }];
-  XLSX.utils.book_append_sheet(wb, ws2, 'Packaging Options');
+
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols'] = [{ wch: 16 }, { wch: 28 }, { wch: 14 }, { wch: 8 }, { wch: 8 }, { wch: 8 },
+    { wch: 12 }, { wch: 14 }, { wch: 11 }, { wch: 17 }, { wch: 22 }, { wch: 18 }, { wch: 22 }, { wch: 10 }, { wch: 14 }];
+  XLSX.utils.book_append_sheet(wb, ws, 'Results');
 
   const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
   res.setHeader('Content-Disposition', 'attachment; filename="configurator-results.xlsx"');
