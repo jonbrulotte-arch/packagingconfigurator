@@ -1,4 +1,4 @@
-import { Product, Packaging, AnalyzeResponse, Settings, RequestItem } from './types';
+import { Product, Packaging, AnalyzeResponse, BulkAnalyzeResponse, BulkShipmentResult, Settings, RequestItem } from './types';
 
 const BASE = '/api';
 
@@ -68,6 +68,31 @@ export const importConfiguratorFile = async (
 
 export const downloadConfiguratorTemplate = () => {
   window.location.href = '/api/configurator/template';
+};
+
+// Bulk configurator
+export const downloadBulkTemplate = () => { window.location.href = '/api/configurator/bulk-template'; };
+
+export const bulkAnalyze = async (file: File): Promise<BulkAnalyzeResponse> => {
+  const fd = new FormData();
+  fd.append('file', file);
+  return request('/configurator/bulk', { method: 'POST', body: fd });
+};
+
+export const exportBulkResults = async (shipments: BulkShipmentResult[]) => {
+  const res = await fetch('/api/configurator/bulk-export', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ shipments }),
+  });
+  if (!res.ok) throw new Error('Export failed');
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'bulk-results.xlsx';
+  a.click();
+  URL.revokeObjectURL(url);
 };
 
 // Settings

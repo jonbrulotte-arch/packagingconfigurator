@@ -53,7 +53,22 @@ export interface AnalyzeResponse {
   results: ConfiguratorResult[];
 }
 
-export interface Settings {
+export interface BulkShipmentResult {
+  id: string;
+  items: ResolvedItem[];
+  total_item_count: number;
+  total_actual_weight: number;
+  results: ConfiguratorResult[];
+  best: ConfiguratorResult | null;
+  error: string | null;
+}
+
+export interface BulkAnalyzeResponse {
+  shipments: BulkShipmentResult[];
+  parse_errors: string[];
+  settings: { dim_divisor: number; pack_efficiency: number };
+  summary: { total: number; matched: number; flagged: number; errors: number };
+}
   dim_divisor: string;
   pack_efficiency: string;
   weight_unit: string;

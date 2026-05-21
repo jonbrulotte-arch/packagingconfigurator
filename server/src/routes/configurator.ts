@@ -5,13 +5,19 @@ import db from '../db';
 import { Product, Packaging, ConfiguratorResult } from '../types';
 
 const upload = multer({ storage: multer.memoryStorage() });
-
 const router = Router();
 
 interface RequestItem {
   product_id: string;
   quantity: number;
 }
+
+interface ResolvedItem {
+  product: Product;
+  quantity: number;
+}
+
+// ── Shared analysis helpers ───────────────────────────────────────────────────
 
 function sortedDims(h: number, w: number, l: number): [number, number, number] {
   return [h, w, l].sort((a, b) => b - a) as [number, number, number];
@@ -23,51 +29,88 @@ function productFitsInBox(product: Product, box: Packaging): boolean {
   return bd1 >= pd1 && bd2 >= pd2 && bd3 >= pd3;
 }
 
-function allItemsFitInBox(
-  items: { product: Product; quantity: number }[],
-  box: Packaging,
-  packEfficiency: number
-): boolean {
-  // Every unique product must individually fit inside the box
+function allItemsFitInBox(items: ResolvedItem[], box: Packaging, packEfficiency: number): boolean {
   if (!items.every(i => productFitsInBox(i.product, box))) return false;
-
   const totalQty = items.reduce((sum, i) => sum + i.quantity, 0);
-
-  // Single unit: dimension check alone is sufficient
   if (totalQty === 1) return true;
-
-  // Multiple units/products: use volume heuristic
   const totalVolume = items.reduce(
-    (sum, i) => sum + i.product.height * i.product.width * i.product.length * i.quantity,
-    0
+    (sum, i) => sum + i.product.height * i.product.width * i.product.length * i.quantity, 0
   );
-  const boxVolume = box.height * box.width * box.length;
-  return totalVolume <= boxVolume * packEfficiency;
+  return totalVolume <= box.height * box.width * box.length * packEfficiency;
 }
 
-function fitQuality(utilizationPct: number): ConfiguratorResult['fit_quality'] {
-  if (utilizationPct >= 90) return 'exact';
-  if (utilizationPct >= 60) return 'good';
-  if (utilizationPct >= 35) return 'snug';
+function fitQuality(pct: number): ConfiguratorResult['fit_quality'] {
+  if (pct >= 90) return 'exact';
+  if (pct >= 60) return 'good';
+  if (pct >= 35) return 'snug';
   return 'large';
 }
 
-router.get('/template', (_req: Request, res: Response) => {
+function analyzeShipment(
+  items: ResolvedItem[],
+  allPackaging: Packaging[],
+  dimDivisor: number,
+  packEfficiency: number
+): ConfiguratorResult[] {
+  const totalActualWeight = items.reduce((sum, i) => sum + i.product.weight * i.quantity, 0);
+  const totalProductVolume = items.reduce(
+    (sum, i) => sum + i.product.height * i.product.width * i.product.length * i.quantity, 0
+  );
+  const results: ConfiguratorResult[] = [];
+
+  for (const pkg of allPackaging) {
+    if (!allItemsFitInBox(items, pkg, packEfficiency)) continue;
+    const boxVolume = pkg.height * pkg.width * pkg.length;
+    const dimWeight = boxVolume / dimDivisor;
+    const pkgWeight = pkg.packaging_weight ?? 0;
+    const totalWeight = totalActualWeight + pkgWeight;
+    const volumeUtilization = (totalProductVolume / boxVolume) * 100;
+
+    results.push({
+      packaging: pkg,
+      products_weight: Math.round(totalActualWeight * 1000) / 1000,
+      packaging_weight: pkgWeight,
+      total_weight: Math.round(totalWeight * 1000) / 1000,
+      dim_weight: Math.round(dimWeight * 1000) / 1000,
+      weight_flag: dimWeight > totalWeight,
+      max_weight_flag: pkg.max_weight != null && totalWeight > pkg.max_weight,
+      volume_utilization: Math.round(volumeUtilization * 10) / 10,
+      fit_quality: fitQuality(volumeUtilization),
+      products_fit: true,
+    });
+  }
+
+  return results.sort((a, b) => b.volume_utilization - a.volume_utilization);
+}
+
+function mergeItems(items: RequestItem[], productMap: Map<string, Product>): ResolvedItem[] {
+  const merged = new Map<string, number>();
+  for (const item of items) {
+    merged.set(item.product_id, (merged.get(item.product_id) ?? 0) + item.quantity);
+  }
+  return Array.from(merged.entries()).map(([id, qty]) => ({
+    product: productMap.get(id)!,
+    quantity: qty,
+  }));
+}
+
+function normalizeKey(key: string) {
+  return key.toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+// ── Single configurator ───────────────────────────────────────────────────────
+
+router.get('/template', (_req, res) => {
   const wb = XLSX.utils.book_new();
-  const rows = [
+  const ws = XLSX.utils.aoa_to_sheet([
     ['Product ID', 'Quantity'],
     ['SKU-001', 1],
     ['SKU-002', 3],
     ['SKU-003', 2],
-  ];
-  const ws = XLSX.utils.aoa_to_sheet(rows);
-
-  // Column widths
+  ]);
   ws['!cols'] = [{ wch: 20 }, { wch: 10 }];
-
   XLSX.utils.book_append_sheet(wb, ws, 'Shipment');
   const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
-
   res.setHeader('Content-Disposition', 'attachment; filename="configurator-template.xlsx"');
   res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
   res.send(buf);
@@ -75,134 +118,215 @@ router.get('/template', (_req: Request, res: Response) => {
 
 router.post('/import', upload.single('file'), (req: Request, res: Response) => {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
-
-  const workbook = XLSX.read(req.file.buffer, { type: 'buffer' });
-  const sheet = workbook.Sheets[workbook.SheetNames[0]];
-  const rawRows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet);
-
+  const sheet = XLSX.read(req.file.buffer, { type: 'buffer' }).Sheets;
+  const rawRows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet[Object.keys(sheet)[0]]);
   if (rawRows.length === 0) return res.status(400).json({ error: 'Spreadsheet is empty' });
-
-  const normalize = (key: string) => key.toLowerCase().replace(/[^a-z0-9]/g, '');
 
   const items: RequestItem[] = [];
   const errors: string[] = [];
-
   for (let i = 0; i < rawRows.length; i++) {
-    const normalized: Record<string, unknown> = {};
-    for (const [k, v] of Object.entries(rawRows[i])) normalized[normalize(k)] = v;
-
-    const productId = String(normalized['productid'] ?? normalized['id'] ?? normalized['sku'] ?? '').trim();
-    const rawQty = normalized['quantity'] ?? normalized['qty'] ?? normalized['amount'] ?? 1;
-    const quantity = Math.round(Number(rawQty));
-
-    if (!productId) {
-      errors.push(`Row ${i + 2}: missing Product ID — skipped`);
-      continue;
-    }
-    if (isNaN(quantity) || quantity < 1) {
-      errors.push(`Row ${i + 2}: invalid quantity "${rawQty}" for "${productId}" — skipped`);
-      continue;
-    }
-
+    const r: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(rawRows[i])) r[normalizeKey(k)] = v;
+    const productId = String(r['productid'] ?? r['partnumber'] ?? r['id'] ?? r['sku'] ?? '').trim();
+    const quantity = Math.round(Number(r['quantity'] ?? r['qty'] ?? 1));
+    if (!productId) { errors.push(`Row ${i + 2}: missing Product ID — skipped`); continue; }
+    if (isNaN(quantity) || quantity < 1) { errors.push(`Row ${i + 2}: invalid quantity — skipped`); continue; }
     items.push({ product_id: productId, quantity });
   }
-
   res.json({ items, errors });
 });
 
 router.post('/analyze', (req: Request, res: Response) => {
   const { items } = req.body as { items: RequestItem[] };
-
-  if (!Array.isArray(items) || items.length === 0) {
+  if (!Array.isArray(items) || items.length === 0)
     return res.status(400).json({ error: 'items must be a non-empty array' });
-  }
-
-  for (const item of items) {
-    if (!item.product_id || !item.quantity || item.quantity < 1) {
-      return res.status(400).json({ error: 'Each item needs a product_id and a quantity ≥ 1' });
-    }
-  }
 
   const settingsRows = db.prepare('SELECT key, value FROM settings').all() as { key: string; value: string }[];
-  const settings = Object.fromEntries(settingsRows.map(r => [r.key, r.value]));
-  const dimDivisor = Number(settings.dim_divisor ?? 139);
-  const packEfficiency = Number(settings.pack_efficiency ?? 0.70);
+  const s = Object.fromEntries(settingsRows.map(r => [r.key, r.value]));
+  const dimDivisor = Number(s.dim_divisor ?? 139);
+  const packEfficiency = Number(s.pack_efficiency ?? 0.70);
 
   const uniqueIds = [...new Set(items.map(i => i.product_id))];
-  const placeholders = uniqueIds.map(() => '?').join(',');
   const products = db
-    .prepare(`SELECT * FROM products WHERE id IN (${placeholders})`)
+    .prepare(`SELECT * FROM products WHERE id IN (${uniqueIds.map(() => '?').join(',')})`)
     .all(...uniqueIds) as Product[];
-
   const productMap = new Map(products.map(p => [p.id, p]));
   const notFound = uniqueIds.filter(id => !productMap.has(id));
-  if (notFound.length > 0) {
-    return res.status(404).json({ error: `Products not found: ${notFound.join(', ')}` });
-  }
+  if (notFound.length > 0) return res.status(404).json({ error: `Products not found: ${notFound.join(', ')}` });
 
-  // Merge duplicate product IDs by summing their quantities
-  const mergedMap = new Map<string, number>();
-  for (const item of items) {
-    mergedMap.set(item.product_id, (mergedMap.get(item.product_id) ?? 0) + item.quantity);
-  }
-  const resolvedItems = Array.from(mergedMap.entries()).map(([id, qty]) => ({
-    product: productMap.get(id)!,
-    quantity: qty,
-  }));
-
-  const totalActualWeight = resolvedItems.reduce(
-    (sum, i) => sum + i.product.weight * i.quantity,
-    0
-  );
-  const totalItemCount = resolvedItems.reduce((sum, i) => sum + i.quantity, 0);
-
+  const resolvedItems = mergeItems(items, productMap);
   const allPackaging = db
     .prepare('SELECT * FROM packaging WHERE active = 1 ORDER BY height * width * length ASC')
     .all() as Packaging[];
 
-  const results: ConfiguratorResult[] = [];
-
-  for (const pkg of allPackaging) {
-    if (!allItemsFitInBox(resolvedItems, pkg, packEfficiency)) continue;
-
-    const boxVolume = pkg.height * pkg.width * pkg.length;
-    const dimWeight = boxVolume / dimDivisor;
-    const pkgWeight = pkg.packaging_weight ?? 0;
-    const totalWeight = totalActualWeight + pkgWeight;
-    const totalProductVolume = resolvedItems.reduce(
-      (sum, i) => sum + i.product.height * i.product.width * i.product.length * i.quantity,
-      0
-    );
-    const volumeUtilization = (totalProductVolume / boxVolume) * 100;
-    const weightFlag = dimWeight > totalWeight;
-    const maxWeightFlag = pkg.max_weight != null && totalWeight > pkg.max_weight;
-
-    results.push({
-      packaging: pkg,
-      products_weight: totalActualWeight,
-      packaging_weight: pkgWeight,
-      total_weight: Math.round(totalWeight * 1000) / 1000,
-      dim_weight: dimWeight,
-      weight_flag: weightFlag,
-      max_weight_flag: maxWeightFlag,
-      volume_utilization: Math.round(volumeUtilization * 10) / 10,
-      fit_quality: fitQuality(volumeUtilization),
-      products_fit: true,
-    });
-  }
-
-  results.sort((a, b) => b.volume_utilization - a.volume_utilization);
+  const results = analyzeShipment(resolvedItems, allPackaging, dimDivisor, packEfficiency);
 
   res.json({
     items: resolvedItems,
-    total_actual_weight: Math.round(totalActualWeight * 1000) / 1000,
-    total_item_count: totalItemCount,
+    total_actual_weight: Math.round(resolvedItems.reduce((s, i) => s + i.product.weight * i.quantity, 0) * 1000) / 1000,
+    total_item_count: resolvedItems.reduce((s, i) => s + i.quantity, 0),
     settings: { dim_divisor: dimDivisor, pack_efficiency: packEfficiency },
     results,
   });
 });
 
-router.get('/settings', (_req: Request, res: Response) => {
+// ── Bulk configurator ─────────────────────────────────────────────────────────
+
+router.get('/bulk-template', (_req, res) => {
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet([
+    ['Order ID', 'Part Number', 'Quantity'],
+    ['ORD-001', 'SKU-001', 2],
+    ['ORD-001', 'SKU-002', 1],
+    ['ORD-002', 'SKU-003', 3],
+    ['ORD-003', 'SKU-001', 1],
+  ]);
+  ws['!cols'] = [{ wch: 16 }, { wch: 20 }, { wch: 10 }];
+  XLSX.utils.book_append_sheet(wb, ws, 'Shipments');
+  const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+  res.setHeader('Content-Disposition', 'attachment; filename="bulk-configurator-template.xlsx"');
+  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  res.send(buf);
+});
+
+router.post('/bulk', upload.single('file'), (req: Request, res: Response) => {
+  if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+
+  const wb = XLSX.read(req.file.buffer, { type: 'buffer' });
+  const rawRows = XLSX.utils.sheet_to_json<Record<string, unknown>>(wb.Sheets[wb.SheetNames[0]]);
+  if (rawRows.length === 0) return res.status(400).json({ error: 'Spreadsheet is empty' });
+
+  // Parse and group by Order ID
+  const orderMap = new Map<string, RequestItem[]>();
+  const parseErrors: string[] = [];
+
+  for (let i = 0; i < rawRows.length; i++) {
+    const r: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(rawRows[i])) r[normalizeKey(k)] = v;
+
+    const orderId = String(r['orderid'] ?? r['shipmentid'] ?? r['order'] ?? '').trim();
+    const productId = String(r['partnumber'] ?? r['productid'] ?? r['id'] ?? r['sku'] ?? '').trim();
+    const quantity = Math.round(Number(r['quantity'] ?? r['qty'] ?? 1));
+
+    if (!orderId) { parseErrors.push(`Row ${i + 2}: missing Order ID — skipped`); continue; }
+    if (!productId) { parseErrors.push(`Row ${i + 2}: missing Part Number — skipped`); continue; }
+    if (isNaN(quantity) || quantity < 1) { parseErrors.push(`Row ${i + 2}: invalid quantity — skipped`); continue; }
+
+    if (!orderMap.has(orderId)) orderMap.set(orderId, []);
+    orderMap.get(orderId)!.push({ product_id: productId, quantity });
+  }
+
+  if (orderMap.size === 0) return res.status(400).json({ error: 'No valid shipment rows found', parseErrors });
+
+  // Load all unique products in one query
+  const allProductIds = [...new Set([...orderMap.values()].flat().map(i => i.product_id))];
+  const products = db
+    .prepare(`SELECT * FROM products WHERE id IN (${allProductIds.map(() => '?').join(',')})`)
+    .all(...allProductIds) as Product[];
+  const productMap = new Map(products.map(p => [p.id, p]));
+
+  const settingsRows = db.prepare('SELECT key, value FROM settings').all() as { key: string; value: string }[];
+  const s = Object.fromEntries(settingsRows.map(r => [r.key, r.value]));
+  const dimDivisor = Number(s.dim_divisor ?? 139);
+  const packEfficiency = Number(s.pack_efficiency ?? 0.70);
+
+  const allPackaging = db
+    .prepare('SELECT * FROM packaging WHERE active = 1 ORDER BY height * width * length ASC')
+    .all() as Packaging[];
+
+  // Analyze each shipment
+  const shipments = [];
+  let matched = 0, flagged = 0, errors = 0;
+
+  for (const [orderId, items] of orderMap.entries()) {
+    const missingIds = [...new Set(items.map(i => i.product_id))].filter(id => !productMap.has(id));
+    if (missingIds.length > 0) {
+      shipments.push({ id: orderId, items: [], total_item_count: 0, total_actual_weight: 0, results: [], best: null, error: `Products not found: ${missingIds.join(', ')}` });
+      errors++;
+      continue;
+    }
+
+    const resolvedItems = mergeItems(items, productMap);
+    const totalActualWeight = resolvedItems.reduce((sum, i) => sum + i.product.weight * i.quantity, 0);
+    const results = analyzeShipment(resolvedItems, allPackaging, dimDivisor, packEfficiency);
+    const best = results[0] ?? null;
+
+    if (best) {
+      matched++;
+      if (best.weight_flag || best.max_weight_flag) flagged++;
+    } else {
+      errors++;
+    }
+
+    shipments.push({
+      id: orderId,
+      items: resolvedItems,
+      total_item_count: resolvedItems.reduce((sum, i) => sum + i.quantity, 0),
+      total_actual_weight: Math.round(totalActualWeight * 1000) / 1000,
+      results,
+      best,
+      error: null,
+    });
+  }
+
+  res.json({
+    shipments,
+    parse_errors: parseErrors,
+    settings: { dim_divisor: dimDivisor, pack_efficiency: packEfficiency },
+    summary: { total: orderMap.size, matched, flagged, errors },
+  });
+});
+
+router.post('/bulk-export', (req: Request, res: Response) => {
+  const { shipments } = req.body as { shipments: ReturnType<typeof buildShipmentRow>[] };
+  if (!Array.isArray(shipments)) return res.status(400).json({ error: 'Invalid payload' });
+
+  const headers = [
+    'Order ID', 'Items', 'Total Units', 'Products Weight (lbs)',
+    'Packaging Weight (lbs)', 'Total Billed Weight (lbs)',
+    'Recommended Packaging', 'Fit Quality', 'Volume Utilization (%)',
+    'Dim Weight (lbs)', 'Dim Weight Flag', 'Overweight Flag', 'Error',
+  ];
+
+  const dataRows = shipments.map((s: any) => {
+    const best = s.best;
+    const itemsSummary = (s.items ?? [])
+      .map((i: any) => `${i.product.id} ×${i.quantity}`)
+      .join(', ');
+    return [
+      s.id,
+      itemsSummary,
+      s.total_item_count ?? '',
+      best ? best.products_weight : '',
+      best ? best.packaging_weight : '',
+      best ? best.total_weight : '',
+      best ? best.packaging.name : '',
+      best ? best.fit_quality : '',
+      best ? best.volume_utilization : '',
+      best ? best.dim_weight : '',
+      best ? (best.weight_flag ? 'YES' : 'No') : '',
+      best ? (best.max_weight_flag ? 'YES' : 'No') : '',
+      s.error ?? '',
+    ];
+  });
+
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet([headers, ...dataRows]);
+  ws['!cols'] = headers.map((h, i) => ({ wch: i === 0 ? 14 : i === 1 ? 30 : h.length + 4 }));
+  XLSX.utils.book_append_sheet(wb, ws, 'Results');
+  const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+
+  res.setHeader('Content-Disposition', 'attachment; filename="bulk-results.xlsx"');
+  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  res.send(buf);
+});
+
+// Type helper (not actually called, just for TS)
+function buildShipmentRow(_: unknown) { return _; }
+
+// ── Settings ──────────────────────────────────────────────────────────────────
+
+router.get('/settings', (_req, res) => {
   const rows = db.prepare('SELECT key, value FROM settings').all() as { key: string; value: string }[];
   res.json(Object.fromEntries(rows.map(r => [r.key, r.value])));
 });
@@ -210,13 +334,12 @@ router.get('/settings', (_req: Request, res: Response) => {
 router.put('/settings', (req: Request, res: Response) => {
   const { dim_divisor, pack_efficiency, weight_unit, dim_unit } = req.body;
   const upsert = db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)');
-  const update = db.transaction(() => {
+  db.transaction(() => {
     if (dim_divisor != null) upsert.run('dim_divisor', String(Number(dim_divisor)));
     if (pack_efficiency != null) upsert.run('pack_efficiency', String(Number(pack_efficiency)));
     if (weight_unit) upsert.run('weight_unit', weight_unit);
     if (dim_unit) upsert.run('dim_unit', dim_unit);
-  });
-  update();
+  })();
   const rows = db.prepare('SELECT key, value FROM settings').all() as { key: string; value: string }[];
   res.json(Object.fromEntries(rows.map(r => [r.key, r.value])));
 });

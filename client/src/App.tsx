@@ -5,6 +5,7 @@ import Packaging from './pages/Packaging';
 import Configurator from './pages/Configurator';
 import Settings from './pages/Settings';
 import Instructions from './pages/Instructions';
+import BulkConfigurator from './pages/BulkConfigurator';
 
 export default function App() {
   return (
@@ -15,6 +16,7 @@ export default function App() {
           <Route path="/products" element={<Products />} />
           <Route path="/packaging" element={<Packaging />} />
           <Route path="/configurator" element={<Configurator />} />
+          <Route path="/bulk" element={<BulkConfigurator />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/instructions" element={<Instructions />} />
         </Route>
