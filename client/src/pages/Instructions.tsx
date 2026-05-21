@@ -51,27 +51,29 @@ export default function Instructions() {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-3 py-2 text-left font-medium text-gray-600">Field</th>
-                <th className="px-3 py-2 text-left font-medium text-gray-600">Accepted header examples</th>
+                <th className="px-3 py-2 text-left font-medium text-gray-600">Required column header</th>
+                <th className="px-3 py-2 text-left font-medium text-gray-600">Also accepted</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {[
-                ['Product ID', 'Product ID, ProductID, ID, SKU'],
-                ['Product Name', 'Product Name, ProductName, Name'],
-                ['Height', 'Height, Height (in), H'],
-                ['Width', 'Width, Width (in), W'],
-                ['Length', 'Length, Length (in), L'],
-                ['Weight', 'Weight, Weight (lbs), Wt'],
-              ].map(([field, examples]) => (
+                ['Product ID', 'Part Number', 'Product ID, ID'],
+                ['Product Name', 'Item Name', 'Product Name, Name'],
+                ['Height', 'UPC Height (Inches)', 'Height (in), Height'],
+                ['Width', 'UPC Width (Inches)', 'Width (in), Width'],
+                ['Length', 'UPC Length (Inches)', 'Length (in), Length'],
+                ['Weight', 'UPC Weight (Pounds)', 'Weight (lbs), Weight'],
+              ].map(([field, primary, fallback]) => (
                 <tr key={field} className="even:bg-gray-50">
                   <td className="px-3 py-2 font-medium text-gray-800">{field}</td>
-                  <td className="px-3 py-2 text-gray-600 font-mono text-xs">{examples}</td>
+                  <td className="px-3 py-2 font-mono text-xs text-brand-700 font-semibold">{primary}</td>
+                  <td className="px-3 py-2 text-gray-500 font-mono text-xs">{fallback}</td>
                 </tr>
               ))}
             </tbody>
           </table>
           <p className="mt-3 text-sm text-gray-700">
-            Importing is an <strong>upsert</strong> — if a Product ID already exists it will be
+            Importing is an <strong>upsert</strong> — if a Part Number already exists it will be
             updated, otherwise a new record is created. Re-uploading a revised spreadsheet is safe.
           </p>
         </SubSection>

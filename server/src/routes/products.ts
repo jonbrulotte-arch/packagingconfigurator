@@ -88,12 +88,12 @@ router.post('/import', upload.single('file'), (req: Request, res: Response) => {
 
     for (let i = 0; i < rows.length; i++) {
       const r = colMap(rows[i]);
-      const id = String(r['productid'] ?? r['id'] ?? '').trim();
-      const name = String(r['productname'] ?? r['name'] ?? '').trim();
-      const height = Number(r['heightin'] ?? r['height'] ?? 0);
-      const width = Number(r['widthin'] ?? r['width'] ?? 0);
-      const length = Number(r['lengthin'] ?? r['length'] ?? 0);
-      const weight = Number(r['weightlbs'] ?? r['weight'] ?? 0);
+      const id = String(r['partnumber'] ?? r['productid'] ?? r['id'] ?? '').trim();
+      const name = String(r['itemname'] ?? r['productname'] ?? r['name'] ?? '').trim();
+      const height = Number(r['upcheightinches'] ?? r['heightin'] ?? r['height'] ?? 0);
+      const width = Number(r['upcwidthinches'] ?? r['widthin'] ?? r['width'] ?? 0);
+      const length = Number(r['upclengthinches'] ?? r['lengthin'] ?? r['length'] ?? 0);
+      const weight = Number(r['upcweightpounds'] ?? r['weightlbs'] ?? r['weight'] ?? 0);
 
       if (!id || !name) {
         errors.push(`Row ${i + 2}: missing product ID or name`);

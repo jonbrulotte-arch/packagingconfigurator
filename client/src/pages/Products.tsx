@@ -148,8 +148,9 @@ export default function Products() {
 
       <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded text-xs text-blue-700">
         <strong>Excel Import Format:</strong> Columns should be labeled{' '}
-        <code>Product ID</code>, <code>Product Name</code>, <code>Height</code>, <code>Width</code>,{' '}
-        <code>Length</code>, <code>Weight</code> (inches / lbs). Existing products are updated by ID.
+        <code>Part Number</code>, <code>Item Name</code>, <code>UPC Height (Inches)</code>,{' '}
+        <code>UPC Width (Inches)</code>, <code>UPC Length (Inches)</code>, <code>UPC Weight (Pounds)</code>.{' '}
+        Existing products are updated by Part Number.
       </div>
 
       {modalOpen && (
