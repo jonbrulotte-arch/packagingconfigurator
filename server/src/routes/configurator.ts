@@ -23,6 +23,14 @@ function sortedDims(h: number, w: number, l: number): [number, number, number] {
   return [h, w, l].sort((a, b) => b - a) as [number, number, number];
 }
 
+// When foldable, halve the longest dimension and double the shortest (thickness stacks).
+// Volume is conserved: 2t × w × (L/2) = t × w × L
+function foldedProduct(p: Product): Product {
+  if (!p.foldable) return p;
+  const [longest, middle, shortest] = sortedDims(p.height, p.width, p.length);
+  return { ...p, height: shortest * 2, width: middle, length: longest / 2 };
+}
+
 function productFitsInBox(product: Product, box: Packaging): boolean {
   const [pd1, pd2, pd3] = sortedDims(product.height, product.width, product.length);
   const [bd1, bd2, bd3] = sortedDims(box.height, box.width, box.length);
@@ -52,14 +60,20 @@ function analyzeShipment(
   dimDivisor: number,
   packEfficiency: number
 ): ConfiguratorResult[] {
+  const hasFoldedItems = items.some(i => i.product.foldable);
+  // Apply fold transformations before all fit/volume calculations
+  const effectiveItems = items.map(i => ({ ...i, product: foldedProduct(i.product) }));
+
+  // Weight never changes when folding — use original items
   const totalActualWeight = items.reduce((sum, i) => sum + i.product.weight * i.quantity, 0);
-  const totalProductVolume = items.reduce(
+  // Volume uses effective (folded) dims
+  const totalProductVolume = effectiveItems.reduce(
     (sum, i) => sum + i.product.height * i.product.width * i.product.length * i.quantity, 0
   );
   const results: ConfiguratorResult[] = [];
 
   for (const pkg of allPackaging) {
-    if (!allItemsFitInBox(items, pkg, packEfficiency)) continue;
+    if (!allItemsFitInBox(effectiveItems, pkg, packEfficiency)) continue;
     const boxVolume = pkg.height * pkg.width * pkg.length;
     const dimWeight = boxVolume / dimDivisor;
     const pkgWeight = pkg.packaging_weight ?? 0;
@@ -77,6 +91,7 @@ function analyzeShipment(
       volume_utilization: Math.round(volumeUtilization * 10) / 10,
       fit_quality: fitQuality(volumeUtilization),
       products_fit: true,
+      has_folded_items: hasFoldedItems,
     });
   }
 

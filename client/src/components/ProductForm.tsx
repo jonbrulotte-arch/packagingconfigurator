@@ -18,12 +18,16 @@ export default function ProductForm({ initial, onSubmit, onCancel, isEdit }: Pro
     width: String(initial?.width ?? ''),
     length: String(initial?.length ?? ''),
     weight: String(initial?.weight ?? ''),
+    foldable: !!(initial?.foldable),
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   const set = (field: string) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm(f => ({ ...f, [field]: e.target.value }));
+
+  const setCheck = (field: string) => (e: React.ChangeEvent<HTMLInputElement>) =>
+    setForm(f => ({ ...f, [field]: e.target.checked }));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,6 +46,7 @@ export default function ProductForm({ initial, onSubmit, onCancel, isEdit }: Pro
         width: nums[1],
         length: nums[2],
         weight: nums[3],
+        foldable: form.foldable ? 1 : 0,
       });
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to save');
@@ -105,6 +110,22 @@ export default function ProductForm({ initial, onSubmit, onCancel, isEdit }: Pro
           />
         </div>
       </div>
+
+      <label className="flex items-start gap-3 cursor-pointer select-none">
+        <input
+          type="checkbox"
+          checked={form.foldable}
+          onChange={setCheck('foldable')}
+          className="mt-0.5 h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+        />
+        <div>
+          <span className="text-sm font-medium text-gray-700">Foldable</span>
+          <p className="text-xs text-gray-500 mt-0.5">
+            Item can be folded in half along its longest dimension. The longest dimension is halved
+            and thickness doubles when shipped — always applied to optimize package size.
+          </p>
+        </div>
+      </label>
 
       <div className="flex justify-end gap-3 pt-2">
         <button type="button" onClick={onCancel} className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800">

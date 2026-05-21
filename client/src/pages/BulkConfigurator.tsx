@@ -187,6 +187,7 @@ export default function BulkConfigurator() {
                       <span className={`text-xs px-2 py-0.5 rounded font-medium ${FIT_COLORS[shipment.best.fit_quality]}`}>
                         {FIT_LABELS[shipment.best.fit_quality]}
                       </span>
+                      {shipment.best.has_folded_items && <span className="text-xs text-indigo-700 font-semibold">↕</span>}
                       {(shipment.best.fit_quality === 'loose' || shipment.best.fit_quality === 'large') && <span className="text-xs text-amber-600 font-semibold">⚠ Loose</span>}
                       {shipment.best.weight_flag && <span className="text-xs text-amber-600 font-semibold">⚠ DIM</span>}
                       {shipment.best.max_weight_flag && <span className="text-xs text-red-600 font-semibold">✕ OVW</span>}
@@ -257,6 +258,9 @@ export default function BulkConfigurator() {
                                 <span className="font-medium text-sm text-gray-900">{r.packaging.name}</span>
                                 <span className="text-xs text-gray-400">{TYPE_LABELS[r.packaging.type] ?? r.packaging.type}</span>
                                 <span className={`text-xs px-2 py-0.5 rounded font-medium ${FIT_COLORS[r.fit_quality]}`}>{FIT_LABELS[r.fit_quality]}</span>
+                                {r.has_folded_items && (
+                                  <span className="text-xs font-medium text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded">↕ items folded</span>
+                                )}
                                 <span className="text-xs text-gray-400 font-mono ml-auto">
                                   {r.packaging.height}"×{r.packaging.width}"×{r.packaging.length}" · {r.volume_utilization}% fill
                                 </span>

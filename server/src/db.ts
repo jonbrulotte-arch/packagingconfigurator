@@ -49,6 +49,13 @@ try {
   // Column already exists — safe to ignore
 }
 
+// Migrate: add foldable flag to products
+try {
+  db.exec('ALTER TABLE products ADD COLUMN foldable INTEGER NOT NULL DEFAULT 0');
+} catch {
+  // Column already exists — safe to ignore
+}
+
 // Seed default settings
 const insertSetting = db.prepare(
   'INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)'

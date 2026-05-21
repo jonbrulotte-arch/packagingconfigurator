@@ -313,7 +313,12 @@ export default function Configurator() {
                   {response.items.map(({ product: p, quantity: qty }) => (
                     <tr key={p.id}>
                       <td className="py-2 pr-4 font-mono text-brand-700">{p.id}</td>
-                      <td className="py-2 pr-4">{p.name}</td>
+                      <td className="py-2 pr-4">
+                        {p.name}
+                        {!!p.foldable && (
+                          <span className="ml-2 text-xs font-medium text-indigo-700 bg-indigo-50 border border-indigo-200 px-1.5 py-0.5 rounded">↕ folded</span>
+                        )}
+                      </td>
                       <td className="py-2 pr-4 font-mono">{p.height} × {p.width} × {p.length}</td>
                       <td className="py-2 pr-4 font-mono">{p.weight}</td>
                       <td className="py-2 pr-4 text-center font-semibold">{qty}</td>
@@ -385,6 +390,11 @@ export default function Configurator() {
                         <span className={`text-xs px-2 py-0.5 rounded border font-medium ${FIT_COLORS[r.fit_quality]}`}>
                           {FIT_LABELS[r.fit_quality]}
                         </span>
+                        {r.has_folded_items && (
+                          <span className="text-xs font-medium text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded">
+                            ↕ items folded
+                          </span>
+                        )}
                       </div>
                       <p className="text-sm text-gray-500 mt-1 font-mono">
                         {r.packaging.height}" H × {r.packaging.width}" W × {r.packaging.length}" L

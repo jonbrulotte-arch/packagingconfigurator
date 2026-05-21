@@ -5,6 +5,7 @@ export interface Product {
   width: number;
   length: number;
   weight: number;
+  foldable: number;
   created_at?: string;
   updated_at?: string;
 }
@@ -33,6 +34,7 @@ export interface ConfiguratorResult {
   volume_utilization: number;
   fit_quality: 'exact' | 'good' | 'loose' | 'large';
   products_fit: boolean;
+  has_folded_items: boolean;
 }
 
 export interface RequestItem {

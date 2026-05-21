@@ -19,7 +19,7 @@ router.get('/:id', (req: Request, res: Response) => {
 });
 
 router.post('/', (req: Request, res: Response) => {
-  const { id, name, height, width, length, weight } = req.body as Product;
+  const { id, name, height, width, length, weight, foldable } = req.body as Product;
   if (!id || !name || height == null || width == null || length == null || weight == null) {
     return res.status(400).json({ error: 'Missing required fields' });
   }
@@ -27,21 +27,21 @@ router.post('/', (req: Request, res: Response) => {
   if (existing) return res.status(409).json({ error: 'Product ID already exists' });
 
   db.prepare(
-    'INSERT INTO products (id, name, height, width, length, weight) VALUES (?, ?, ?, ?, ?, ?)'
-  ).run(id, name, Number(height), Number(width), Number(length), Number(weight));
+    'INSERT INTO products (id, name, height, width, length, weight, foldable) VALUES (?, ?, ?, ?, ?, ?, ?)'
+  ).run(id, name, Number(height), Number(width), Number(length), Number(weight), foldable ? 1 : 0);
 
   res.status(201).json(db.prepare('SELECT * FROM products WHERE id = ?').get(id));
 });
 
 router.put('/:id', (req: Request, res: Response) => {
-  const { name, height, width, length, weight } = req.body as Product;
+  const { name, height, width, length, weight, foldable } = req.body as Product;
   const existing = db.prepare('SELECT id FROM products WHERE id = ?').get(req.params.id);
   if (!existing) return res.status(404).json({ error: 'Product not found' });
 
   db.prepare(
-    `UPDATE products SET name = ?, height = ?, width = ?, length = ?, weight = ?,
+    `UPDATE products SET name = ?, height = ?, width = ?, length = ?, weight = ?, foldable = ?,
      updated_at = CURRENT_TIMESTAMP WHERE id = ?`
-  ).run(name, Number(height), Number(width), Number(length), Number(weight), req.params.id);
+  ).run(name, Number(height), Number(width), Number(length), Number(weight), foldable ? 1 : 0, req.params.id);
 
   res.json(db.prepare('SELECT * FROM products WHERE id = ?').get(req.params.id));
 });
@@ -71,14 +71,15 @@ router.post('/import', upload.single('file'), (req: Request, res: Response) => {
   };
 
   const upsert = db.prepare(`
-    INSERT INTO products (id, name, height, width, length, weight)
-    VALUES (?, ?, ?, ?, ?, ?)
+    INSERT INTO products (id, name, height, width, length, weight, foldable)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(id) DO UPDATE SET
       name = excluded.name,
       height = excluded.height,
       width = excluded.width,
       length = excluded.length,
       weight = excluded.weight,
+      foldable = excluded.foldable,
       updated_at = CURRENT_TIMESTAMP
   `);
 
@@ -95,6 +96,8 @@ router.post('/import', upload.single('file'), (req: Request, res: Response) => {
       const length = Number(r['upclengthinches'] ?? r['lengthin'] ?? r['length'] ?? 0);
       const weight = Number(r['upcweightpounds'] ?? r['weightlbs'] ?? r['weight'] ?? 0);
 
+      const foldable = r['foldable'] ? 1 : 0;
+
       if (!id || !name) {
         errors.push(`Row ${i + 2}: missing product ID or name`);
         continue;
@@ -104,7 +107,7 @@ router.post('/import', upload.single('file'), (req: Request, res: Response) => {
         continue;
       }
 
-      upsert.run(id, name, height, width, length, weight);
+      upsert.run(id, name, height, width, length, weight, foldable);
       imported++;
     }
 

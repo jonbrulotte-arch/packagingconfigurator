@@ -100,7 +100,7 @@ export default function Products() {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                {['Product ID', 'Name', 'H (in)', 'W (in)', 'L (in)', 'Weight (lbs)', 'Volume (in³)', ''].map(h => (
+                {['Product ID', 'Name', 'H (in)', 'W (in)', 'L (in)', 'Weight (lbs)', 'Volume (in³)', 'Foldable', ''].map(h => (
                   <th key={h} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     {h}
                   </th>
@@ -111,7 +111,7 @@ export default function Products() {
               {loading ? (
                 <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-400">Loading…</td></tr>
               ) : products.length === 0 ? (
-                <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-400">No products yet. Add one or import an Excel file.</td></tr>
+                <tr><td colSpan={9} className="px-4 py-8 text-center text-gray-400">No products yet. Add one or import an Excel file.</td></tr>
               ) : (
                 products.map((p, i) => (
                   <tr key={p.id} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
@@ -123,6 +123,15 @@ export default function Products() {
                     <td className="px-4 py-3 text-sm text-gray-600">{p.weight}</td>
                     <td className="px-4 py-3 text-sm text-gray-600">
                       {(p.height * p.width * p.length).toFixed(1)}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-center">
+                      {p.foldable ? (
+                        <span className="inline-flex items-center gap-1 text-xs font-medium text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded">
+                          ↕ Yes
+                        </span>
+                      ) : (
+                        <span className="text-gray-300">—</span>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-sm text-right">
                       <button
