@@ -11,7 +11,7 @@ export default function Instructions() {
 
       {/* ── SETUP ── */}
       <Section title="Getting Started">
-        <p>There are three things to configure before using the Configurator:</p>
+        <p>There are four things to configure before using the Configurator:</p>
         <ol className="mt-3 space-y-2 list-decimal list-inside text-sm text-gray-700">
           <li>
             <strong>Add your products</strong> — go to the <NavRef to="Products" /> tab. Enter each
@@ -23,8 +23,13 @@ export default function Instructions() {
             and enter every box, bubble mailer, or other container you have on hand.
           </li>
           <li>
+            <strong>Add your shipping methods</strong> — go to the <NavRef to="Shipping" /> tab
+            and configure each carrier service with its weight range, DIM divisor, and any volume
+            threshold rules (e.g. USPS DIM only applies above 1 728 in³).
+          </li>
+          <li>
             <strong>Review settings</strong> — go to <NavRef to="Settings" /> and confirm the DIM
-            divisor and packing efficiency match your carrier and workflow.
+            divisor, packing efficiency, and LTL threshold match your carrier and workflow.
           </li>
         </ol>
         <p className="mt-3 text-sm text-gray-700">
@@ -37,9 +42,8 @@ export default function Instructions() {
       <Section title="Products Tab">
         <SubSection title="Manual entry">
           <p>
-            Click <strong>+ Add Product</strong> and fill in all six fields. The Product ID is your
+            Click <strong>+ Add Product</strong> and fill in all fields. The Product ID is your
             SKU or internal code — it must be unique and is used when querying the Configurator.
-            Check <strong>Foldable</strong> if the item can be folded in half — see below.
           </p>
         </SubSection>
 
@@ -68,6 +72,27 @@ Volume unchanged  →  2 × 1 × 12 × 9 = 1 × 12 × 18 = 216 in³`}
             so it is always clear when smaller packaging was made possible by folding.
           </p>
         </SubSection>
+
+        <SubSection title="Ships in Own Packaging">
+          <p>
+            Some products ship directly in their own manufacturer or retail packaging — appliances,
+            large equipment, items pre-boxed by the vendor — with no outer shipping box.
+            Check <strong>Ships in Own Packaging</strong> on any product to reflect this.
+          </p>
+          <Callout color="blue" label="How ships-in-own-packaging works">
+            <ul className="mt-1 space-y-1 list-disc list-inside text-sm">
+              <li>The product is removed from the packaging search entirely — no outer box is assigned.</li>
+              <li>DIM weight is calculated using the product's own H × W × L dimensions, because those <em>are</em> the shipping dimensions.</li>
+              <li>A teal <strong>✦ Ships Own Pkg</strong> card appears in the Configurator results, showing the per-unit DIM weight, billed weight, and matching shipping methods.</li>
+              <li>The product's weight is still included in the shipment's total weight for LTL detection purposes.</li>
+            </ul>
+          </Callout>
+          <p className="mt-2">
+            A shipment can mix regular products (which get a box assigned) and ships-in-own-packaging
+            products (which get their own card). Both are shown in the same result view.
+          </p>
+        </SubSection>
+
         <SubSection title="Excel / spreadsheet import">
           <p>
             Click <strong>Import Excel</strong> and upload an <code>.xlsx</code>, <code>.xls</code>,
@@ -91,6 +116,7 @@ Volume unchanged  →  2 × 1 × 12 × 9 = 1 × 12 × 18 = 216 in³`}
                 ['Length', 'UPC Length (Inches)', 'Length (in), Length'],
                 ['Weight', 'UPC Weight (Pounds)', 'Weight (lbs), Weight'],
                 ['Foldable', 'Foldable', '(optional) 1, true, yes, or y to enable'],
+                ['Ships In Own Packaging', 'Ships In Own Packaging', '(optional) 1, true, yes, or y to enable'],
               ].map(([field, primary, fallback]) => (
                 <tr key={field} className="even:bg-gray-50">
                   <td className="px-3 py-2 font-medium text-gray-800">{field}</td>
@@ -155,14 +181,123 @@ Volume unchanged  →  2 × 1 × 12 × 9 = 1 × 12 × 18 = 216 in³`}
         </SubSection>
       </Section>
 
+      {/* ── SHIPPING METHODS ── */}
+      <Section title="Shipping Methods Tab">
+        <p className="text-sm text-gray-700">
+          Configure each carrier service you use. A shipping method is a specific service
+          (e.g. "UPS Ground", "USPS Priority Mail", "FedEx 2Day") with its own weight range
+          and billing rules. Every active method is evaluated against each packaging result —
+          methods whose range covers the shipment's billed weight appear as chips on the result card.
+        </p>
+        <SubSection title="Weight range (Min / Max Weight)">
+          <p>
+            Each method has a <strong>Min Weight</strong> and optional <strong>Max Weight</strong>
+            (in lbs). A method only appears on a result if the shipment's carrier-specific billed
+            weight falls within that range. Leave Max Weight blank for unlimited.
+          </p>
+          <Callout color="blue" label="Example — UPS Ground 0–150 lbs, FedEx Ground 0–150 lbs">
+            If the billed weight is 12 lbs, both UPS Ground and FedEx Ground appear.
+            If it is 183 lbs (LTL), neither appears — but an LTL freight method configured
+            for 150+ lbs would.
+          </Callout>
+        </SubSection>
+        <SubSection title="Per-carrier DIM divisor">
+          <p>
+            Each method can have its own <strong>DIM Divisor</strong>. When set, it overrides
+            the global divisor from Settings for that method's billed-weight calculation.
+            Leave blank to use the global setting.
+          </p>
+          <p className="mt-2 text-sm text-gray-700">
+            This lets you model different billing correctly in the same analysis — for example
+            UPS Ground uses 139 while USPS Priority Mail uses 166.
+          </p>
+        </SubSection>
+        <SubSection title="DIM Volume Threshold">
+          <p>
+            Some carriers only apply dimensional weight billing if the package volume exceeds
+            a threshold. Set <strong>DIM Threshold (in³)</strong> to enable this rule for a method.
+          </p>
+          <Callout color="blue" label="USPS example — DIM only above 1 728 in³">
+            USPS Priority Mail does not apply DIM billing unless the package volume exceeds
+            1 728 in³ (a 12" cube). Set DIM Threshold to 1728 on the USPS method to model this
+            correctly — packages at or below that volume are billed at actual weight only.
+          </Callout>
+          <p className="mt-2">
+            Leave blank if the carrier always applies DIM billing regardless of package size.
+          </p>
+        </SubSection>
+        <SubSection title="Sort order">
+          <p>
+            The <strong>Sort Order</strong> field controls the display order of methods on result
+            cards. Lower numbers appear first. Methods with the same sort order are sorted by
+            min weight.
+          </p>
+        </SubSection>
+      </Section>
+
       {/* ── CONFIGURATOR ── */}
       <Section title="Configurator Tab">
         <p className="text-sm text-gray-700">
-          Enter one or more product IDs (one per line or comma-separated) and click{' '}
+          Enter one or more product IDs (one per row) and quantities, then click{' '}
           <strong>Find Best Packaging</strong>. The tool returns every active packaging option that
           can physically hold all the products, ranked from <em>best fit</em> (tightest) to{' '}
           <em>loosest</em>.
         </p>
+        <p className="mt-2 text-sm text-gray-700">
+          Products flagged <strong>Ships in Own Packaging</strong> appear in a separate teal section
+          above the packaging results — they bypass the box search and show per-unit DIM weight and
+          matching shipping methods directly.
+        </p>
+        <p className="mt-2 text-sm text-gray-700">
+          If the shipment's combined weight meets or exceeds the LTL threshold (default 150 lbs),
+          a red <strong>LTL Freight Required</strong> banner appears at the top of the results.
+          Packaging options are still shown when available (a heavy item may fit a box and ship LTL
+          on a pallet), but you are warned that standard parcel carriers do not apply.
+        </p>
+      </Section>
+
+      {/* ── BULK CONFIGURATOR ── */}
+      <Section title="Bulk Configurator Tab">
+        <p className="text-sm text-gray-700">
+          Upload an Excel spreadsheet with multiple shipments — one product row per line, grouped
+          by Order ID. Required columns: <code>Order ID</code>, <code>Part Number</code>,{' '}
+          <code>Quantity</code>. Multiple rows with the same Order ID are treated as a single
+          shipment.
+        </p>
+        <SubSection title="Results summary bar">
+          <table className="mt-2 w-full text-sm border border-gray-200 rounded overflow-hidden">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-3 py-2 text-left font-medium text-gray-600">Counter</th>
+                <th className="px-3 py-2 text-left font-medium text-gray-600">Meaning</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100 text-gray-700">
+              {[
+                ['Total Shipments', 'Number of unique Order IDs processed'],
+                ['Matched', 'Shipments with at least one valid packaging option (or all items ship in own packaging)'],
+                ['Flagged', 'Matched shipments where the best option has a DIM weight flag or is overweight'],
+                ['LTL Freight', 'Shipments whose total weight meets or exceeds the LTL threshold'],
+                ['No Match / Error', 'Shipments with no compatible packaging found, or a missing product ID'],
+              ].map(([counter, meaning]) => (
+                <tr key={counter} className="even:bg-gray-50">
+                  <td className="px-3 py-2 font-medium">{counter}</td>
+                  <td className="px-3 py-2 text-gray-600">{meaning}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </SubSection>
+        <SubSection title="Row status indicators">
+          <p>Each shipment row is color-coded:</p>
+          <ul className="mt-2 space-y-1 text-sm text-gray-700 list-disc list-inside">
+            <li><strong className="text-green-700">✓ Green</strong> — matched, no flags</li>
+            <li><strong className="text-amber-600">⚠ Amber</strong> — matched but flagged (DIM, overweight, or loose fit)</li>
+            <li><strong className="text-red-600">LTL Red</strong> — shipment weight exceeds LTL threshold</li>
+            <li><strong className="text-gray-500">— Gray</strong> — no packaging option found for packaged items</li>
+            <li><strong className="text-red-500">✕ Error</strong> — one or more product IDs not found in the catalog</li>
+          </ul>
+        </SubSection>
       </Section>
 
       {/* ── ALGORITHM ── */}
@@ -204,6 +339,10 @@ product sorted: [9,  6, 4]
             the longest dimension is halved and the thickness (shortest dimension) is doubled before
             any comparison is made. See the Products Tab section for details.
           </p>
+          <p className="mt-2 text-sm text-gray-700">
+            <strong>Ships-in-own-packaging products</strong> are excluded from this step entirely —
+            no box is assigned to them. See their own section above.
+          </p>
         </SubSection>
 
         <SubSection title="Step 2 — Volume utilization">
@@ -239,8 +378,9 @@ product sorted: [9,  6, 4]
         </SubSection>
 
         <SubSection title="Step 3 — Dimensional weight">
-          <p>Carriers calculate a <em>dimensional weight</em> for every shipment and charge whichever is higher — actual weight or dimensional weight. The formula:</p>
-          <Code>{`Dimensional Weight (lbs) = (Box L × Box W × Box H) ÷ DIM Divisor`}</Code>
+          <p>Carriers calculate a <em>dimensional weight</em> for every shipment and charge whichever is higher — actual weight or dimensional weight.</p>
+          <Code>{`Dimensional Weight (lbs) = CEIL( Box L × Box W × Box H ÷ DIM Divisor )`}</Code>
+          <Code>{`Billed Weight (lbs)      = MAX( CEIL(Actual Weight), DIM Weight )`}</Code>
           <p className="mt-2 text-sm text-gray-700">
             Common divisor values (all using inches):
           </p>
@@ -265,11 +405,41 @@ product sorted: [9,  6, 4]
             </tbody>
           </table>
           <p className="mt-3 text-sm text-gray-700">
-            Change the divisor on the <NavRef to="Settings" /> page to match your carrier.
+            The global DIM divisor is set on the <NavRef to="Settings" /> page. Each{' '}
+            <NavRef to="Shipping" /> method can override this with its own per-carrier divisor.
+            When a method has a <strong>DIM Volume Threshold</strong> set, DIM billing only applies
+            if the box volume exceeds that threshold — otherwise actual weight is used for that method.
           </p>
         </SubSection>
 
-        <SubSection title="Step 4 — Warning flags">
+        <SubSection title="Step 4 — Shipping method matching">
+          <p>
+            For each packaging result, every active shipping method is evaluated independently
+            using that method's own DIM divisor and threshold rules to compute the carrier-specific
+            billed weight. Methods are shown on the result card when the billed weight falls within
+            the method's configured min–max weight range.
+          </p>
+          <Callout color="blue" label="Amber DIM badge on shipping chip">
+            When a shipping chip shows an amber <strong>DIM</strong> badge, it means DIM weight
+            is higher than actual weight for that specific carrier — the carrier will bill by
+            dimensional weight, not the scale weight.
+          </Callout>
+        </SubSection>
+
+        <SubSection title="Step 5 — LTL Freight detection">
+          <p>
+            Before packaging is evaluated, the shipment's total actual weight (all products,
+            including ships-in-own-packaging items) is compared against the{' '}
+            <strong>LTL Threshold</strong> (default 150 lbs). If the threshold is met or exceeded:
+          </p>
+          <ul className="mt-2 space-y-1 text-sm text-gray-700 list-disc list-inside">
+            <li>A red <strong>LTL Freight Required</strong> banner is shown.</li>
+            <li>LTL-range shipping methods (e.g. those with min_weight ≥ 150) are matched by actual weight only — no DIM billing applies to LTL freight.</li>
+            <li>Standard packaging options are still evaluated and shown if any fit, since the item may still ship in a box on a pallet.</li>
+          </ul>
+        </SubSection>
+
+        <SubSection title="Step 6 — Warning flags">
           <Callout color="amber" label="⚠ Dimensional weight flag">
             Appears when <strong>dimensional weight &gt; actual weight</strong>. The carrier will
             ignore the scale and bill by the box's dimensional weight instead. Consider a smaller
@@ -279,6 +449,11 @@ product sorted: [9,  6, 4]
             Appears when the <strong>combined product weight exceeds the packaging's configured max
             weight</strong>. The box may not be structurally rated for this load, or the carrier
             may reject the shipment. Switch to a heavier-duty option.
+          </Callout>
+          <Callout color="amber" label="⚠ Loose Fit flag">
+            Appears when volume utilization is below 60 %. The box is significantly larger than
+            the contents, which inflates dimensional weight charges and leaves product poorly
+            supported. Consider a smaller option.
           </Callout>
         </SubSection>
       </Section>
@@ -295,8 +470,9 @@ product sorted: [9,  6, 4]
           </thead>
           <tbody className="divide-y divide-gray-100 text-gray-700">
             {[
-              ['DIM Divisor', '139', 'Divisor used in the dimensional weight formula. Match to your carrier.'],
+              ['DIM Divisor', '139', 'Global divisor used in the dimensional weight formula. Individual shipping methods can override this.'],
               ['Packing Efficiency', '0.70 (70 %)', 'Fraction of box volume available for multi-product shipments. Lower for bulky/irregular items.'],
+              ['LTL Threshold', '150 lbs', 'Shipments at or above this total weight are flagged as LTL Freight. Standard industry cutoff is 150 lbs.'],
               ['Weight Unit', 'lbs', 'Display label only — does not convert values.'],
               ['Dimension Unit', 'in', 'Display label only — does not convert values.'],
             ].map(([s, d, desc]) => (
@@ -308,6 +484,55 @@ product sorted: [9,  6, 4]
             ))}
           </tbody>
         </table>
+      </Section>
+
+      {/* ── ADMIN & SECURITY ── */}
+      <Section title="Admin &amp; Security">
+        <SubSection title="Admin password">
+          <p>
+            The Products, Packaging, Shipping, and Settings pages can be protected with a password.
+            Set one from the <NavRef to="Settings" /> page under <strong>Admin Password</strong>.
+            Once set, a <strong>Lock</strong> button appears in the navigation — click it to lock
+            the session. The Configurator, Bulk Configurator, and Instructions pages are always
+            accessible without a password.
+          </p>
+        </SubSection>
+        <SubSection title="Password recovery">
+          <p>
+            If you forget the admin password, a one-time recovery token is printed to the server
+            console every time the server starts:
+          </p>
+          <Code>
+            {`[Auth] Emergency recovery token: a3f9...
+       POST /api/auth/emergency-reset?token=a3f9... to clear the admin password.`}
+          </Code>
+          <p className="mt-2 text-sm text-gray-700">
+            Send a POST request to that URL and the password hash is deleted — no password
+            will be required to access admin pages until you set a new one.
+            The token changes every time the server restarts, so it cannot be reused after a reboot.
+          </p>
+        </SubSection>
+        <SubSection title="Database backups">
+          <p>
+            The SQLite database is backed up automatically every 6 hours. You can also create a
+            manual backup at any time from the <NavRef to="Settings" /> page under{' '}
+            <strong>Database Backups</strong>.
+          </p>
+          <ul className="mt-2 space-y-1 text-sm text-gray-700 list-disc list-inside">
+            <li><strong>Download</strong> — save a backup file locally for off-server storage.</li>
+            <li>
+              <strong>Restore</strong> — replaces the live database with the selected backup.
+              A safety copy of the current database is saved automatically before any restore.
+              The server restarts after a restore to pick up the new database file.
+            </li>
+            <li><strong>Delete</strong> — permanently removes a backup file from the server.</li>
+          </ul>
+          <Callout color="amber" label="Restore is destructive">
+            Restoring overwrites ALL current data — products, packaging, shipping methods, and
+            settings. The automatic pre-restore safety copy gives you one level of undo, but
+            proceed carefully.
+          </Callout>
+        </SubSection>
       </Section>
     </div>
   );

@@ -86,63 +86,138 @@ export default function ApiDocs() {
         <p className="text-xs text-blue-700">
           All endpoints are relative to this base. Requests with a body must include{' '}
           <code>Content-Type: application/json</code>. File upload endpoints use{' '}
-          <code>multipart/form-data</code>.
+          <code>multipart/form-data</code>. Protected admin endpoints require an{' '}
+          <code>X-Session-Token</code> header (see Auth section).
         </p>
       </div>
+
+      {/* ── AUTH ── */}
+      <Section title="Auth">
+        <p className="text-sm text-gray-600">
+          When an admin password is configured, the Products, Packaging, Shipping, and Settings
+          endpoints are protected. Obtain a session token via <code>POST /auth/login</code> and
+          pass it as <code>X-Session-Token: &lt;token&gt;</code> on subsequent requests.
+          Tokens expire after 24 hours.
+        </p>
+
+        <Endpoint
+          method="GET"
+          path="/auth/status"
+          description="Check whether an admin password is configured."
+          response={JSON.stringify({ protected: true }, null, 2)}
+        />
+
+        <Endpoint
+          method="POST"
+          path="/auth/login"
+          description="Log in with the admin password. Returns a session token on success."
+          request={{
+            headers: 'Content-Type: application/json',
+            body: JSON.stringify({ password: 'yourpassword' }),
+          }}
+          response={JSON.stringify({ token: 'abc123...', success: true }, null, 2)}
+        />
+
+        <Endpoint
+          method="POST"
+          path="/auth/logout"
+          description="Invalidate the current session token."
+          request={{ headers: 'X-Session-Token: abc123...' }}
+          response={JSON.stringify({ success: true }, null, 2)}
+        />
+
+        <Endpoint
+          method="POST"
+          path="/auth/set-password"
+          description="Set or change the admin password. If a password is already set, currentPassword is required. Minimum 4 characters. All active sessions are invalidated."
+          request={{
+            headers: 'Content-Type: application/json',
+            body: JSON.stringify({ newPassword: 'newpass', currentPassword: 'oldpass' }),
+          }}
+          response={JSON.stringify({ success: true }, null, 2)}
+        />
+
+        <Endpoint
+          method="POST"
+          path="/auth/remove-password"
+          description="Remove the admin password entirely. Requires the current password. All sessions are invalidated."
+          request={{
+            headers: 'Content-Type: application/json',
+            body: JSON.stringify({ currentPassword: 'currentpass' }),
+          }}
+          response={JSON.stringify({ success: true }, null, 2)}
+        />
+
+        <Endpoint
+          method="POST"
+          path="/auth/emergency-reset?token=<token>"
+          description="Clear the admin password using the one-time recovery token printed to the server console at startup. Token changes every restart."
+          response={JSON.stringify({ success: true, message: 'Admin password cleared. Access admin pages without a password.' }, null, 2)}
+          note="The recovery token is printed to stdout each time the server starts. It cannot be recovered from the API — check the server logs."
+        />
+      </Section>
 
       {/* ── CONFIGURATOR ── */}
       <Section title="Configurator">
         <Endpoint
           method="POST"
           path="/configurator/analyze"
-          description="Analyze one or more products and return ranked packaging recommendations."
+          description="Analyze one or more products and return ranked packaging recommendations. Products with ships_in_own_packaging=1 appear in standalone_items rather than packaging results. If total weight ≥ LTL threshold, ltl_required is true and ltl_shipping contains matching freight methods."
           request={{
             headers: 'Content-Type: application/json',
             body: JSON.stringify({ items: [{ product_id: 'SKU-001', quantity: 2 }, { product_id: 'SKU-002', quantity: 1 }] }),
           }}
           response={JSON.stringify({
             items: [
-              { product: { id: 'SKU-001', name: 'Widget A', height: 3, width: 4, length: 5, weight: 1.2 }, quantity: 2 },
+              { product: { id: 'SKU-001', name: 'Widget A', height: 3, width: 4, length: 5, weight: 1.2, foldable: 0, ships_in_own_packaging: 0 }, quantity: 2 },
             ],
             total_actual_weight: 2.4,
             total_item_count: 2,
-            settings: { dim_divisor: 139, pack_efficiency: 0.7 },
+            settings: { dim_divisor: 139, pack_efficiency: 0.7, ltl_threshold: 150 },
             results: [
               {
                 packaging: { id: 1, name: 'Medium Box 10x8x6', type: 'box', height: 6, width: 8, length: 10, max_weight: 20, packaging_weight: 0.5 },
                 products_weight: 2.4,
                 packaging_weight: 0.5,
-                total_weight: 2.9,
-                dim_weight: 3.45,
+                total_weight: 3,
+                dim_weight: 3,
                 weight_flag: true,
                 max_weight_flag: false,
                 volume_utilization: 45.0,
                 fit_quality: 'loose',
+                has_folded_items: false,
+                shipping: [{ method_id: 1, method_name: 'UPS Ground', billed_weight: 3, dim_applied: true }],
               },
             ],
+            standalone_items: [],
+            ltl_required: false,
+            ltl_shipping: [],
           }, null, 2)}
         />
 
         <Endpoint
           method="POST"
           path="/configurator/bulk"
-          description="Upload an Excel/CSV file with multiple shipments grouped by Order ID. Returns packaging recommendations for all shipments in one response."
+          description="Upload an Excel/CSV file with multiple shipments grouped by Order ID. Returns packaging recommendations for all shipments. Each shipment includes standalone_items for ships-in-own-packaging products and ltl_required for LTL detection."
           request={{ headers: 'Content-Type: multipart/form-data' }}
           response={JSON.stringify({
             shipments: [
               {
                 id: 'ORD-001',
-                items: [{ product: { id: 'SKU-001', name: 'Widget A' }, quantity: 2 }],
+                items: [{ product: { id: 'SKU-001', name: 'Widget A', ships_in_own_packaging: 0 }, quantity: 2 }],
                 total_item_count: 2,
                 total_actual_weight: 2.4,
-                best: { packaging: { name: 'Medium Box 10x8x6' }, fit_quality: 'good', total_weight: 2.9, dim_weight: 3.45, weight_flag: true, max_weight_flag: false },
+                best: { packaging: { name: 'Medium Box 10x8x6' }, fit_quality: 'good', total_weight: 3, dim_weight: 3, weight_flag: true, max_weight_flag: false },
                 results: ['... full ranked list ...'],
+                standalone_items: [],
+                ltl_required: false,
+                ltl_shipping: [],
                 error: null,
               },
             ],
             parse_errors: [],
-            summary: { total: 1, matched: 1, flagged: 1, errors: 0 },
-            settings: { dim_divisor: 139, pack_efficiency: 0.7 },
+            summary: { total: 1, matched: 1, flagged: 1, ltl: 0, errors: 0 },
+            settings: { dim_divisor: 139, pack_efficiency: 0.7, ltl_threshold: 150 },
           }, null, 2)}
           note='File field name must be "file". Columns required: Order ID, Part Number, Quantity.'
         />
@@ -150,19 +225,19 @@ export default function ApiDocs() {
         <Endpoint
           method="GET"
           path="/configurator/settings"
-          description="Retrieve current configurator settings (DIM divisor, packing efficiency, unit labels)."
-          response={JSON.stringify({ dim_divisor: '139', pack_efficiency: '0.70', weight_unit: 'lbs', dim_unit: 'in' }, null, 2)}
+          description="Retrieve current configurator settings."
+          response={JSON.stringify({ dim_divisor: '139', pack_efficiency: '0.70', weight_unit: 'lbs', dim_unit: 'in', ltl_threshold: '150' }, null, 2)}
         />
 
         <Endpoint
           method="PUT"
           path="/configurator/settings"
-          description="Update configurator settings. All fields are optional — only supplied fields are changed."
+          description="Update configurator settings. All fields optional — only supplied fields are changed."
           request={{
             headers: 'Content-Type: application/json',
-            body: JSON.stringify({ dim_divisor: 166, pack_efficiency: 0.65 }),
+            body: JSON.stringify({ dim_divisor: 166, pack_efficiency: 0.65, ltl_threshold: 150 }),
           }}
-          response={JSON.stringify({ dim_divisor: '166', pack_efficiency: '0.65', weight_unit: 'lbs', dim_unit: 'in' }, null, 2)}
+          response={JSON.stringify({ dim_divisor: '166', pack_efficiency: '0.65', weight_unit: 'lbs', dim_unit: 'in', ltl_threshold: '150' }, null, 2)}
         />
 
         <Endpoint
@@ -187,8 +262,8 @@ export default function ApiDocs() {
           path="/products"
           description="Return all products ordered by ID."
           response={JSON.stringify([
-            { id: 'SKU-001', name: 'Widget A', height: 3, width: 4, length: 5, weight: 1.2, foldable: 0 },
-            { id: 'SKU-002', name: 'Widget B', height: 5, width: 5, length: 8, weight: 2.8, foldable: 1 },
+            { id: 'SKU-001', name: 'Widget A', height: 3, width: 4, length: 5, weight: 1.2, foldable: 0, ships_in_own_packaging: 0 },
+            { id: 'SKU-002', name: 'Appliance XL', height: 18, width: 14, length: 24, weight: 45.0, foldable: 0, ships_in_own_packaging: 1 },
           ], null, 2)}
         />
 
@@ -196,29 +271,29 @@ export default function ApiDocs() {
           method="GET"
           path="/products/:id"
           description="Return a single product by ID."
-          response={JSON.stringify({ id: 'SKU-001', name: 'Widget A', height: 3, width: 4, length: 5, weight: 1.2, foldable: 0 }, null, 2)}
+          response={JSON.stringify({ id: 'SKU-001', name: 'Widget A', height: 3, width: 4, length: 5, weight: 1.2, foldable: 0, ships_in_own_packaging: 0 }, null, 2)}
         />
 
         <Endpoint
           method="POST"
           path="/products"
-          description="Create a new product. Product ID must be unique. foldable: 1 means the item is always shipped folded in half along its longest dimension — the longest dim is halved and thickness doubles."
+          description="Create a new product. foldable: 1 = always ship folded (longest dim halved, thickness doubled). ships_in_own_packaging: 1 = bypass box search, use product dims for DIM weight."
           request={{
             headers: 'Content-Type: application/json',
-            body: JSON.stringify({ id: 'SKU-003', name: 'Widget C', height: 2, width: 3, length: 4, weight: 0.8, foldable: 0 }),
+            body: JSON.stringify({ id: 'SKU-003', name: 'Widget C', height: 2, width: 3, length: 4, weight: 0.8, foldable: 0, ships_in_own_packaging: 0 }),
           }}
-          response={JSON.stringify({ id: 'SKU-003', name: 'Widget C', height: 2, width: 3, length: 4, weight: 0.8, foldable: 0 }, null, 2)}
+          response={JSON.stringify({ id: 'SKU-003', name: 'Widget C', height: 2, width: 3, length: 4, weight: 0.8, foldable: 0, ships_in_own_packaging: 0 }, null, 2)}
         />
 
         <Endpoint
           method="PUT"
           path="/products/:id"
-          description="Update an existing product's name, dimensions, and foldable flag. ID cannot be changed."
+          description="Update an existing product. ID cannot be changed."
           request={{
             headers: 'Content-Type: application/json',
-            body: JSON.stringify({ name: 'Widget C v2', height: 2.5, width: 3, length: 4, weight: 0.9, foldable: 1 }),
+            body: JSON.stringify({ name: 'Widget C v2', height: 2.5, width: 3, length: 4, weight: 0.9, foldable: 1, ships_in_own_packaging: 0 }),
           }}
-          response={JSON.stringify({ id: 'SKU-003', name: 'Widget C v2', height: 2.5, width: 3, length: 4, weight: 0.9, foldable: 1 }, null, 2)}
+          response={JSON.stringify({ id: 'SKU-003', name: 'Widget C v2', height: 2.5, width: 3, length: 4, weight: 0.9, foldable: 1, ships_in_own_packaging: 0 }, null, 2)}
         />
 
         <Endpoint
@@ -231,7 +306,7 @@ export default function ApiDocs() {
         <Endpoint
           method="POST"
           path="/products/import"
-          description="Upload an Excel/CSV file to bulk upsert products. Existing products are updated by Part Number; new ones are created."
+          description="Upload an Excel/CSV file to bulk upsert products. Existing products are updated by Part Number; new ones are created. Optional columns: Foldable, Ships In Own Packaging (1/true/yes to enable)."
           request={{ headers: 'Content-Type: multipart/form-data' }}
           response={JSON.stringify({ imported: 42, errors: ['Row 7: missing Part Number — skipped'] }, null, 2)}
           note='File field name must be "file". Required columns: Part Number, Item Name, UPC Height (Inches), UPC Width (Inches), UPC Length (Inches), UPC Weight (Pounds).'
@@ -253,7 +328,7 @@ export default function ApiDocs() {
         <Endpoint
           method="POST"
           path="/packaging"
-          description="Create a new packaging option. Type must be one of: box, bubble_mailer, poly_mailer, other. max_height applies to mailers only — sets the maximum stuffed thickness used for fit checks, volume utilization, and DIM weight instead of H."
+          description="Create a new packaging option. type must be: box, bubble_mailer, poly_mailer, or other. max_height (mailers only) sets max stuffed thickness used for fit checks, volume, and DIM instead of H."
           request={{
             headers: 'Content-Type: application/json',
             body: JSON.stringify({ name: 'Bubble Mailer 9x12', type: 'bubble_mailer', height: 1, width: 9, length: 12, max_weight: 2, max_height: 1.5, packaging_weight: 0.1, notes: null, active: 1 }),
@@ -264,7 +339,7 @@ export default function ApiDocs() {
         <Endpoint
           method="PUT"
           path="/packaging/:id"
-          description="Update an existing packaging option. All fields can be changed. Set max_height to null to remove the mailer thickness constraint."
+          description="Update an existing packaging option. All fields can be changed."
           request={{
             headers: 'Content-Type: application/json',
             body: JSON.stringify({ name: 'Bubble Mailer 9x12', type: 'bubble_mailer', height: 1, width: 9, length: 12, max_weight: 2, max_height: 2.0, packaging_weight: 0.1, notes: null, active: 1 }),
@@ -276,6 +351,104 @@ export default function ApiDocs() {
           method="DELETE"
           path="/packaging/:id"
           description="Delete a packaging option by ID."
+          response={JSON.stringify({ success: true }, null, 2)}
+        />
+      </Section>
+
+      {/* ── SHIPPING METHODS ── */}
+      <Section title="Shipping Methods">
+        <p className="text-sm text-gray-600">
+          Shipping methods are discrete carrier services with a weight range. Every active method
+          is evaluated per-result to find matches based on the carrier-specific billed weight.
+          Per-carrier DIM divisors and volume thresholds (e.g. USPS 1 728 in³ rule) are
+          configured here.
+        </p>
+
+        <Endpoint
+          method="GET"
+          path="/shipping"
+          description="Return all shipping methods ordered by sort_order, then min_weight."
+          response={JSON.stringify([
+            { id: 1, name: 'UPS Ground', min_weight: 0, max_weight: 150, dim_divisor: 139, dim_threshold: null, active: 1, notes: null, sort_order: 0 },
+            { id: 2, name: 'USPS Priority Mail', min_weight: 0, max_weight: 70, dim_divisor: 166, dim_threshold: 1728, active: 1, notes: 'DIM only above 1728 in³', sort_order: 1 },
+            { id: 3, name: 'LTL Freight', min_weight: 150, max_weight: null, dim_divisor: null, dim_threshold: null, active: 1, notes: null, sort_order: 10 },
+          ], null, 2)}
+        />
+
+        <Endpoint
+          method="POST"
+          path="/shipping"
+          description="Create a new shipping method. dim_divisor overrides the global setting for this method; leave null to use global. dim_threshold: if set, DIM billing only applies when box volume exceeds this value (in³). max_weight: null means unlimited."
+          request={{
+            headers: 'Content-Type: application/json',
+            body: JSON.stringify({ name: 'FedEx Ground', min_weight: 0, max_weight: 150, dim_divisor: 139, dim_threshold: null, active: 1, notes: null, sort_order: 0 }),
+          }}
+          response={JSON.stringify({ id: 4, name: 'FedEx Ground', min_weight: 0, max_weight: 150, dim_divisor: 139, dim_threshold: null, active: 1, notes: null, sort_order: 0 }, null, 2)}
+        />
+
+        <Endpoint
+          method="PUT"
+          path="/shipping/:id"
+          description="Update an existing shipping method. All fields can be changed."
+          request={{
+            headers: 'Content-Type: application/json',
+            body: JSON.stringify({ name: 'FedEx Ground', min_weight: 0, max_weight: 150, dim_divisor: 139, dim_threshold: null, active: 0, notes: 'Temporarily disabled', sort_order: 0 }),
+          }}
+          response={JSON.stringify({ id: 4, name: 'FedEx Ground', min_weight: 0, max_weight: 150, dim_divisor: 139, dim_threshold: null, active: 0, notes: 'Temporarily disabled', sort_order: 0 }, null, 2)}
+        />
+
+        <Endpoint
+          method="DELETE"
+          path="/shipping/:id"
+          description="Delete a shipping method by ID."
+          response={JSON.stringify({ success: true }, null, 2)}
+        />
+      </Section>
+
+      {/* ── BACKUP ── */}
+      <Section title="Backups">
+        <p className="text-sm text-gray-600">
+          The SQLite database is backed up automatically every 6 hours. Backups are stored on the
+          server and can be listed, downloaded, restored, or deleted via these endpoints. Restoring
+          saves a pre-restore safety copy, replaces the live database, and restarts the server process.
+        </p>
+
+        <Endpoint
+          method="GET"
+          path="/backup"
+          description="List all available backups, newest first."
+          response={JSON.stringify([
+            { filename: 'backup-2026-05-21T06-00-00-000Z.db', size: 204800, created_at: '2026-05-21T06:00:01.000Z' },
+            { filename: 'backup-2026-05-21T00-00-00-000Z.db', size: 200704, created_at: '2026-05-21T00:00:01.000Z' },
+          ], null, 2)}
+        />
+
+        <Endpoint
+          method="POST"
+          path="/backup"
+          description="Create a manual backup immediately. Returns the new backup entry."
+          response={JSON.stringify({ filename: 'backup-2026-05-21T12-34-56-789Z.db', size: 204800, created_at: '2026-05-21T12:34:57.000Z' }, null, 2)}
+        />
+
+        <Endpoint
+          method="GET"
+          path="/backup/download/:filename"
+          description="Download a backup file as a binary .db attachment."
+          response="→ Binary SQLite .db file download"
+        />
+
+        <Endpoint
+          method="POST"
+          path="/backup/restore/:filename"
+          description="Restore the database from a backup. A pre-restore safety copy is saved first, then the server restarts automatically."
+          response={JSON.stringify({ success: true, message: 'Database restored. Server is restarting.' }, null, 2)}
+          note="This operation replaces all current data. The server will restart after a successful restore — allow a few seconds before making further requests."
+        />
+
+        <Endpoint
+          method="DELETE"
+          path="/backup/:filename"
+          description="Delete a backup file from the server."
           response={JSON.stringify({ success: true }, null, 2)}
         />
       </Section>
@@ -323,6 +496,9 @@ ${JSON.stringify({ error: 'Products not found: SKU-999' }, null, 2)}
 
 HTTP 400
 ${JSON.stringify({ error: 'items must be a non-empty array' }, null, 2)}
+
+HTTP 401
+${JSON.stringify({ error: 'Invalid or missing recovery token' }, null, 2)}
 
 HTTP 409
 ${JSON.stringify({ error: 'Product ID already exists' }, null, 2)}`}
