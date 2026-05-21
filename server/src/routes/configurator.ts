@@ -183,6 +183,12 @@ function analyzeShipment(
     const actualWeight = totalActualWeight + pkgWeight;
     const billedWeight = roundWeight(Math.max(actualWeight, dimWeight));
     const volumeUtilization = (totalProductVolume / boxVolume) * 100;
+    const shipping = computeShipping(dimVolume, actualWeight, dimDivisor, shippingMethods);
+    // Flag only when there is no DIM-free carrier option available.
+    // If at least one method bills by actual weight, the user can avoid DIM charges.
+    const weight_flag = shipping.length > 0
+      ? shipping.every(sm => sm.dim_applied)
+      : dimWeight > actualWeight;
 
     results.push({
       packaging: pkg,
@@ -190,13 +196,13 @@ function analyzeShipment(
       packaging_weight: pkgWeight,
       total_weight: billedWeight,
       dim_weight: dimWeight,
-      weight_flag: dimWeight > actualWeight,
+      weight_flag,
       max_weight_flag: pkg.max_weight != null && actualWeight > pkg.max_weight,
       volume_utilization: Math.round(volumeUtilization * 10) / 10,
       fit_quality: fitQuality(volumeUtilization),
       products_fit: true,
       has_folded_items: hasFoldedItems,
-      shipping: computeShipping(dimVolume, actualWeight, dimDivisor, shippingMethods),
+      shipping,
     });
   }
 
