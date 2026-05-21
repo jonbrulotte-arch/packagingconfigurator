@@ -69,6 +69,8 @@ export interface BulkAnalyzeResponse {
   settings: { dim_divisor: number; pack_efficiency: number };
   summary: { total: number; matched: number; flagged: number; errors: number };
 }
+
+export interface Settings {
   dim_divisor: string;
   pack_efficiency: string;
   weight_unit: string;
