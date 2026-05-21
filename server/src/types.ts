@@ -38,6 +38,7 @@ export interface ConfiguratorResult {
   fit_quality: 'exact' | 'good' | 'loose' | 'large';
   products_fit: boolean;
   has_folded_items: boolean;
+  shipping: ShippingMatch[];
 }
 
 export interface Settings {
@@ -45,4 +46,34 @@ export interface Settings {
   pack_efficiency: number;
   weight_unit: string;
   dim_unit: string;
+}
+
+export interface ShippingMethod {
+  id: number;
+  name: string;
+  dim_divisor: number | null;
+  dim_threshold: number | null;
+  active: number;
+  notes: string | null;
+  sort_order: number;
+}
+
+export interface ShippingRate {
+  id: number;
+  method_id: number;
+  max_weight: number;
+  label: string;
+  sort_order: number;
+}
+
+export interface ShippingMethodWithRates extends ShippingMethod {
+  rates: ShippingRate[];
+}
+
+export interface ShippingMatch {
+  method_id: number;
+  method_name: string;
+  billed_weight: number;
+  dim_applied: boolean;
+  tier_label: string | null;
 }

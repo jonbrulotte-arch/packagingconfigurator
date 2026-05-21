@@ -7,6 +7,7 @@ import Settings from './pages/Settings';
 import Instructions from './pages/Instructions';
 import BulkConfigurator from './pages/BulkConfigurator';
 import ApiDocs from './pages/ApiDocs';
+import ShippingMethods from './pages/ShippingMethods';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import LoginModal from './components/LoginModal';
 
@@ -30,6 +31,7 @@ export default function App() {
             <Route path="/api-docs" element={<ApiDocs />} />
             <Route path="/products" element={<ProtectedPage><Products /></ProtectedPage>} />
             <Route path="/packaging" element={<ProtectedPage><Packaging /></ProtectedPage>} />
+            <Route path="/shipping" element={<ProtectedPage><ShippingMethods /></ProtectedPage>} />
             <Route path="/settings" element={<ProtectedPage><Settings /></ProtectedPage>} />
           </Route>
         </Routes>

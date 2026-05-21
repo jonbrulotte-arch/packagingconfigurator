@@ -5,6 +5,7 @@ import productsRouter from './routes/products';
 import packagingRouter from './routes/packaging';
 import configuratorRouter from './routes/configurator';
 import authRouter from './routes/auth';
+import shippingRouter from './routes/shipping';
 
 const app = express();
 const PORT = process.env.PORT ?? 3002;
@@ -16,6 +17,7 @@ app.use('/api/auth', authRouter);
 app.use('/api/products', productsRouter);
 app.use('/api/packaging', packagingRouter);
 app.use('/api/configurator', configuratorRouter);
+app.use('/api/shipping', shippingRouter);
 
 // Serve built React app in production
 const clientBuild = path.join(__dirname, '../../client/dist');

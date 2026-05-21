@@ -6,6 +6,7 @@ const navItems = [
   { to: '/bulk', label: 'Bulk' },
   { to: '/products', label: 'Products' },
   { to: '/packaging', label: 'Packaging' },
+  { to: '/shipping', label: 'Shipping' },
   { to: '/settings', label: 'Settings' },
   { to: '/instructions', label: 'Instructions' },
   { to: '/api-docs', label: 'API Docs' },

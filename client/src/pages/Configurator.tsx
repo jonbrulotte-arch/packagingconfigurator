@@ -446,6 +446,36 @@ export default function Configurator() {
                     </div>
                   </div>
 
+                  {r.shipping && r.shipping.length > 0 && (
+                    <div className="mt-3 pt-3 border-t border-gray-100">
+                      <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Shipping Methods</p>
+                      <div className="flex flex-wrap gap-2">
+                        {r.shipping.map(sm => (
+                          <div key={sm.method_id}
+                            className={`inline-flex items-center gap-1.5 rounded px-2.5 py-1.5 border text-xs ${
+                              sm.tier_label
+                                ? 'bg-indigo-50 border-indigo-200'
+                                : 'bg-gray-50 border-gray-200'
+                            }`}
+                          >
+                            <span className="font-semibold text-gray-800">{sm.method_name}</span>
+                            {sm.tier_label
+                              ? <span className="text-indigo-700">· {sm.tier_label}</span>
+                              : <span className="text-gray-400 italic">no tier match</span>
+                            }
+                            <span className="text-gray-400">·</span>
+                            <span className={`font-medium ${sm.dim_applied ? 'text-amber-600' : 'text-gray-600'}`}>
+                              {sm.billed_weight} lbs
+                            </span>
+                            {sm.dim_applied && (
+                              <span className="bg-amber-100 text-amber-700 font-semibold px-1 rounded text-[10px]">DIM</span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   {(r.weight_flag || r.max_weight_flag || r.fit_quality === 'loose' || r.fit_quality === 'large') && (
                     <div className="mt-3 space-y-2">
                       {(r.fit_quality === 'loose' || r.fit_quality === 'large') && (
