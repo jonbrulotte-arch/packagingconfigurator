@@ -268,6 +268,7 @@ export default function BulkConfigurator() {
                               <div className="flex flex-wrap gap-4 text-xs text-gray-600">
                                 <span>Products: <strong>{r.products_weight.toFixed(3)} lbs</strong></span>
                                 {r.packaging_weight > 0 && <span>Packaging: <strong>{r.packaging_weight.toFixed(3)} lbs</strong></span>}
+                                <span>Actual: <strong>{(r.products_weight + r.packaging_weight).toFixed(3)} lbs</strong></span>
                                 <span>Billed: <strong>{r.total_weight} lbs</strong></span>
                                 <span className={r.weight_flag ? 'text-amber-700 font-semibold' : ''}>
                                   DIM: <strong>{r.dim_weight} lbs</strong>
