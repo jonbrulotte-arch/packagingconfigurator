@@ -96,10 +96,13 @@ export const bulkAnalyze = async (file: File): Promise<BulkAnalyzeResponse> => {
 };
 
 export const exportBulkResults = async (shipments: BulkShipmentResult[]) => {
+  // Strip the full results[] array — the export only needs best, items, and summary fields.
+  // This keeps the payload small even for thousands of shipments.
+  const slim = shipments.map(({ results: _r, ...rest }) => rest);
   const res = await fetch('/api/configurator/bulk-export', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ shipments }),
+    body: JSON.stringify({ shipments: slim }),
   });
   if (!res.ok) throw new Error('Export failed');
   const blob = await res.blob();
