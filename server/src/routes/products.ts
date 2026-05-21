@@ -7,6 +7,24 @@ import { Product } from '../types';
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
 
+router.get('/template', (_req: Request, res: Response) => {
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet([
+    ['Part Number', 'Item Name', 'UPC Height (Inches)', 'UPC Width (Inches)', 'UPC Length (Inches)', 'UPC Weight (Pounds)', 'Foldable'],
+    ['SKU-001', 'Widget A', 3, 4, 5, 1.2, 0],
+    ['SKU-002', 'Widget B', 5, 5, 8, 2.8, 0],
+    ['SKU-003', 'Soft Pouch', 0.5, 6, 10, 0.4, 1],
+  ]);
+  ws['!cols'] = [
+    { wch: 16 }, { wch: 22 }, { wch: 22 }, { wch: 22 }, { wch: 22 }, { wch: 22 }, { wch: 12 },
+  ];
+  XLSX.utils.book_append_sheet(wb, ws, 'Products');
+  const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+  res.setHeader('Content-Disposition', 'attachment; filename="products-template.xlsx"');
+  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  res.send(buf);
+});
+
 router.get('/', (_req: Request, res: Response) => {
   const products = db.prepare('SELECT * FROM products ORDER BY id').all();
   res.json(products);

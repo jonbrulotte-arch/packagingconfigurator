@@ -27,6 +27,8 @@ export const updateProduct = (id: string, data: Omit<Product, 'id' | 'created_at
   });
 export const deleteProduct = (id: string) =>
   request<{ success: boolean }>(`/products/${id}`, { method: 'DELETE' });
+export const downloadProductsTemplate = () => { window.location.href = '/api/products/template'; };
+
 export const importProducts = async (file: File): Promise<{ imported: number; errors: string[] }> => {
   const fd = new FormData();
   fd.append('file', file);
