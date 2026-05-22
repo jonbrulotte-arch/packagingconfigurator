@@ -376,11 +376,11 @@ router.post('/export', (req: Request, res: Response) => {
 router.get('/bulk-template', (_req, res) => {
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.aoa_to_sheet([
-    ['Order ID', 'Part Number', 'Quantity'],
-    ['ORD-001', 'SKU-001', 2],
-    ['ORD-001', 'SKU-002', 1],
-    ['ORD-002', 'SKU-003', 3],
-    ['ORD-003', 'SKU-001', 1],
+    ['Grouping ID', 'Part Number', 'Quantity'],
+    ['GRP-001', 'SKU-001', 2],
+    ['GRP-001', 'SKU-002', 1],
+    ['GRP-002', 'SKU-003', 3],
+    ['GRP-003', 'SKU-001', 1],
   ]);
   ws['!cols'] = [{ wch: 16 }, { wch: 20 }, { wch: 10 }];
   XLSX.utils.book_append_sheet(wb, ws, 'Shipments');
@@ -405,7 +405,7 @@ router.post('/bulk', upload.single('file'), (req: Request, res: Response) => {
     const r: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(rawRows[i])) r[normalizeKey(k)] = v;
 
-    const orderId = String(r['orderid'] ?? r['shipmentid'] ?? r['order'] ?? '').trim();
+    const orderId = String(r['groupingid'] ?? r['orderid'] ?? r['shipmentid'] ?? r['order'] ?? r['groupid'] ?? '').trim();
     const productId = String(r['partnumber'] ?? r['productid'] ?? r['id'] ?? r['sku'] ?? '').trim();
     const quantity = Math.round(Number(r['quantity'] ?? r['qty'] ?? 1));
 
@@ -501,7 +501,7 @@ router.post('/bulk-export', (req: Request, res: Response) => {
   if (!Array.isArray(shipments)) return res.status(400).json({ error: 'Invalid payload' });
 
   const headers = [
-    'Order ID', 'Items', 'Total Units', 'Products Weight (lbs)',
+    'Grouping ID', 'Items', 'Total Units', 'Products Weight (lbs)',
     'Packaging Weight (lbs)', 'Actual Shipping Weight (lbs)', 'Total Billed Weight (lbs)',
     'Recommended Packaging', 'Shipping Height (Inches)', 'Shipping Length (Inches)', 'Shipping Width (Inches)',
     'Fit Quality', 'Volume Utilization (%)',
@@ -575,7 +575,8 @@ router.get('/settings', (_req, res) => {
 });
 
 router.put('/settings', (req: Request, res: Response) => {
-  const { dim_divisor, pack_efficiency, weight_unit, dim_unit, ltl_threshold } = req.body;
+  const { dim_divisor, pack_efficiency, weight_unit, dim_unit, ltl_threshold,
+          backup_frequency, backup_hour, backup_max_count } = req.body;
   const upsert = db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)');
   db.transaction(() => {
     if (dim_divisor != null) upsert.run('dim_divisor', String(Number(dim_divisor)));
@@ -583,6 +584,9 @@ router.put('/settings', (req: Request, res: Response) => {
     if (weight_unit) upsert.run('weight_unit', weight_unit);
     if (dim_unit) upsert.run('dim_unit', dim_unit);
     if (ltl_threshold != null) upsert.run('ltl_threshold', String(Number(ltl_threshold)));
+    if (backup_frequency) upsert.run('backup_frequency', backup_frequency);
+    if (backup_hour != null) upsert.run('backup_hour', String(Number(backup_hour)));
+    if (backup_max_count != null) upsert.run('backup_max_count', String(Number(backup_max_count)));
   })();
   const rows = db.prepare('SELECT key, value FROM settings').all() as { key: string; value: string }[];
   res.json(Object.fromEntries(rows.map(r => [r.key, r.value])));

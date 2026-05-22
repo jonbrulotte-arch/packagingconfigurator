@@ -3,12 +3,48 @@ import { Settings, BackupEntry } from '../types';
 import { getSettings, updateSettings, setPassword, removePassword, listBackups, createBackup, downloadBackup, restoreBackup, deleteBackup } from '../api';
 import { useAuth } from '../contexts/AuthContext';
 
+const HOURS = Array.from({ length: 24 }, (_, h) => ({
+  value: String(h),
+  label: h === 0 ? '12 AM' : h < 12 ? `${h} AM` : h === 12 ? '12 PM' : `${h - 12} PM`,
+}));
+
 function BackupSection() {
   const [backups, setBackups] = useState<BackupEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [msg, setMsg] = useState('');
   const [err, setErr] = useState('');
+
+  const [schedule, setSchedule] = useState({ frequency: 'daily', hour: '2', max_count: '7' });
+  const [scheduleLoading, setScheduleLoading] = useState(true);
+  const [scheduleSaving, setScheduleSaving] = useState(false);
+  const [scheduleMsg, setScheduleMsg] = useState('');
+
+  useEffect(() => {
+    getSettings().then(s => {
+      setSchedule({
+        frequency: s.backup_frequency ?? 'daily',
+        hour: s.backup_hour ?? '2',
+        max_count: s.backup_max_count ?? '7',
+      });
+    }).finally(() => setScheduleLoading(false));
+  }, []);
+
+  const handleSaveSchedule = async () => {
+    setScheduleSaving(true);
+    setScheduleMsg('');
+    try {
+      await updateSettings({
+        backup_frequency: schedule.frequency,
+        backup_hour: schedule.hour,
+        backup_max_count: schedule.max_count,
+      } as Settings);
+      setScheduleMsg('Schedule saved.');
+      setTimeout(() => setScheduleMsg(''), 3000);
+    } finally {
+      setScheduleSaving(false);
+    }
+  };
 
   const load = async () => {
     try {
@@ -75,7 +111,7 @@ function BackupSection() {
 
   return (
     <div className="bg-white rounded-lg shadow p-6">
-      <div className="flex items-center justify-between mb-1">
+      <div className="flex items-center justify-between mb-4">
         <h2 className="text-base font-semibold text-gray-900">Database Backups</h2>
         <button
           onClick={handleCreate}
@@ -85,9 +121,67 @@ function BackupSection() {
           {creating ? 'Creating…' : 'Create Backup Now'}
         </button>
       </div>
-      <p className="text-sm text-gray-500 mb-4">
-        Backups are created automatically every 6 hours. A safety copy is saved before any restore.
-      </p>
+
+      {/* Schedule settings */}
+      <div className="mb-5 p-4 bg-gray-50 rounded-lg border border-gray-200">
+        <h3 className="text-sm font-semibold text-gray-700 mb-3">Auto-Backup Schedule</h3>
+        {scheduleLoading ? (
+          <p className="text-sm text-gray-400">Loading…</p>
+        ) : (
+          <div className="space-y-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Frequency</label>
+                <select
+                  value={schedule.frequency}
+                  onChange={e => setSchedule(s => ({ ...s, frequency: e.target.value }))}
+                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                >
+                  <option value="daily">Daily</option>
+                  <option value="weekly">Weekly</option>
+                  <option value="monthly">Monthly</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Hour</label>
+                <select
+                  value={schedule.hour}
+                  onChange={e => setSchedule(s => ({ ...s, hour: e.target.value }))}
+                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                >
+                  {HOURS.map(h => (
+                    <option key={h.value} value={h.value}>{h.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Max Backups to Keep</label>
+                <input
+                  type="number"
+                  min="1"
+                  max="365"
+                  value={schedule.max_count}
+                  onChange={e => setSchedule(s => ({ ...s, max_count: e.target.value }))}
+                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                />
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handleSaveSchedule}
+                disabled={scheduleSaving}
+                className="px-4 py-1.5 bg-brand-600 text-white text-sm font-medium rounded hover:bg-brand-700 disabled:opacity-50"
+              >
+                {scheduleSaving ? 'Saving…' : 'Save Schedule'}
+              </button>
+              {scheduleMsg && <span className="text-sm text-green-700">{scheduleMsg}</span>}
+            </div>
+            <p className="text-xs text-gray-400">
+              Oldest auto-backups are removed when the limit is reached. Manual backups are not automatically pruned.
+            </p>
+          </div>
+        )}
+      </div>
 
       {msg && <div className="mb-3 px-3 py-2 bg-green-50 border border-green-200 rounded text-sm text-green-800">{msg}</div>}
       {err && <div className="mb-3 px-3 py-2 bg-red-50 border border-red-200 rounded text-sm text-red-800">{err}</div>}

@@ -123,4 +123,7 @@ export interface Settings {
   weight_unit: string;
   dim_unit: string;
   ltl_threshold: string;
+  backup_frequency?: string;
+  backup_hour?: string;
+  backup_max_count?: string;
 }

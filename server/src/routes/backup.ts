@@ -19,7 +19,29 @@ export async function createBackup(): Promise<{ filename: string; size: number; 
   return { filename, size: stat.size, created_at: stat.mtime.toISOString() };
 }
 
-// List backups
+// Returns all backup-*.db files sorted newest first (excludes pre-restore safety copies).
+export function listRegularBackups(): { filename: string; size: number; created_at: string }[] {
+  return fs.readdirSync(BACKUP_DIR)
+    .filter(f => f.startsWith('backup-') && f.endsWith('.db'))
+    .map(f => {
+      const stat = fs.statSync(path.join(BACKUP_DIR, f));
+      return { filename: f, size: stat.size, created_at: stat.mtime.toISOString() };
+    })
+    .sort((a, b) => b.created_at.localeCompare(a.created_at));
+}
+
+// Deletes the oldest backup-*.db files so that at most maxCount remain.
+// Pre-restore safety copies are never touched.
+export function pruneOldBackups(maxCount: number): void {
+  if (maxCount <= 0) return;
+  const backups = listRegularBackups();
+  const toDelete = backups.slice(maxCount);
+  for (const b of toDelete) {
+    try { fs.unlinkSync(path.join(BACKUP_DIR, b.filename)); } catch {}
+  }
+}
+
+// List all backups (regular + pre-restore), newest first
 router.get('/', (_req: Request, res: Response) => {
   const files = fs.readdirSync(BACKUP_DIR)
     .filter(f => f.endsWith('.db'))
@@ -31,7 +53,7 @@ router.get('/', (_req: Request, res: Response) => {
   res.json(files);
 });
 
-// Create backup
+// Create manual backup (no automatic pruning — user manages manually)
 router.post('/', async (_req: Request, res: Response) => {
   try {
     const backup = await createBackup();

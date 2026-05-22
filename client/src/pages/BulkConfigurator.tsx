@@ -90,7 +90,7 @@ export default function BulkConfigurator() {
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Bulk Configurator</h1>
         <p className="text-sm text-gray-500 mt-1">
-          Upload a spreadsheet with multiple shipments — one product row per line, grouped by Order ID.
+          Upload a spreadsheet with multiple shipments — one product row per line, grouped by Grouping ID.
         </p>
       </div>
 
@@ -130,8 +130,8 @@ export default function BulkConfigurator() {
         </div>
 
         <p className="mt-3 text-xs text-gray-400">
-          Required columns: <code>Order ID</code>, <code>Part Number</code>, <code>Quantity</code>.
-          Multiple rows with the same Order ID are treated as one shipment.
+          Required columns: <code>Grouping ID</code>, <code>Part Number</code>, <code>Quantity</code>.
+          Multiple rows with the same Grouping ID are treated as one shipment.
         </p>
 
         {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
