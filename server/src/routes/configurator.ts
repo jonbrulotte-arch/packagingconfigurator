@@ -38,8 +38,19 @@ function effectiveBoxDims(box: Packaging): [number, number, number] {
   return sortedDims(h, box.width, box.length);
 }
 
+function isFlexibleMailer(box: Packaging): boolean {
+  return (box.type === 'bubble_mailer' || box.type === 'poly_mailer') && box.max_height != null;
+}
+
 function productFitsInBox(product: Product, box: Packaging): boolean {
   const [pd1, pd2, pd3] = sortedDims(product.height, product.width, product.length);
+  if (isFlexibleMailer(box)) {
+    // Envelope physics: inserting a product of thickness pd3 into a bubble/poly mailer
+    // causes the flat dimensions to shrink by pd3 as the material wraps around both faces.
+    const flatD1 = Math.max(box.width, box.length);
+    const flatD2 = Math.min(box.width, box.length);
+    return box.max_height! >= pd3 && (flatD1 - pd3) >= pd1 && (flatD2 - pd3) >= pd2;
+  }
   const [bd1, bd2, bd3] = effectiveBoxDims(box);
   return bd1 >= pd1 && bd2 >= pd2 && bd3 >= pd3;
 }
@@ -56,7 +67,18 @@ function allItemsFitInBox(items: ResolvedItem[], box: Packaging, packEfficiency:
       const [, , thickness] = sortedDims(i.product.height, i.product.width, i.product.length);
       return sum + thickness * i.quantity;
     }, 0);
-    return totalThickness <= box.max_height;
+    if (totalThickness > box.max_height) return false;
+    // For flexible mailers: the full stacked thickness shrinks both flat dimensions.
+    // Check that every product still fits within the corrected available flat area.
+    if (isFlexibleMailer(box)) {
+      const flatD1 = Math.max(box.width, box.length);
+      const flatD2 = Math.min(box.width, box.length);
+      return items.every(item => {
+        const [pd1, pd2] = sortedDims(item.product.height, item.product.width, item.product.length);
+        return pd1 <= flatD1 - totalThickness && pd2 <= flatD2 - totalThickness;
+      });
+    }
+    return true;
   }
 
   const totalVolume = items.reduce(
@@ -169,7 +191,8 @@ function analyzeShipment(
 
     // For packaging with max_height, DIM uses actual stacked product thickness, not max capacity.
     // Carriers measure the sealed package — thickness equals the product's smallest dimension.
-    // For bubble/poly mailers, the mailer material (pkg.height) is also part of the sealed thickness.
+    // For bubble/poly mailers, the mailer material (pkg.height) adds to sealed thickness, and
+    // the flat dimensions shrink by the product thickness (envelope wraps around the contents).
     let dimVolume = boxVolume;
     if (pkg.max_height != null) {
       const productThickness = effectiveItems.reduce((sum, i) => {
@@ -177,7 +200,14 @@ function analyzeShipment(
         return sum + t * i.quantity;
       }, 0);
       const mailerMaterial = (pkg.type === 'bubble_mailer' || pkg.type === 'poly_mailer') ? pkg.height : 0;
-      dimVolume = ed1 * ed2 * (productThickness + mailerMaterial);
+      const packedThickness = productThickness + mailerMaterial;
+      if (isFlexibleMailer(pkg)) {
+        const flatD1 = Math.max(pkg.width, pkg.length);
+        const flatD2 = Math.min(pkg.width, pkg.length);
+        dimVolume = (flatD1 - productThickness) * (flatD2 - productThickness) * packedThickness;
+      } else {
+        dimVolume = ed1 * ed2 * packedThickness;
+      }
     }
 
     const dimWeight = roundWeight(dimVolume / dimDivisor);

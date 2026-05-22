@@ -168,15 +168,61 @@ Volume unchanged  →  2 × 1 × 12 × 9 = 1 × 12 × 18 = 216 in³`}
           </p>
           <Callout color="blue" label="How Max Height is used for mailers">
             <ul className="mt-1 space-y-1 list-disc list-inside text-sm">
-              <li><strong>Fit check (single item):</strong> product dimensions are compared against [Max Height, W, L] sorted — Max Height acts as the height constraint.</li>
-              <li><strong>Fit check (multiple items):</strong> total stacked thickness (sum of each item's thinnest dimension × quantity) must be ≤ Max Height.</li>
+              <li><strong>Fit check (single item):</strong> product thickness must be ≤ Max Height, and the flat dimensions are reduced by the product thickness before checking the product's other two dimensions — see Envelope Physics below.</li>
+              <li><strong>Fit check (multiple items):</strong> total stacked thickness (sum of each item's thinnest dimension × quantity) must be ≤ Max Height, and flat dimensions are reduced by the total stacked thickness.</li>
               <li><strong>Volume utilization:</strong> calculated using Max Height × W × L as the effective interior volume.</li>
-              <li><strong>DIM weight:</strong> calculated using Max Height × W × L — reflects the actual carrier-measured size when the mailer is packed.</li>
+              <li><strong>DIM weight:</strong> calculated using the actual packed exterior dimensions — flat dims reduced by product thickness, height equal to product thickness + mailer material.</li>
             </ul>
           </Callout>
           <p className="mt-2">
             Leaving Max Height blank for a mailer falls back to using the H dimension — useful
             if you prefer to treat the mailer like a rigid container.
+          </p>
+        </SubSection>
+
+        <SubSection title="Envelope physics — why flat dimensions shrink">
+          <p>
+            A bubble or poly mailer's listed dimensions (e.g. <strong>13.75" × 9.5"</strong>) are
+            measured flat and empty. When a product of thickness <strong>T</strong> is inserted, the
+            flexible material must wrap around all four edges of the item. This consumes{' '}
+            <strong>T/2 of the flat dimension on each face</strong>, reducing both the usable width
+            and usable length by <strong>T</strong> total:
+          </p>
+          <Code>
+            {`Available width  = Mailer W − Product Thickness (T)
+Available length = Mailer L − Product Thickness (T)
+
+Example — Bubble Mailer 13.75" × 9.5", product 11.6" × 9.1" × 2.3":
+  Available width  = 13.75 − 2.3 = 11.45"   product needs 11.6"  → does NOT fit
+  Available length =  9.5  − 2.3 =  7.2"   product needs  9.1"  → does NOT fit
+
+Without this correction the flat check alone (11.6 ≤ 13.75, 9.1 ≤ 9.5) would
+incorrectly pass — the mailer physically cannot close around this product.`}
+          </Code>
+          <p className="mt-2">
+            For <strong>multi-item shipments</strong> the correction uses the{' '}
+            <em>total stacked thickness</em> of all items rather than a single item's thickness —
+            because the envelope must wrap around the entire stack:
+          </p>
+          <Code>
+            {`Total Thickness = sum of (each item's thinnest dimension × quantity)
+Available width  = Mailer W − Total Thickness
+Available length = Mailer L − Total Thickness
+
+Every item in the shipment must fit within those reduced dimensions.`}
+          </Code>
+          <Callout color="amber" label="Applies to bubble mailers and poly mailers only">
+            This correction is applied exclusively to <strong>Bubble Mailer</strong> and{' '}
+            <strong>Poly Mailer</strong> packaging types — rigid boxes and other packaging types
+            are not affected. Other packaging types that use Max Height (flat-pack boxes,
+            etc.) do not experience the same physical dimension reduction.
+          </Callout>
+          <p className="mt-2">
+            The same thickness-based flat reduction also applies to the{' '}
+            <strong>DIM volume calculation</strong> for these mailer types, since the carrier
+            measures the actual exterior of the packed mailer — not the empty flat dimensions.
+            A product that is thick relative to the mailer's opening will result in a noticeably
+            smaller DIM volume than the nominal mailer size would suggest.
           </p>
         </SubSection>
       </Section>
@@ -338,6 +384,11 @@ product sorted: [9,  6, 4]
             <strong>Foldable products</strong> use their folded dimensions for both checks above —
             the longest dimension is halved and the thickness (shortest dimension) is doubled before
             any comparison is made. See the Products Tab section for details.
+          </p>
+          <p className="mt-2 text-sm text-gray-700">
+            <strong>Bubble and poly mailers</strong> apply an additional envelope physics correction
+            during the fit check — see <em>Envelope physics</em> in the Packaging Tab section above
+            for the full explanation.
           </p>
           <p className="mt-2 text-sm text-gray-700">
             <strong>Ships-in-own-packaging products</strong> are excluded from this step entirely —
@@ -514,9 +565,9 @@ product sorted: [9,  6, 4]
         </SubSection>
         <SubSection title="Database backups">
           <p>
-            The SQLite database is backed up automatically every 6 hours. You can also create a
-            manual backup at any time from the <NavRef to="Settings" /> page under{' '}
-            <strong>Database Backups</strong>.
+            The SQLite database is backed up automatically on a configurable schedule (daily,
+            weekly, or monthly, at a configured hour). You can also create a manual backup at
+            any time from the <NavRef to="Settings" /> page under <strong>Database Backups</strong>.
           </p>
           <ul className="mt-2 space-y-1 text-sm text-gray-700 list-disc list-inside">
             <li><strong>Download</strong> — save a backup file locally for off-server storage.</li>
