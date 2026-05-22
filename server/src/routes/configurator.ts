@@ -307,7 +307,7 @@ router.post('/analyze', (req: Request, res: Response) => {
     total_actual_weight: totalActualWeight,
     total_item_count: allItems.reduce((s, i) => s + i.quantity, 0),
     settings: { dim_divisor: dimDivisor, pack_efficiency: packEfficiency, ltl_threshold: ltlThreshold },
-    results,
+    results: results.slice(0, 1),
     standalone_items: standaloneResults,
     ltl_required: ltlRequired,
     ltl_shipping: ltlShipping,
