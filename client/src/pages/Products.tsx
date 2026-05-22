@@ -101,6 +101,14 @@ export default function Products() {
         </div>
       </div>
 
+      <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded text-xs text-blue-700">
+        <strong>Excel Import Format:</strong> Columns:{' '}
+        <code>Part Number</code>, <code>Item Name</code>, <code>UPC Height (Inches)</code>,{' '}
+        <code>UPC Width (Inches)</code>, <code>UPC Length (Inches)</code>, <code>UPC Weight (Pounds)</code>,{' '}
+        <code>Foldable</code> (0/1), <code>Ships In Own Packaging</code> (0/1).{' '}
+        Existing products are updated by Part Number.
+      </div>
+
       <div className="mb-4 flex items-center gap-2 max-w-sm">
         <div className="relative flex-1">
           <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -206,14 +214,6 @@ export default function Products() {
             </tbody>
           </table>
         </div>
-      </div>
-
-      <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded text-xs text-blue-700">
-        <strong>Excel Import Format:</strong> Columns:{' '}
-        <code>Part Number</code>, <code>Item Name</code>, <code>UPC Height (Inches)</code>,{' '}
-        <code>UPC Width (Inches)</code>, <code>UPC Length (Inches)</code>, <code>UPC Weight (Pounds)</code>,{' '}
-        <code>Foldable</code> (0/1), <code>Ships In Own Packaging</code> (0/1).{' '}
-        Existing products are updated by Part Number.
       </div>
 
       {modalOpen && (
