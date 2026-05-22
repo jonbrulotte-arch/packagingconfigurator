@@ -468,7 +468,7 @@ router.post('/bulk', upload.single('file'), (req: Request, res: Response) => {
       ltl++;
     } else if (allItemsAreStandalone || best) {
       matched++;
-      if (best && (best.weight_flag || best.max_weight_flag)) flagged++;
+      if (best && (best.weight_flag || best.max_weight_flag || best.fit_quality === 'loose' || best.fit_quality === 'large')) flagged++;
     } else {
       errors++;
     }
