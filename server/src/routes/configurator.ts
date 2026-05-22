@@ -339,7 +339,7 @@ router.post('/export', (req: Request, res: Response) => {
     // Packaging options section
     ['PACKAGING OPTIONS'],
     ['Rank', 'Packaging', 'Type', 'H (in)', 'W (in)', 'L (in)', 'Volume (in³)',
-     'Utilization (%)', 'Fit Quality', 'Products Wt (lbs)', 'Shipping Weight (Pounds)',
+     'Utilization (%)', 'Fit Quality', 'Products Wt (lbs)', 'Packaging Wt (lbs)', 'Actual Shipping Wt (lbs)',
      'Total Billed Wt (lbs)', `DIM Wt (lbs, ÷${settings?.dim_divisor ?? 139})`,
      'DIM Flag', 'Overweight Flag'],
     ...results.map((r, i) => [
@@ -352,6 +352,7 @@ router.post('/export', (req: Request, res: Response) => {
       r.fit_quality.charAt(0).toUpperCase() + r.fit_quality.slice(1),
       r.products_weight,
       r.packaging_weight,
+      Math.round((r.products_weight + r.packaging_weight) * 1000) / 1000,
       r.total_weight,
       r.dim_weight,
       r.weight_flag ? 'YES' : 'No',
@@ -501,7 +502,7 @@ router.post('/bulk-export', (req: Request, res: Response) => {
 
   const headers = [
     'Order ID', 'Items', 'Total Units', 'Products Weight (lbs)',
-    'Shipping Weight (Pounds)', 'Total Billed Weight (lbs)',
+    'Packaging Weight (lbs)', 'Actual Shipping Weight (lbs)', 'Total Billed Weight (lbs)',
     'Recommended Packaging', 'Shipping Height (Inches)', 'Shipping Length (Inches)', 'Shipping Width (Inches)',
     'Fit Quality', 'Volume Utilization (%)',
     'Dim Weight (lbs)', 'Dim Weight Flag', 'Overweight Flag', 'Error',
@@ -537,6 +538,7 @@ router.post('/bulk-export', (req: Request, res: Response) => {
       s.total_item_count ?? '',
       best ? best.products_weight : '',
       best ? best.packaging_weight : '',
+      best ? Math.round((best.products_weight + best.packaging_weight) * 1000) / 1000 : '',
       best ? best.total_weight : '',
       best ? best.packaging.name : '',
       shippingHeight,
@@ -553,7 +555,7 @@ router.post('/bulk-export', (req: Request, res: Response) => {
 
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.aoa_to_sheet([headers, ...dataRows]);
-  ws['!cols'] = headers.map((h, i) => ({ wch: i === 0 ? 14 : i === 1 ? 30 : h.length + 4 }));
+  ws['!cols'] = headers.map((h, i) => ({ wch: i === 0 ? 14 : i === 1 ? 32 : h.length + 4 }));
   XLSX.utils.book_append_sheet(wb, ws, 'Results');
   const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
 
