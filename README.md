@@ -65,8 +65,15 @@ packagingconfigurator/
 
 ### Prerequisites
 
-- Node.js 18 or later
-- npm 9 or later
+- Node.js 18 or later — verify with `node -v`
+- npm 9 or later — verify with `npm -v`
+
+If Node.js is not installed, the quickest way on Ubuntu/Debian:
+
+```bash
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt-get install -y nodejs
+```
 
 ### Development
 
@@ -172,6 +179,16 @@ All runtime settings are stored in the database (`Settings` page in the UI).
 
 Backup files are stored in `backups/` as `backup-YYYY-MM-DDTHH-MM-SS.db`.  
 Pre-restore safety copies (`pre-restore-*.db`) are never automatically pruned.
+
+### First-run setup
+
+The database starts empty. Before the Configurator will return any results, you need to configure three things through the UI:
+
+1. **Products** — add your product catalog (or import via Excel)
+2. **Packaging** — add every box, bubble mailer, and poly mailer you ship in
+3. **Shipping Methods** — add each carrier service with its weight range and DIM rules
+
+Until at least one product, one packaging option, and one shipping method exist, the Configurator and Bulk Configurator pages will return no results.
 
 ---
 
