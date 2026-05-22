@@ -512,6 +512,25 @@ router.post('/bulk-export', (req: Request, res: Response) => {
     const itemsSummary = (s.items ?? [])
       .map((i: any) => `${i.product.id} ×${i.quantity}`)
       .join(', ');
+
+    // For bubble/poly mailers, actual sealed height = mailer material + stacked product thickness.
+    // All other packaging uses the fixed external height.
+    let shippingHeight: number | string = '';
+    if (best) {
+      const pkg = best.packaging as Packaging;
+      if ((pkg.type === 'bubble_mailer' || pkg.type === 'poly_mailer') && pkg.max_height != null) {
+        const packagedItems = (s.items ?? []).filter((i: any) => !i.product.ships_in_own_packaging);
+        const productThickness = packagedItems.reduce((sum: number, i: any) => {
+          const fp = foldedProduct(i.product as Product);
+          const [, , t] = sortedDims(fp.height, fp.width, fp.length);
+          return sum + t * i.quantity;
+        }, 0);
+        shippingHeight = Math.round((pkg.height + productThickness) * 1000) / 1000;
+      } else {
+        shippingHeight = pkg.height;
+      }
+    }
+
     return [
       s.id,
       itemsSummary,
@@ -520,7 +539,7 @@ router.post('/bulk-export', (req: Request, res: Response) => {
       best ? best.packaging_weight : '',
       best ? best.total_weight : '',
       best ? best.packaging.name : '',
-      best ? best.packaging.height : '',
+      shippingHeight,
       best ? best.packaging.length : '',
       best ? best.packaging.width : '',
       best ? best.fit_quality : '',
