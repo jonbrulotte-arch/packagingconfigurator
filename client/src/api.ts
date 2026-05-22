@@ -64,10 +64,10 @@ export const importPackaging = async (file: File): Promise<{ imported: number; e
 
 // Configurator
 export const analyzeProducts = (items: RequestItem[]) =>
-  request<AnalyzeResponse>('/configurator/analyze?best_only=false', {
+  request<AnalyzeResponse>('/configurator/analyze', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ items }),
+    body: JSON.stringify({ items, best_only: false }),
   });
 
 export const exportResults = async (payload: Pick<AnalyzeResponse, 'items' | 'results' | 'settings'>) => {

@@ -265,10 +265,10 @@ router.post('/import', upload.single('file'), (req: Request, res: Response) => {
 });
 
 router.post('/analyze', (req: Request, res: Response) => {
-  const { items } = req.body as { items: RequestItem[] };
+  const { items, best_only } = req.body as { items: RequestItem[]; best_only?: boolean };
   if (!Array.isArray(items) || items.length === 0)
     return res.status(400).json({ error: 'items must be a non-empty array' });
-  const bestOnly = req.query.best_only !== 'false';
+  const bestOnly = best_only !== false;
 
   const settingsRows = db.prepare('SELECT key, value FROM settings').all() as { key: string; value: string }[];
   const s = Object.fromEntries(settingsRows.map(r => [r.key, r.value]));
