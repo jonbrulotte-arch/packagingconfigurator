@@ -119,7 +119,7 @@ export default function BulkConfigurator() {
             <button
               onClick={handleExport}
               disabled={exporting}
-              className="inline-flex items-center gap-2 px-4 py-2.5 text-sm text-gray-600 border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 ml-auto"
+              className="inline-flex items-center gap-2 px-4 py-2.5 text-sm text-gray-600 border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 sm:ml-auto"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -180,7 +180,7 @@ export default function BulkConfigurator() {
                 >
                   <span className="w-5 text-center flex-shrink-0">{STATUS_ICON[status]}</span>
 
-                  <span className="font-mono font-semibold text-gray-900 w-32 flex-shrink-0">{shipment.id}</span>
+                  <span className="font-mono font-semibold text-gray-900 w-20 sm:w-32 flex-shrink-0 truncate">{shipment.id}</span>
 
                   <span className="text-sm text-gray-500 flex-1 truncate">
                     {shipment.error

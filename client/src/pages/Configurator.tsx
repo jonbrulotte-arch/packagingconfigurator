@@ -218,7 +218,7 @@ export default function Configurator() {
           </div>
         </div>
 
-        <div className="flex items-center justify-between mt-3">
+        <div className="flex flex-wrap items-center justify-between gap-2 mt-3">
           <button
             onClick={addRow}
             className="text-sm text-brand-600 hover:text-brand-800 flex items-center gap-1"
@@ -229,7 +229,7 @@ export default function Configurator() {
             Add product
           </button>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <button
               onClick={downloadConfiguratorTemplate}
               className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1"
@@ -267,7 +267,7 @@ export default function Configurator() {
 
         {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
 
-        <div className="mt-4 flex gap-3">
+        <div className="mt-4 flex flex-wrap gap-3">
           <button
             onClick={handleAnalyze}
             disabled={loading}
@@ -298,22 +298,22 @@ export default function Configurator() {
               Shipment Summary — {response.total_item_count} unit{response.total_item_count !== 1 ? 's' : ''}
             </h2>
             <div className="overflow-x-auto">
-              <table className="min-w-full text-sm">
+              <table className="min-w-full text-sm whitespace-nowrap">
                 <thead>
                   <tr className="text-left text-xs text-gray-500 uppercase">
                     <th className="pb-2 pr-4">ID</th>
                     <th className="pb-2 pr-4">Name</th>
-                    <th className="pb-2 pr-4">H × W × L (in)</th>
-                    <th className="pb-2 pr-4">Unit Wt (lbs)</th>
+                    <th className="pb-2 pr-4 hidden sm:table-cell">H × W × L (in)</th>
+                    <th className="pb-2 pr-4">Wt (lbs)</th>
                     <th className="pb-2 pr-4 text-center">Qty</th>
-                    <th className="pb-2 text-right">Line Wt (lbs)</th>
+                    <th className="pb-2 text-right">Line Wt</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {response.items.map(({ product: p, quantity: qty }) => (
                     <tr key={p.id}>
                       <td className="py-2 pr-4 font-mono text-brand-700">{p.id}</td>
-                      <td className="py-2 pr-4">
+                      <td className="py-2 pr-4 whitespace-normal">
                         {p.name}
                         {!!p.foldable && (
                           <span className="ml-2 text-xs font-medium text-indigo-700 bg-indigo-50 border border-indigo-200 px-1.5 py-0.5 rounded">↕ folded</span>
@@ -322,7 +322,7 @@ export default function Configurator() {
                           <span className="ml-2 text-xs font-medium text-teal-700 bg-teal-50 border border-teal-200 px-1.5 py-0.5 rounded">✦ ships own</span>
                         )}
                       </td>
-                      <td className="py-2 pr-4 font-mono">{p.height} × {p.width} × {p.length}</td>
+                      <td className="py-2 pr-4 font-mono hidden sm:table-cell">{p.height} × {p.width} × {p.length}</td>
                       <td className="py-2 pr-4 font-mono">{p.weight}</td>
                       <td className="py-2 pr-4 text-center font-semibold">{qty}</td>
                       <td className="py-2 text-right font-mono">{(p.weight * qty).toFixed(3)}</td>
@@ -331,7 +331,7 @@ export default function Configurator() {
                 </tbody>
                 <tfoot>
                   <tr className="border-t-2 border-gray-200 font-semibold">
-                    <td colSpan={5} className="pt-2 text-gray-600 text-right pr-4">Combined weight:</td>
+                    <td colSpan={5} className="pt-2 text-gray-600 text-right pr-4">Combined:</td>
                     <td className="pt-2 text-right font-mono">{response.total_actual_weight.toFixed(3)} lbs</td>
                   </tr>
                 </tfoot>
@@ -463,7 +463,7 @@ export default function Configurator() {
             if (!hasPackagedItems) return null;
             return (
           <div>
-            <div className="flex items-center justify-between mb-3">
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
               <h2 className="text-base font-semibold text-gray-900">
                 {response.results.length === 0
                   ? (response.ltl_required ? 'No Standard Packaging Options' : 'No Packaging Options Found')

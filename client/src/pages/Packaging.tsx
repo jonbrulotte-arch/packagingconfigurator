@@ -78,31 +78,31 @@ export default function Packaging() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Packaging Options</h1>
           <p className="text-sm text-gray-500 mt-1">{items.length} option{items.length !== 1 ? 's' : ''}</p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-2">
           <button
             onClick={downloadPackagingTemplate}
-            className="px-4 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50 flex items-center gap-2"
+            className="px-3 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50 flex items-center gap-2"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
             </svg>
-            Download Template
+            Template
           </button>
-          <label className="cursor-pointer px-4 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50 flex items-center gap-2">
+          <label className="cursor-pointer px-3 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50 flex items-center gap-2">
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l4-4m0 0l4 4m-4-4v12" />
             </svg>
-            Import Excel
+            Import
             <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" onChange={handleImport} className="hidden" />
           </label>
           <button
             onClick={exportPackaging}
-            className="px-4 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50 flex items-center gap-2"
+            className="px-3 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50 flex items-center gap-2"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -111,9 +111,9 @@ export default function Packaging() {
           </button>
           <button
             onClick={() => setModalOpen(true)}
-            className="px-4 py-2 text-sm bg-brand-600 text-white rounded hover:bg-brand-700"
+            className="px-3 py-2 text-sm bg-brand-600 text-white rounded hover:bg-brand-700"
           >
-            + Add Packaging
+            + Add
           </button>
         </div>
       </div>
@@ -128,7 +128,7 @@ export default function Packaging() {
 
       <div className="bg-white rounded-lg shadow overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
+          <table className="min-w-full divide-y divide-gray-200 whitespace-nowrap">
             <thead className="bg-gray-50">
               <tr>
                 {['Name', 'Type', 'H (in)', 'W (in)', 'L (in)', 'Max H (in)', 'Volume (in³)', 'Pkg Wt (lbs)', 'Max Wt (lbs)', 'Status', 'Notes', ''].map(h => (
@@ -146,7 +146,7 @@ export default function Packaging() {
               ) : (
                 items.map((pkg, i) => (
                   <tr key={pkg.id} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                    <td className="px-4 py-3 text-sm font-medium text-gray-900">{pkg.name}</td>
+                    <td className="px-4 py-3 text-sm font-medium text-gray-900 whitespace-normal max-w-[160px]">{pkg.name}</td>
                     <td className="px-4 py-3 text-sm">
                       <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${TYPE_COLORS[pkg.type] ?? TYPE_COLORS.other}`}>
                         {TYPE_LABELS[pkg.type] ?? pkg.type}
