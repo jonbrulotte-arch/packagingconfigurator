@@ -268,6 +268,7 @@ router.post('/analyze', (req: Request, res: Response) => {
   const { items } = req.body as { items: RequestItem[] };
   if (!Array.isArray(items) || items.length === 0)
     return res.status(400).json({ error: 'items must be a non-empty array' });
+  const bestOnly = req.query.best_only !== 'false';
 
   const settingsRows = db.prepare('SELECT key, value FROM settings').all() as { key: string; value: string }[];
   const s = Object.fromEntries(settingsRows.map(r => [r.key, r.value]));
@@ -307,7 +308,7 @@ router.post('/analyze', (req: Request, res: Response) => {
     total_actual_weight: totalActualWeight,
     total_item_count: allItems.reduce((s, i) => s + i.quantity, 0),
     settings: { dim_divisor: dimDivisor, pack_efficiency: packEfficiency, ltl_threshold: ltlThreshold },
-    results: results,
+    results: bestOnly ? results.slice(0, 1) : results,
     standalone_items: standaloneResults,
     ltl_required: ltlRequired,
     ltl_shipping: ltlShipping,

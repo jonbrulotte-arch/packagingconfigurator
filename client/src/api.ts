@@ -64,7 +64,7 @@ export const importPackaging = async (file: File): Promise<{ imported: number; e
 
 // Configurator
 export const analyzeProducts = (items: RequestItem[]) =>
-  request<AnalyzeResponse>('/configurator/analyze', {
+  request<AnalyzeResponse>('/configurator/analyze?best_only=false', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ items }),
