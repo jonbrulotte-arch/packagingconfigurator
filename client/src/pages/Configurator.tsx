@@ -80,6 +80,7 @@ export default function Configurator() {
   const [error, setError] = useState('');
   const [importErrors, setImportErrors] = useState<string[]>([]);
   const [response, setResponse] = useState<AnalyzeResponse | null>(initial.response);
+  const [formCollapsed, setFormCollapsed] = useState(!!initial.response);
   const fileRef = useRef<HTMLInputElement>(null);
   const didAutoAnalyze = useRef(false);
 
@@ -152,7 +153,9 @@ export default function Configurator() {
 
     setLoading(true);
     try {
-      setResponse(await analyzeProducts(items));
+      const result = await analyzeProducts(items);
+      setResponse(result);
+      setFormCollapsed(true);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Analysis failed');
     } finally {
@@ -165,6 +168,7 @@ export default function Configurator() {
     setResponse(null);
     setError('');
     setImportErrors([]);
+    setFormCollapsed(false);
     localStorage.removeItem(STORAGE_KEY);
   };
 
@@ -204,6 +208,26 @@ export default function Configurator() {
         </p>
       </div>
 
+      {formCollapsed && response ? (
+        <div className="bg-white rounded-lg shadow px-4 py-3 mb-6 flex items-center justify-between gap-3 flex-wrap">
+          <div className="flex flex-wrap items-center gap-2">
+            {response.items.map(({ product, quantity }) => (
+              <span key={product.id} className="inline-flex items-center gap-1.5 bg-gray-100 text-gray-800 text-xs font-mono px-2.5 py-1.5 rounded border border-gray-200">
+                {product.id}
+                {quantity > 1 && <span className="text-gray-400 font-sans">× {quantity}</span>}
+              </span>
+            ))}
+          </div>
+          <div className="flex items-center gap-4">
+            <button onClick={() => setFormCollapsed(false)} className="text-sm text-brand-600 hover:text-brand-800 font-medium">
+              Edit
+            </button>
+            <button onClick={handleClear} className="text-sm text-gray-500 hover:text-gray-700">
+              Clear
+            </button>
+          </div>
+        </div>
+      ) : (
       <div className="bg-white rounded-lg shadow p-6 mb-6">
         {/* Row table */}
         <div className="mb-3">
@@ -318,6 +342,7 @@ export default function Configurator() {
           Tip: press Enter in a product ID field to add the next row.
         </p>
       </div>
+      )}
 
       {response && (
         <div className="space-y-6">
