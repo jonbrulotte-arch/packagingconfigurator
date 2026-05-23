@@ -234,17 +234,18 @@ export async function computePackagingAnalysis(): Promise<void> {
         if (product.ships_in_own_packaging) {
           const vol = product.height * product.width * product.length;
           const dimWt = roundWeight(vol / dimDivisor);
-          const dimExposed = dimWt > product.weight;
-          if (dimExposed) dimExposureCount++;
           hasPackagingCount++;
 
           const shipping = computeShipping(vol, product.weight, dimDivisor, shippingMethods);
+          let anyDimBilled = false;
           for (const sm of shipping) {
             if (sm.dim_applied) {
+              anyDimBilled = true;
               const entry = carrierAccum.get(sm.method_id);
               if (entry) entry.count++;
             }
           }
+          if (anyDimBilled) dimExposureCount++;
 
           productResults.push({
             ...gap,
@@ -254,7 +255,7 @@ export async function computePackagingAnalysis(): Promise<void> {
             volume_utilization: null,
             actual_weight: product.weight,
             dim_weight: dimWt,
-            dim_exposed: dimExposed,
+            dim_exposed: anyDimBilled,
             compatible_count: 0,
           });
           continue;
@@ -341,15 +342,15 @@ export async function computePackagingAnalysis(): Promise<void> {
         }
 
         const best = fitResults[0];
-        const dimExposed = best.dim_weight > best.actual_weight;
-        if (dimExposed) dimExposureCount++;
-
+        let anyDimBilled = false;
         for (const sm of best.shipping) {
           if (sm.dim_applied) {
+            anyDimBilled = true;
             const entry = carrierAccum.get(sm.method_id);
             if (entry) entry.count++;
           }
         }
+        if (anyDimBilled) dimExposureCount++;
 
         // Accumulate per-packaging stats
         for (const r of fitResults) {
@@ -374,7 +375,7 @@ export async function computePackagingAnalysis(): Promise<void> {
           volume_utilization: best.volume_utilization,
           actual_weight: best.actual_weight,
           dim_weight: best.dim_weight,
-          dim_exposed: dimExposed,
+          dim_exposed: anyDimBilled,
           compatible_count: fitResults.length,
         });
       }

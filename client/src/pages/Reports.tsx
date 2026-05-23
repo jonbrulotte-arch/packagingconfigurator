@@ -279,7 +279,7 @@ export default function Reports() {
             <StatCard
               label="DIM Exposure"
               value={`${report.dim_exposure_rate}%`}
-              sub={`${fmt(report.dim_exposure_count)} products billed by DIM`}
+              sub={`${fmt(report.dim_exposure_count)} products DIM-billed by ≥1 carrier`}
               color="blue"
             />
           </div>
@@ -393,7 +393,7 @@ export default function Reports() {
               <div className="px-5 py-4 border-b border-gray-100">
                 <h2 className="text-base font-semibold text-gray-900">DIM Exposure by Carrier</h2>
                 <p className="text-xs text-gray-500 mt-0.5">
-                  Products where DIM weight exceeds actual weight on the best packaging option.
+                  Products where a carrier's DIM weight exceeds actual weight on the best packaging option. A product may appear in multiple carriers if it qualifies for more than one method.
                 </p>
               </div>
               {report.dim_by_carrier.length === 0 ? (
