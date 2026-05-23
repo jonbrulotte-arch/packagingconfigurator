@@ -275,38 +275,38 @@ export default function ApiDocs() {
           path="/products"
           description="Return all products ordered by ID."
           response={JSON.stringify([
-            { id: 'SKU-001', name: 'Widget A', height: 3, width: 4, length: 5, weight: 1.2, foldable: 0, ships_in_own_packaging: 0 },
-            { id: 'SKU-002', name: 'Appliance XL', height: 18, width: 14, length: 24, weight: 45.0, foldable: 0, ships_in_own_packaging: 1 },
+            { id: 'SKU-001', name: 'Widget A', height: 3, width: 4, length: 5, weight: 1.2, foldable: 0, ships_in_own_packaging: 0, upc: '012345678901' },
+            { id: 'SKU-002', name: 'Appliance XL', height: 18, width: 14, length: 24, weight: 45.0, foldable: 0, ships_in_own_packaging: 1, upc: null },
           ], null, 2)}
         />
 
         <Endpoint
           method="GET"
           path="/products/:id"
-          description="Return a single product by ID."
-          response={JSON.stringify({ id: 'SKU-001', name: 'Widget A', height: 3, width: 4, length: 5, weight: 1.2, foldable: 0, ships_in_own_packaging: 0 }, null, 2)}
+          description="Return a single product by ID or UPC. Both the Part Number and the UPC barcode resolve to the same product record."
+          response={JSON.stringify({ id: 'SKU-001', name: 'Widget A', height: 3, width: 4, length: 5, weight: 1.2, foldable: 0, ships_in_own_packaging: 0, upc: '012345678901' }, null, 2)}
         />
 
         <Endpoint
           method="POST"
           path="/products"
-          description="Create a new product. foldable: 1 = always ship folded (longest dim halved, thickness doubled). ships_in_own_packaging: 1 = bypass box search, use product dims for DIM weight."
+          description="Create a new product. foldable: 1 = always ship folded (longest dim halved, thickness doubled). ships_in_own_packaging: 1 = bypass box search, use product dims for DIM weight. upc is optional — used for barcode scanner lookup."
           request={{
             headers: 'Content-Type: application/json',
-            body: JSON.stringify({ id: 'SKU-003', name: 'Widget C', height: 2, width: 3, length: 4, weight: 0.8, foldable: 0, ships_in_own_packaging: 0 }),
+            body: JSON.stringify({ id: 'SKU-003', name: 'Widget C', height: 2, width: 3, length: 4, weight: 0.8, foldable: 0, ships_in_own_packaging: 0, upc: '012345678903' }),
           }}
-          response={JSON.stringify({ id: 'SKU-003', name: 'Widget C', height: 2, width: 3, length: 4, weight: 0.8, foldable: 0, ships_in_own_packaging: 0 }, null, 2)}
+          response={JSON.stringify({ id: 'SKU-003', name: 'Widget C', height: 2, width: 3, length: 4, weight: 0.8, foldable: 0, ships_in_own_packaging: 0, upc: '012345678903' }, null, 2)}
         />
 
         <Endpoint
           method="PUT"
           path="/products/:id"
-          description="Update an existing product. ID cannot be changed."
+          description="Update an existing product. ID cannot be changed. Pass upc: null to clear the barcode."
           request={{
             headers: 'Content-Type: application/json',
-            body: JSON.stringify({ name: 'Widget C v2', height: 2.5, width: 3, length: 4, weight: 0.9, foldable: 1, ships_in_own_packaging: 0 }),
+            body: JSON.stringify({ name: 'Widget C v2', height: 2.5, width: 3, length: 4, weight: 0.9, foldable: 1, ships_in_own_packaging: 0, upc: '012345678903' }),
           }}
-          response={JSON.stringify({ id: 'SKU-003', name: 'Widget C v2', height: 2.5, width: 3, length: 4, weight: 0.9, foldable: 1, ships_in_own_packaging: 0 }, null, 2)}
+          response={JSON.stringify({ id: 'SKU-003', name: 'Widget C v2', height: 2.5, width: 3, length: 4, weight: 0.9, foldable: 1, ships_in_own_packaging: 0, upc: '012345678903' }, null, 2)}
         />
 
         <Endpoint
@@ -317,12 +317,19 @@ export default function ApiDocs() {
         />
 
         <Endpoint
+          method="GET"
+          path="/products/export"
+          description="Download all products as an Excel file in the same column format as the import template, ready for bulk editing and re-import."
+          response="→ Binary .xlsx file download (products-export.xlsx)"
+        />
+
+        <Endpoint
           method="POST"
           path="/products/import"
-          description="Upload an Excel/CSV file to bulk upsert products. Existing products are updated by Part Number; new ones are created. Optional columns: Foldable, Ships In Own Packaging (1/true/yes to enable)."
+          description="Upload an Excel/CSV file to bulk upsert products. Existing products are updated by Part Number; new ones are created. Optional columns: Foldable, Ships In Own Packaging (1/true/yes to enable), UPC (barcode for scanner lookup)."
           request={{ headers: 'Content-Type: multipart/form-data' }}
           response={JSON.stringify({ imported: 42, errors: ['Row 7: missing Part Number — skipped'] }, null, 2)}
-          note='File field name must be "file". Required columns: Part Number, Item Name, UPC Height (Inches), UPC Width (Inches), UPC Length (Inches), UPC Weight (Pounds).'
+          note='File field name must be "file". Required columns: Part Number, Item Name, UPC Height (Inches), UPC Width (Inches), UPC Length (Inches), UPC Weight (Pounds). Optional: Foldable, Ships In Own Packaging, UPC.'
         />
       </Section>
 
