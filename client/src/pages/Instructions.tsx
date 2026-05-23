@@ -8,6 +8,7 @@ const TOC_ITEMS = [
   { id: 'configurator-tab', label: 'Configurator' },
   { id: 'manual-configurator-tab', label: 'Manual Configurator' },
   { id: 'bulk-configurator-tab', label: 'Bulk Configurator' },
+  { id: 'reports-tab', label: 'Reports' },
   { id: 'how-results-are-calculated', label: 'How Results Work' },
   { id: 'settings-reference', label: 'Settings' },
   { id: 'admin-security', label: 'Admin & Security' },
@@ -491,6 +492,87 @@ Every item in the shipment must fit within those reduced dimensions.`}
             <li><strong className="text-red-600">LTL Red</strong> — shipment weight exceeds LTL threshold</li>
             <li><strong className="text-gray-500">— Gray</strong> — no packaging option found for packaged items</li>
             <li><strong className="text-red-500">✕ Error</strong> — one or more product IDs not found in the catalog</li>
+          </ul>
+        </SubSection>
+      </Section>
+
+      {/* ── REPORTS ── */}
+      <Section id="reports-tab" title="Reports">
+        <p>
+          The <strong>Reports</strong> page provides a pre-computed packaging analysis across your entire product catalog.
+          Because the report evaluates every product against every active packaging option, it can take a minute to run
+          for large catalogs — results are cached and refreshed automatically every 6 hours.
+        </p>
+
+        <SubSection title="Running the Report">
+          <p>
+            Click <strong>Run Analysis</strong> to generate or refresh the report. A spinner appears while the server
+            processes the catalog in the background. The page polls every 3 seconds and displays results automatically
+            when the run finishes. Subsequent page loads use the cached result instantly.
+          </p>
+          <p className="mt-2 text-sm text-gray-600">
+            The report also re-runs automatically on server startup (if no cached result exists or the cache is more
+            than 6 hours old) and on a scheduled hourly check.
+          </p>
+        </SubSection>
+
+        <SubSection title="Summary Cards">
+          <ul className="space-y-2 text-sm list-disc list-inside text-gray-700">
+            <li><strong>Coverage Rate</strong> — percentage of products that fit at least one active packaging option.</li>
+            <li><strong>No Packaging Found</strong> — products that fit zero active options; these need a new packaging size added.</li>
+            <li><strong>Loose/Oversized Only</strong> — products that technically fit, but only in packaging where volume utilization is below 35%. Consider adding a smaller option.</li>
+            <li><strong>DIM Exposure</strong> — products where at least one active carrier bills by dimensional weight rather than actual weight on the best packaging option. Matches the carrier breakdown table below.</li>
+          </ul>
+        </SubSection>
+
+        <SubSection title="Packaging Utilization Table">
+          <p>
+            Lists every active packaging option with how many products it fits, how many products it is the
+            <em> best</em> (highest-volume-utilization) option for, average volume utilization, and a fit-quality
+            bar breaking down Exact / Good / Loose / Oversized counts. Click any column header to sort.
+          </p>
+          <p className="mt-2 text-sm text-gray-600">
+            A low <em>Best Fit</em> count relative to <em>Fits</em> means a packaging option is always
+            beaten by a better-fitting option — it may be redundant. A <em>Sole Option</em> flag means
+            at least one product has no other choice; removing that packaging would create a coverage gap.
+          </p>
+        </SubSection>
+
+        <SubSection title="DIM Exposure by Carrier">
+          <p>
+            Shows how many catalog products would be billed by each carrier's dimensional weight on their
+            best packaging option. A product appears in a carrier's count only when:
+          </p>
+          <ul className="mt-2 space-y-1 text-sm list-disc list-inside text-gray-700">
+            <li>The product's billed weight falls within the carrier's min/max weight range.</li>
+            <li>The package volume exceeds the carrier's DIM threshold (if one is configured).</li>
+            <li>The carrier's DIM weight exceeds the product's actual weight.</li>
+          </ul>
+          <p className="mt-2 text-sm text-gray-600">
+            A product can appear in multiple carriers' counts if it qualifies for more than one method.
+            The summary card shows the count of <em>unique</em> products billed by DIM on at least one carrier.
+          </p>
+        </SubSection>
+
+        <SubSection title="Coverage Gaps">
+          <p>
+            Three collapsible lists identify products that need attention:
+          </p>
+          <ul className="mt-2 space-y-2 text-sm list-disc list-inside text-gray-700">
+            <li><strong>No Packaging Found</strong> — zero active options fit these products. Add larger packaging.</li>
+            <li><strong>Only Loose/Oversized Fits</strong> — all fitting options are below 35% utilization. Add a better-sized option to protect product and reduce DIM charges.</li>
+            <li><strong>DIM Exposure</strong> — products actively billed by DIM on their best packaging, with actual weight, DIM weight, and the difference per product. Click a product ID in the Configurator to see all packaging options for that SKU.</li>
+          </ul>
+        </SubSection>
+
+        <SubSection title="Exporting Results">
+          <p>
+            Click <strong>Export to Excel</strong> to download a three-sheet workbook:
+          </p>
+          <ul className="mt-2 space-y-1 text-sm list-disc list-inside text-gray-700">
+            <li><strong>Packaging Utilization</strong> — full stats for every active packaging option.</li>
+            <li><strong>Coverage Gaps</strong> — products with no fit or loose-only fits.</li>
+            <li><strong>Product Matrix</strong> — every product with its best packaging, fit quality, actual/DIM weights, and DIM exposure flag.</li>
           </ul>
         </SubSection>
       </Section>

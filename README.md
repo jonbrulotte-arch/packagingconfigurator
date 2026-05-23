@@ -11,6 +11,7 @@ A self-hosted web application for determining the optimal shipping package for p
 - **Products** — Manage your product catalog (dimensions, weight, foldable flag, ships-in-own-packaging flag) with Excel import/export
 - **Packaging** — Manage packaging options (boxes, bubble mailers, poly mailers, padded mailers) including capacity, tare weight, and DIM divisor overrides
 - **Shipping Methods** — Configure carriers (UPS, USPS, FedEx, etc.) with per-method DIM divisors, weight limits, and DIM thresholds
+- **Reports** — Scheduled packaging analysis across the full catalog: coverage rates, DIM exposure by carrier, packaging utilization stats, and exportable Excel workbook
 - **Settings** — Admin password protection, automated database backups with configurable frequency and retention
 - **API** — JSON REST API for programmatic access (see `/api-docs`)
 
@@ -270,6 +271,36 @@ Products with a UPC can be looked up in the Configurator using a USB or Bluetoot
 Multiple rows with the same Grouping ID are combined into a single shipment before packaging is evaluated. Rows without a Grouping ID are treated as individual shipments.
 
 Download the template from the Bulk Configurator page.
+
+---
+
+## Packaging Analysis Report
+
+The **Reports** page runs a background analysis of every product against every active packaging option. Results are cached in SQLite and served instantly on subsequent page loads.
+
+### What the report covers
+
+| Metric | Description |
+|--------|-------------|
+| Coverage Rate | % of products with at least one fitting packaging option |
+| No Packaging Found | Products that fit zero active options |
+| Loose/Oversized Only | Products whose best fit is below 35% volume utilization |
+| DIM Exposure | Products billed by dimensional weight on ≥1 carrier |
+| Packaging Utilization | Per-packaging fits count, best-fit count, avg utilization, fit-quality breakdown |
+| DIM by Carrier | Per-carrier count of products billed by DIM weight |
+
+### Schedule
+
+- Runs automatically on server startup if no cached result exists or the cache is older than 6 hours
+- Rechecked hourly; recomputes if the cache has aged past 6 hours
+- Can be triggered manually from the Reports page at any time
+
+### Export
+
+Click **Export to Excel** on the Reports page for a three-sheet workbook:
+1. **Packaging Utilization** — stats for every active packaging option
+2. **Coverage Gaps** — products with no fit or loose-only fits
+3. **Product Matrix** — every product with best packaging, weights, and DIM exposure flag
 
 ---
 
