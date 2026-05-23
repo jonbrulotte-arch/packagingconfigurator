@@ -49,13 +49,17 @@ function fitQualityLabel(pct: number): 'exact' | 'good' | 'loose' | 'large' {
   return 'large';
 }
 
+interface ExtendedMatch extends ShippingMatch {
+  carrier_dim_weight: number;
+}
+
 function computeShipping(
   dimVolume: number,
   actualWeight: number,
   globalDimDivisor: number,
   methods: ShippingMethod[]
-): ShippingMatch[] {
-  const matches: ShippingMatch[] = [];
+): ExtendedMatch[] {
+  const matches: ExtendedMatch[] = [];
   for (const m of methods) {
     const effectiveDivisor = m.dim_divisor ?? globalDimDivisor;
     const carrierDimWeight = roundWeight(dimVolume / effectiveDivisor);
@@ -71,6 +75,7 @@ function computeShipping(
         method_name: m.name,
         billed_weight: carrierBilled,
         dim_applied: dimApplies && carrierDimWeight > actualWeight,
+        carrier_dim_weight: carrierDimWeight,
       });
     }
   }
@@ -107,8 +112,8 @@ export interface DimExposedProduct {
   length: number;
   weight: number;
   actual_weight: number;
-  dim_weight: number;
   best_packaging_name: string | null;
+  dim_carriers: { method_name: string; dim_weight: number; billed_weight: number }[];
 }
 
 export interface DimCarrierStat {
@@ -269,8 +274,10 @@ export async function computePackagingAnalysis(): Promise<void> {
               length: product.length,
               weight: product.weight,
               actual_weight: product.weight,
-              dim_weight: dimWt,
               best_packaging_name: 'Ships in Own Packaging',
+              dim_carriers: shipping
+                .filter(sm => sm.dim_applied)
+                .map(sm => ({ method_name: sm.method_name, dim_weight: sm.carrier_dim_weight, billed_weight: sm.billed_weight })),
             });
           }
 
@@ -299,7 +306,7 @@ export async function computePackagingAnalysis(): Promise<void> {
           volume_utilization: number;
           actual_weight: number;
           dim_weight: number;
-          shipping: ShippingMatch[];
+          shipping: ExtendedMatch[];
         }
 
         const fitResults: FitResult[] = [];
@@ -387,8 +394,10 @@ export async function computePackagingAnalysis(): Promise<void> {
             length: product.length,
             weight: product.weight,
             actual_weight: best.actual_weight,
-            dim_weight: best.dim_weight,
             best_packaging_name: best.pkg.name,
+            dim_carriers: best.shipping
+              .filter(sm => sm.dim_applied)
+              .map(sm => ({ method_name: sm.method_name, dim_weight: sm.carrier_dim_weight, billed_weight: sm.billed_weight })),
           });
         }
 
@@ -645,22 +654,29 @@ router.get('/packaging-analysis/export', (_req, res) => {
   ];
   XLSX.utils.book_append_sheet(wb, ws3, 'Product Matrix');
 
-  // Sheet 4: DIM Exposure
+  // Sheet 4: DIM Exposure — one row per product×carrier
   const headers4 = [
     'Product ID', 'Name', 'H (in)', 'W (in)', 'L (in)', 'Weight (lbs)',
-    'Best Packaging', 'Actual Weight (lbs)', 'DIM Weight (lbs)', 'Difference (lbs)',
+    'Best Packaging', 'Actual Weight (lbs)', 'Carrier', 'DIM Weight (lbs)', 'Billed Weight (lbs)', 'Difference (lbs)',
   ];
-  const rows4 = report.dim_exposed_products.map(p => [
-    p.id, p.name, p.height, p.width, p.length, p.weight,
-    p.best_packaging_name ?? '',
-    p.actual_weight,
-    p.dim_weight,
-    Math.round((p.dim_weight - p.actual_weight) * 1000) / 1000,
-  ]);
+  const rows4: (string | number)[][] = [];
+  for (const p of report.dim_exposed_products) {
+    for (const c of p.dim_carriers) {
+      rows4.push([
+        p.id, p.name, p.height, p.width, p.length, p.weight,
+        p.best_packaging_name ?? '',
+        p.actual_weight,
+        c.method_name,
+        c.dim_weight,
+        c.billed_weight,
+        Math.round((c.dim_weight - p.actual_weight) * 1000) / 1000,
+      ]);
+    }
+  }
   const ws4 = XLSX.utils.aoa_to_sheet([headers4, ...(rows4.length ? rows4 : [['No DIM-exposed products']])]);
   ws4['!cols'] = [
     { wch: 16 }, { wch: 28 }, { wch: 8 }, { wch: 8 }, { wch: 8 }, { wch: 12 },
-    { wch: 30 }, { wch: 18 }, { wch: 16 }, { wch: 16 },
+    { wch: 30 }, { wch: 18 }, { wch: 22 }, { wch: 16 }, { wch: 18 }, { wch: 16 },
   ];
   XLSX.utils.book_append_sheet(wb, ws4, 'DIM Exposure');
 

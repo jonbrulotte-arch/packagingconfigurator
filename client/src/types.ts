@@ -149,8 +149,8 @@ export interface DimExposedProduct {
   length: number;
   weight: number;
   actual_weight: number;
-  dim_weight: number;
   best_packaging_name: string | null;
+  dim_carriers: { method_name: string; dim_weight: number; billed_weight: number }[];
 }
 
 export interface DimCarrierStat {

@@ -569,8 +569,7 @@ export default function Reports() {
                             <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
                             <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Best Packaging</th>
                             <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Actual Wt</th>
-                            <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">DIM Wt</th>
-                            <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Difference</th>
+                            <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">DIM by Carrier</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
@@ -587,10 +586,19 @@ export default function Reports() {
                               </td>
                               <td className="px-3 py-2 text-gray-800">{p.name}</td>
                               <td className="px-3 py-2 text-gray-500 text-xs">{p.best_packaging_name ?? '—'}</td>
-                              <td className="px-3 py-2 font-mono text-right text-gray-600">{p.actual_weight} lbs</td>
-                              <td className="px-3 py-2 font-mono text-right text-amber-700 font-semibold">{p.dim_weight} lbs</td>
-                              <td className="px-3 py-2 font-mono text-right text-amber-600">
-                                +{Math.round((p.dim_weight - p.actual_weight) * 1000) / 1000} lbs
+                              <td className="px-3 py-2 font-mono text-right text-gray-600 whitespace-nowrap">{p.actual_weight} lbs</td>
+                              <td className="px-3 py-2">
+                                <div className="flex flex-wrap gap-1">
+                                  {p.dim_carriers.map(c => (
+                                    <span key={c.method_name} className="inline-flex items-center gap-1 text-xs bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5">
+                                      <span className="text-gray-600 font-medium">{c.method_name}</span>
+                                      <span className="text-gray-400">·</span>
+                                      <span className="text-amber-700 font-semibold font-mono">{c.dim_weight} lbs DIM</span>
+                                      <span className="text-gray-400">·</span>
+                                      <span className="text-gray-600 font-mono">billed {c.billed_weight} lbs</span>
+                                    </span>
+                                  ))}
+                                </div>
                               </td>
                             </tr>
                           ))}
