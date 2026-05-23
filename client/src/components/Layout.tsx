@@ -29,7 +29,12 @@ export default function Layout() {
       <header className="bg-brand-800 text-white shadow-md">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-14">
-            <span className="font-bold text-lg tracking-tight">Packaging Configurator</span>
+            <span className="font-bold text-lg tracking-tight flex items-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" className="w-6 h-6 flex-shrink-0">
+                <text y=".9em" fontSize="90">📦</text>
+              </svg>
+              Packaging Configurator
+            </span>
 
             {/* Desktop nav */}
             <nav className="hidden md:flex items-center gap-1">
