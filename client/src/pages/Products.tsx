@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import { Product } from '../types';
 import { getProducts, createProduct, updateProduct, deleteProduct, importProducts, downloadProductsTemplate, exportProducts } from '../api';
 import Modal from '../components/Modal';
@@ -181,7 +182,15 @@ export default function Products() {
                   .filter(p => !filter || p.id.toLowerCase().includes(filter.toLowerCase()) || p.name.toLowerCase().includes(filter.toLowerCase()))
                   .map((p, i) => (
                   <tr key={p.id} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                    <td className="px-3 py-3 text-sm font-mono font-medium text-brand-700 truncate max-w-[9rem]">{p.id}</td>
+                    <td className="px-3 py-3 text-sm font-mono font-medium truncate max-w-[9rem]">
+                      <Link
+                        to={`/configurator?product_id=${encodeURIComponent(p.id)}`}
+                        className="text-brand-700 hover:text-brand-900 hover:underline"
+                        title={`Open ${p.id} in Configurator`}
+                      >
+                        {p.id}
+                      </Link>
+                    </td>
                     <td className="px-3 py-3 text-sm text-gray-900 whitespace-normal min-w-[130px]">{p.name}</td>
                     <td className="px-2 py-3 text-sm text-gray-600">{p.height}</td>
                     <td className="px-2 py-3 text-sm text-gray-600">{p.width}</td>
