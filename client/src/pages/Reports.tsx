@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { PackagingAnalysisReport, PackagingStatEntry, ReportState } from '../types';
+import { PackagingAnalysisReport, PackagingStatEntry, ReportState, DimExposedProduct } from '../types';
 import { getPackagingAnalysis, runPackagingAnalysis, downloadPackagingAnalysisExport } from '../api';
 
 const TYPE_LABELS: Record<string, string> = {
@@ -102,6 +102,7 @@ export default function Reports() {
   const [sortDir, setSortDir] = useState<SortDir>('desc');
   const [showNoFit, setShowNoFit] = useState(false);
   const [showLooseOnly, setShowLooseOnly] = useState(false);
+  const [showDimExposed, setShowDimExposed] = useState(false);
   const pollRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fetchState = async () => {
@@ -432,7 +433,7 @@ export default function Reports() {
           </div>
 
           {/* Coverage Gaps */}
-          {(report.no_packaging_count > 0 || report.loose_only_count > 0) && (
+          {(report.no_packaging_count > 0 || report.loose_only_count > 0 || report.dim_exposure_count > 0) && (
             <div className="space-y-4">
               <h2 className="text-base font-semibold text-gray-900">Coverage Gaps</h2>
 
@@ -527,10 +528,57 @@ export default function Reports() {
                   )}
                 </div>
               )}
+              {report.dim_exposure_count > 0 && (
+                <div className="bg-white rounded-lg shadow overflow-hidden">
+                  <button
+                    onClick={() => setShowDimExposed(v => !v)}
+                    className="w-full px-5 py-4 flex items-center justify-between border-b border-gray-100 hover:bg-gray-50"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-blue-100 text-blue-700 text-xs font-bold">
+                        {report.dim_exposure_count}
+                      </span>
+                      <span className="font-semibold text-gray-900">DIM Exposure</span>
+                      <span className="text-sm text-gray-500">— at least one carrier bills by dimensional weight</span>
+                    </div>
+                    <span className="text-gray-400 text-sm">{showDimExposed ? '▲' : '▼'}</span>
+                  </button>
+                  {showDimExposed && (
+                    <div className="overflow-x-auto max-h-96 overflow-y-auto">
+                      <table className="min-w-full text-sm divide-y divide-gray-100">
+                        <thead className="bg-gray-50 sticky top-0">
+                          <tr>
+                            <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Product ID</th>
+                            <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
+                            <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Best Packaging</th>
+                            <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Actual Wt</th>
+                            <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">DIM Wt</th>
+                            <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Difference</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                          {(report.dim_exposed_products as DimExposedProduct[]).map((p, i) => (
+                            <tr key={p.id} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                              <td className="px-3 py-2 font-mono text-brand-700">{p.id}</td>
+                              <td className="px-3 py-2 text-gray-800">{p.name}</td>
+                              <td className="px-3 py-2 text-gray-500 text-xs">{p.best_packaging_name ?? '—'}</td>
+                              <td className="px-3 py-2 font-mono text-right text-gray-600">{p.actual_weight} lbs</td>
+                              <td className="px-3 py-2 font-mono text-right text-amber-700 font-semibold">{p.dim_weight} lbs</td>
+                              <td className="px-3 py-2 font-mono text-right text-amber-600">
+                                +{Math.round((p.dim_weight - p.actual_weight) * 1000) / 1000} lbs
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
-          {report.no_packaging_count === 0 && report.loose_only_count === 0 && (
+          {report.no_packaging_count === 0 && report.loose_only_count === 0 && report.dim_exposure_count === 0 && (
             <div className="bg-green-50 border border-green-200 rounded-lg px-5 py-4 text-sm text-green-800">
               No coverage gaps — every product has at least one well-fitting packaging option.
             </div>

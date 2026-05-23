@@ -99,6 +99,18 @@ export interface ProductGap {
   ships_in_own_packaging: number;
 }
 
+export interface DimExposedProduct {
+  id: string;
+  name: string;
+  height: number;
+  width: number;
+  length: number;
+  weight: number;
+  actual_weight: number;
+  dim_weight: number;
+  best_packaging_name: string | null;
+}
+
 export interface DimCarrierStat {
   method_id: number;
   method_name: string;
@@ -147,6 +159,7 @@ export interface PackagingAnalysisReport {
   packaging_stats: PackagingStatEntry[];
   no_fit_products: ProductGap[];
   loose_only_products: ProductGap[];
+  dim_exposed_products: DimExposedProduct[];
   dim_by_carrier: DimCarrierStat[];
   type_breakdown: TypeBreakdownEntry[];
   product_results: ProductResultEntry[];
@@ -210,6 +223,7 @@ export async function computePackagingAnalysis(): Promise<void> {
 
     const noFitProducts: ProductGap[] = [];
     const looseOnlyProducts: ProductGap[] = [];
+    const dimExposedProducts: DimExposedProduct[] = [];
     const productResults: ProductResultEntry[] = [];
     let hasPackagingCount = 0;
     let dimExposureCount = 0;
@@ -245,7 +259,20 @@ export async function computePackagingAnalysis(): Promise<void> {
               if (entry) entry.count++;
             }
           }
-          if (anyDimBilled) dimExposureCount++;
+          if (anyDimBilled) {
+            dimExposureCount++;
+            dimExposedProducts.push({
+              id: product.id,
+              name: product.name,
+              height: product.height,
+              width: product.width,
+              length: product.length,
+              weight: product.weight,
+              actual_weight: product.weight,
+              dim_weight: dimWt,
+              best_packaging_name: 'Ships in Own Packaging',
+            });
+          }
 
           productResults.push({
             ...gap,
@@ -350,7 +377,20 @@ export async function computePackagingAnalysis(): Promise<void> {
             if (entry) entry.count++;
           }
         }
-        if (anyDimBilled) dimExposureCount++;
+        if (anyDimBilled) {
+          dimExposureCount++;
+          dimExposedProducts.push({
+            id: product.id,
+            name: product.name,
+            height: product.height,
+            width: product.width,
+            length: product.length,
+            weight: product.weight,
+            actual_weight: best.actual_weight,
+            dim_weight: best.dim_weight,
+            best_packaging_name: best.pkg.name,
+          });
+        }
 
         // Accumulate per-packaging stats
         for (const r of fitResults) {
@@ -445,6 +485,7 @@ export async function computePackagingAnalysis(): Promise<void> {
       packaging_stats: packagingStats,
       no_fit_products: noFitProducts,
       loose_only_products: looseOnlyProducts,
+      dim_exposed_products: dimExposedProducts,
       dim_by_carrier: [...carrierAccum.entries()]
         .map(([method_id, d]) => ({
           method_id,

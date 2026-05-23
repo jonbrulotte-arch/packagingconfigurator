@@ -141,6 +141,18 @@ export interface ProductGap {
   ships_in_own_packaging: number;
 }
 
+export interface DimExposedProduct {
+  id: string;
+  name: string;
+  height: number;
+  width: number;
+  length: number;
+  weight: number;
+  actual_weight: number;
+  dim_weight: number;
+  best_packaging_name: string | null;
+}
+
 export interface DimCarrierStat {
   method_id: number;
   method_name: string;
@@ -170,6 +182,7 @@ export interface PackagingAnalysisReport {
   packaging_stats: PackagingStatEntry[];
   no_fit_products: ProductGap[];
   loose_only_products: ProductGap[];
+  dim_exposed_products: DimExposedProduct[];
   dim_by_carrier: DimCarrierStat[];
   type_breakdown: TypeBreakdownEntry[];
 }
