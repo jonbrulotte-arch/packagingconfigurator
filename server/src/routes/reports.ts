@@ -645,6 +645,25 @@ router.get('/packaging-analysis/export', (_req, res) => {
   ];
   XLSX.utils.book_append_sheet(wb, ws3, 'Product Matrix');
 
+  // Sheet 4: DIM Exposure
+  const headers4 = [
+    'Product ID', 'Name', 'H (in)', 'W (in)', 'L (in)', 'Weight (lbs)',
+    'Best Packaging', 'Actual Weight (lbs)', 'DIM Weight (lbs)', 'Difference (lbs)',
+  ];
+  const rows4 = report.dim_exposed_products.map(p => [
+    p.id, p.name, p.height, p.width, p.length, p.weight,
+    p.best_packaging_name ?? '',
+    p.actual_weight,
+    p.dim_weight,
+    Math.round((p.dim_weight - p.actual_weight) * 1000) / 1000,
+  ]);
+  const ws4 = XLSX.utils.aoa_to_sheet([headers4, ...(rows4.length ? rows4 : [['No DIM-exposed products']])]);
+  ws4['!cols'] = [
+    { wch: 16 }, { wch: 28 }, { wch: 8 }, { wch: 8 }, { wch: 8 }, { wch: 12 },
+    { wch: 30 }, { wch: 18 }, { wch: 16 }, { wch: 16 },
+  ];
+  XLSX.utils.book_append_sheet(wb, ws4, 'DIM Exposure');
+
   const dateStr = new Date(report.computed_at).toISOString().split('T')[0];
   const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
   res.setHeader('Content-Disposition', `attachment; filename="packaging-analysis-${dateStr}.xlsx"`);
