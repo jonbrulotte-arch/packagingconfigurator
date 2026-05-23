@@ -194,6 +194,7 @@ function analyzeShipment(
     // For bubble/poly mailers, the mailer material (pkg.height) adds to sealed thickness, and
     // the flat dimensions shrink by the product thickness (envelope wraps around the contents).
     let dimVolume = boxVolume;
+    let shippedDims = { height: pkg.height, width: pkg.width, length: pkg.length };
     if (pkg.max_height != null) {
       const productThickness = effectiveItems.reduce((sum, i) => {
         const [, , t] = sortedDims(i.product.height, i.product.width, i.product.length);
@@ -205,8 +206,14 @@ function analyzeShipment(
         const flatD1 = Math.max(pkg.width, pkg.length);
         const flatD2 = Math.min(pkg.width, pkg.length);
         dimVolume = (flatD1 - productThickness) * (flatD2 - productThickness) * packedThickness;
+        shippedDims = {
+          height: Math.round(packedThickness * 1000) / 1000,
+          width: Math.round((flatD2 - productThickness) * 1000) / 1000,
+          length: Math.round((flatD1 - productThickness) * 1000) / 1000,
+        };
       } else {
         dimVolume = ed1 * ed2 * packedThickness;
+        shippedDims = { height: Math.round(packedThickness * 1000) / 1000, width: pkg.width, length: pkg.length };
       }
     }
 
@@ -235,6 +242,7 @@ function analyzeShipment(
       products_fit: true,
       has_folded_items: hasFoldedItems,
       shipping,
+      shipped_dims: shippedDims,
     });
   }
 

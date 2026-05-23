@@ -442,6 +442,14 @@ function Results({ response }: { response: AnalyzeResponse }) {
                         {r.packaging.height}" H × {r.packaging.width}" W × {r.packaging.length}" L
                         {r.packaging.max_weight != null && ` · max ${r.packaging.max_weight} lbs`}
                       </p>
+                      {(r.shipped_dims.height !== r.packaging.height ||
+                        r.shipped_dims.width !== r.packaging.width ||
+                        r.shipped_dims.length !== r.packaging.length) && (
+                        <p className="text-sm text-indigo-600 font-mono mt-0.5">
+                          <span className="text-xs text-indigo-400 font-sans mr-1">Shipped:</span>
+                          {r.shipped_dims.height}" H × {r.shipped_dims.width}" W × {r.shipped_dims.length}" L
+                        </p>
+                      )}
                     </div>
                     <div className="text-right text-sm">
                       <p className="text-gray-500">Volume utilization</p>

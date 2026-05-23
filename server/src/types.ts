@@ -41,6 +41,7 @@ export interface ConfiguratorResult {
   products_fit: boolean;
   has_folded_items: boolean;
   shipping: ShippingMatch[];
+  shipped_dims: { height: number; width: number; length: number };
 }
 
 export interface Settings {
