@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Product } from '../types';
-import { getProducts, createProduct, updateProduct, deleteProduct, importProducts, downloadProductsTemplate } from '../api';
+import { getProducts, createProduct, updateProduct, deleteProduct, importProducts, downloadProductsTemplate, exportProducts } from '../api';
 import Modal from '../components/Modal';
 import ProductForm from '../components/ProductForm';
 
@@ -93,6 +93,15 @@ export default function Products() {
             <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" onChange={handleImport} className="hidden" />
           </label>
           <button
+            onClick={exportProducts}
+            className="px-3 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50 flex items-center gap-2"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            Export
+          </button>
+          <button
             onClick={() => setModalOpen(true)}
             className="px-3 py-2 text-sm bg-brand-600 text-white rounded hover:bg-brand-700"
           >
@@ -105,8 +114,8 @@ export default function Products() {
         <strong>Excel Import Format:</strong> Columns:{' '}
         <code>Part Number</code>, <code>Item Name</code>, <code>UPC Height (Inches)</code>,{' '}
         <code>UPC Width (Inches)</code>, <code>UPC Length (Inches)</code>, <code>UPC Weight (Pounds)</code>,{' '}
-        <code>Foldable</code> (0/1), <code>Ships In Own Packaging</code> (0/1).{' '}
-        Existing products are updated by Part Number.
+        <code>Foldable</code> (0/1), <code>Ships In Own Packaging</code> (0/1), <code>UPC</code> (optional barcode).{' '}
+        Existing products are updated by Part Number. Use <strong>Export</strong> to download current data for bulk editing.
       </div>
 
       <div className="mb-4 flex items-center gap-2 max-w-sm">

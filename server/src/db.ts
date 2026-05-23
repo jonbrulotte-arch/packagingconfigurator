@@ -94,6 +94,13 @@ db.exec(`
 try { db.exec('ALTER TABLE shipping_methods ADD COLUMN min_weight REAL NOT NULL DEFAULT 0'); } catch {}
 try { db.exec('ALTER TABLE shipping_methods ADD COLUMN max_weight REAL'); } catch {}
 
+// Migrate: add upc to products (optional barcode for desktop scanner lookup)
+try {
+  db.exec('ALTER TABLE products ADD COLUMN upc TEXT');
+} catch {
+  // Column already exists — safe to ignore
+}
+
 // Seed default settings
 const insertSetting = db.prepare(
   'INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)'

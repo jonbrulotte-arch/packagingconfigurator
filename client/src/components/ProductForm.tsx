@@ -20,6 +20,7 @@ export default function ProductForm({ initial, onSubmit, onCancel, isEdit }: Pro
     weight: String(initial?.weight ?? ''),
     foldable: !!(initial?.foldable),
     ships_in_own_packaging: !!(initial?.ships_in_own_packaging),
+    upc: initial?.upc ?? '',
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -49,6 +50,7 @@ export default function ProductForm({ initial, onSubmit, onCancel, isEdit }: Pro
         weight: nums[3],
         foldable: form.foldable ? 1 : 0,
         ships_in_own_packaging: form.ships_in_own_packaging ? 1 : 0,
+        upc: form.upc.trim() || null,
       });
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to save');
@@ -111,6 +113,18 @@ export default function ProductForm({ initial, onSubmit, onCancel, isEdit }: Pro
             className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
           />
         </div>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          UPC <span className="text-gray-400 font-normal">(optional — for barcode scanner lookup)</span>
+        </label>
+        <input
+          value={form.upc ?? ''}
+          onChange={set('upc')}
+          placeholder="012345678901"
+          className="w-full border border-gray-300 rounded px-3 py-2 text-sm font-mono"
+        />
       </div>
 
       <label className="flex items-start gap-3 cursor-pointer select-none">

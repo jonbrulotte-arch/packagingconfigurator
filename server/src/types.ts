@@ -7,6 +7,7 @@ export interface Product {
   weight: number;
   foldable: number;
   ships_in_own_packaging: number;
+  upc?: string | null;
   created_at?: string;
   updated_at?: string;
 }

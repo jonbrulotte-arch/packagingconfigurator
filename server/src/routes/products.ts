@@ -7,17 +7,23 @@ import { Product } from '../types';
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
 
+const TEMPLATE_HEADERS = [
+  'Part Number', 'Item Name',
+  'UPC Height (Inches)', 'UPC Width (Inches)', 'UPC Length (Inches)', 'UPC Weight (Pounds)',
+  'Foldable', 'Ships In Own Packaging', 'UPC',
+];
+
 router.get('/template', (_req: Request, res: Response) => {
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.aoa_to_sheet([
-    ['Part Number', 'Item Name', 'UPC Height (Inches)', 'UPC Width (Inches)', 'UPC Length (Inches)', 'UPC Weight (Pounds)', 'Foldable', 'Ships In Own Packaging'],
-    ['SKU-001', 'Widget A', 3, 4, 5, 1.2, 0, 0],
-    ['SKU-002', 'Widget B', 5, 5, 8, 2.8, 0, 0],
-    ['SKU-003', 'Soft Pouch', 0.5, 6, 10, 0.4, 1, 0],
-    ['SKU-004', 'Appliance', 12, 10, 18, 15.0, 0, 1],
+    TEMPLATE_HEADERS,
+    ['SKU-001', 'Widget A', 3, 4, 5, 1.2, 0, 0, ''],
+    ['SKU-002', 'Widget B', 5, 5, 8, 2.8, 0, 0, ''],
+    ['SKU-003', 'Soft Pouch', 0.5, 6, 10, 0.4, 1, 0, ''],
+    ['SKU-004', 'Appliance', 12, 10, 18, 15.0, 0, 1, ''],
   ]);
   ws['!cols'] = [
-    { wch: 16 }, { wch: 22 }, { wch: 22 }, { wch: 22 }, { wch: 22 }, { wch: 22 }, { wch: 12 }, { wch: 24 },
+    { wch: 16 }, { wch: 22 }, { wch: 22 }, { wch: 22 }, { wch: 22 }, { wch: 22 }, { wch: 12 }, { wch: 24 }, { wch: 16 },
   ];
   XLSX.utils.book_append_sheet(wb, ws, 'Products');
   const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
@@ -26,9 +32,29 @@ router.get('/template', (_req: Request, res: Response) => {
   res.send(buf);
 });
 
+router.get('/export', (_req: Request, res: Response) => {
+  const products = db.prepare('SELECT * FROM products ORDER BY id').all() as Product[];
+  const wb = XLSX.utils.book_new();
+  const rows = [
+    TEMPLATE_HEADERS,
+    ...products.map(p => [
+      p.id, p.name, p.height, p.width, p.length, p.weight,
+      p.foldable ? 1 : 0, p.ships_in_own_packaging ? 1 : 0, p.upc ?? '',
+    ]),
+  ];
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols'] = [
+    { wch: 16 }, { wch: 28 }, { wch: 22 }, { wch: 22 }, { wch: 22 }, { wch: 22 }, { wch: 12 }, { wch: 24 }, { wch: 16 },
+  ];
+  XLSX.utils.book_append_sheet(wb, ws, 'Products');
+  const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+  res.setHeader('Content-Disposition', 'attachment; filename="products-export.xlsx"');
+  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  res.send(buf);
+});
+
 router.get('/', (_req: Request, res: Response) => {
-  const products = db.prepare('SELECT * FROM products ORDER BY id').all();
-  res.json(products);
+  res.json(db.prepare('SELECT * FROM products ORDER BY id').all());
 });
 
 router.get('/:id', (req: Request, res: Response) => {
@@ -38,7 +64,7 @@ router.get('/:id', (req: Request, res: Response) => {
 });
 
 router.post('/', (req: Request, res: Response) => {
-  const { id, name, height, width, length, weight, foldable, ships_in_own_packaging } = req.body as Product;
+  const { id, name, height, width, length, weight, foldable, ships_in_own_packaging, upc } = req.body as Product;
   if (!id || !name || height == null || width == null || length == null || weight == null) {
     return res.status(400).json({ error: 'Missing required fields' });
   }
@@ -46,21 +72,21 @@ router.post('/', (req: Request, res: Response) => {
   if (existing) return res.status(409).json({ error: 'Product ID already exists' });
 
   db.prepare(
-    'INSERT INTO products (id, name, height, width, length, weight, foldable, ships_in_own_packaging) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
-  ).run(id, name, Number(height), Number(width), Number(length), Number(weight), foldable ? 1 : 0, ships_in_own_packaging ? 1 : 0);
+    'INSERT INTO products (id, name, height, width, length, weight, foldable, ships_in_own_packaging, upc) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+  ).run(id, name, Number(height), Number(width), Number(length), Number(weight), foldable ? 1 : 0, ships_in_own_packaging ? 1 : 0, upc?.trim() || null);
 
   res.status(201).json(db.prepare('SELECT * FROM products WHERE id = ?').get(id));
 });
 
 router.put('/:id', (req: Request, res: Response) => {
-  const { name, height, width, length, weight, foldable, ships_in_own_packaging } = req.body as Product;
+  const { name, height, width, length, weight, foldable, ships_in_own_packaging, upc } = req.body as Product;
   const existing = db.prepare('SELECT id FROM products WHERE id = ?').get(req.params.id);
   if (!existing) return res.status(404).json({ error: 'Product not found' });
 
   db.prepare(
     `UPDATE products SET name = ?, height = ?, width = ?, length = ?, weight = ?, foldable = ?,
-     ships_in_own_packaging = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`
-  ).run(name, Number(height), Number(width), Number(length), Number(weight), foldable ? 1 : 0, ships_in_own_packaging ? 1 : 0, req.params.id);
+     ships_in_own_packaging = ?, upc = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`
+  ).run(name, Number(height), Number(width), Number(length), Number(weight), foldable ? 1 : 0, ships_in_own_packaging ? 1 : 0, upc?.trim() || null, req.params.id);
 
   res.json(db.prepare('SELECT * FROM products WHERE id = ?').get(req.params.id));
 });
@@ -90,8 +116,8 @@ router.post('/import', upload.single('file'), (req: Request, res: Response) => {
   };
 
   const upsert = db.prepare(`
-    INSERT INTO products (id, name, height, width, length, weight, foldable, ships_in_own_packaging)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO products (id, name, height, width, length, weight, foldable, ships_in_own_packaging, upc)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(id) DO UPDATE SET
       name = excluded.name,
       height = excluded.height,
@@ -100,6 +126,7 @@ router.post('/import', upload.single('file'), (req: Request, res: Response) => {
       weight = excluded.weight,
       foldable = excluded.foldable,
       ships_in_own_packaging = excluded.ships_in_own_packaging,
+      upc = excluded.upc,
       updated_at = CURRENT_TIMESTAMP
   `);
 
@@ -122,6 +149,8 @@ router.post('/import', upload.single('file'), (req: Request, res: Response) => {
       const siownRaw = String(r['shipsinownpackaging'] ?? r['shipsownpackaging'] ?? r['ownpackaging'] ?? '').toLowerCase().trim();
       const ships_in_own_packaging = ['1', 'true', 'yes', 'y'].includes(siownRaw) ? 1 : 0;
 
+      const upc = String(r['upc'] ?? r['upccode'] ?? r['barcode'] ?? '').trim() || null;
+
       if (!id || !name) {
         errors.push(`Row ${i + 2}: missing product ID or name`);
         continue;
@@ -131,7 +160,7 @@ router.post('/import', upload.single('file'), (req: Request, res: Response) => {
         continue;
       }
 
-      upsert.run(id, name, height, width, length, weight, foldable, ships_in_own_packaging);
+      upsert.run(id, name, height, width, length, weight, foldable, ships_in_own_packaging, upc);
       imported++;
     }
 

@@ -308,9 +308,14 @@ router.post('/analyze', (req: Request, res: Response) => {
 
   const uniqueIds = [...new Set(items.map(i => i.product_id))];
   const products = db
-    .prepare(`SELECT * FROM products WHERE id IN (${uniqueIds.map(() => '?').join(',')})`)
-    .all(...uniqueIds) as Product[];
-  const productMap = new Map(products.map(p => [p.id, p]));
+    .prepare(`SELECT * FROM products WHERE id IN (${uniqueIds.map(() => '?').join(',')}) OR upc IN (${uniqueIds.map(() => '?').join(',')})`)
+    .all(...uniqueIds, ...uniqueIds) as Product[];
+  // Build lookup map that resolves both product ID and UPC to the same product record
+  const productMap = new Map<string, Product>();
+  for (const p of products) {
+    productMap.set(p.id, p);
+    if (p.upc) productMap.set(p.upc, p);
+  }
   const notFound = uniqueIds.filter(id => !productMap.has(id));
   if (notFound.length > 0) return res.status(404).json({ error: `Products not found: ${notFound.join(', ')}` });
 
