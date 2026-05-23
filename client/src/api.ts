@@ -3,7 +3,14 @@ import { Product, Packaging, AnalyzeResponse, BulkAnalyzeResponse, BulkShipmentR
 const BASE = '/api';
 
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(BASE + url, options);
+  const token = getSessionToken();
+  const res = await fetch(BASE + url, {
+    ...options,
+    headers: {
+      ...(token ? { 'x-session-token': token } : {}),
+      ...options?.headers,
+    },
+  });
   if (!res.ok) {
     const body = await res.json().catch(() => ({ error: res.statusText }));
     throw new Error(body.error ?? 'Request failed');

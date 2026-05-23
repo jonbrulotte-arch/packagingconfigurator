@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ShippingMethod } from '../types';
 import { getShippingMethods, createShippingMethod, updateShippingMethod, deleteShippingMethod } from '../api';
+import { useAuth } from '../contexts/AuthContext';
 
 const EMPTY: Omit<ShippingMethod, 'id'> = {
   name: '', min_weight: 0, max_weight: null,
@@ -183,11 +184,13 @@ function MethodRow({
   onEdit,
   onDelete,
   onToggle,
+  canEdit,
 }: {
   method: ShippingMethod;
   onEdit: (m: ShippingMethod) => void;
   onDelete: (id: number) => void;
   onToggle: (m: ShippingMethod) => void;
+  canEdit: boolean;
 }) {
   const weightRange = method.max_weight != null
     ? `${method.min_weight} – ${method.max_weight} lbs`
@@ -231,39 +234,42 @@ function MethodRow({
           </div>
         </div>
 
-        <div className="flex items-center gap-1 flex-shrink-0">
-          <button
-            onClick={() => onToggle(method)}
-            className={`px-2.5 py-1 text-xs font-medium rounded border transition-colors ${
-              method.active
-                ? 'text-green-700 border-green-300 bg-green-50 hover:bg-green-100'
-                : 'text-gray-500 border-gray-300 bg-gray-50 hover:bg-gray-100'
-            }`}
-            title={method.active ? 'Click to deactivate' : 'Click to activate'}
-          >
-            {method.active ? '● Active' : '○ Inactive'}
-          </button>
-          <button onClick={() => onEdit(method)}
-            className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors"
-            title="Edit">
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-            </svg>
-          </button>
-          <button onClick={() => onDelete(method.id)}
-            className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
-            title="Delete">
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-            </svg>
-          </button>
-        </div>
+        {canEdit && (
+          <div className="flex items-center gap-1 flex-shrink-0">
+            <button
+              onClick={() => onToggle(method)}
+              className={`px-2.5 py-1 text-xs font-medium rounded border transition-colors ${
+                method.active
+                  ? 'text-green-700 border-green-300 bg-green-50 hover:bg-green-100'
+                  : 'text-gray-500 border-gray-300 bg-gray-50 hover:bg-gray-100'
+              }`}
+              title={method.active ? 'Click to deactivate' : 'Click to activate'}
+            >
+              {method.active ? '● Active' : '○ Inactive'}
+            </button>
+            <button onClick={() => onEdit(method)}
+              className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors"
+              title="Edit">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+            </button>
+            <button onClick={() => onDelete(method.id)}
+              className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
+              title="Delete">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
 export default function ShippingMethodsPage() {
+  const { authenticated } = useAuth();
   const [methods, setMethods] = useState<ShippingMethod[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -328,7 +334,7 @@ export default function ShippingMethodsPage() {
             carrier-specific billed weight.
           </p>
         </div>
-        {!showForm && !editing && (
+        {authenticated && !showForm && !editing && (
           <button
             onClick={() => setShowForm(true)}
             className="flex-shrink-0 inline-flex items-center gap-2 px-4 py-2 bg-brand-600 text-white text-sm font-medium rounded hover:bg-brand-700"
@@ -343,7 +349,7 @@ export default function ShippingMethodsPage() {
 
       {error && <div className="mb-4 px-4 py-3 bg-red-50 border border-red-200 rounded text-sm text-red-800">{error}</div>}
 
-      {(showForm || editing) && (
+      {authenticated && (showForm || editing) && (
         <MethodForm
           initial={editing ?? undefined}
           onSave={handleSave}
@@ -376,6 +382,7 @@ export default function ShippingMethodsPage() {
               onEdit={m => { setEditing(m); setShowForm(false); setFormError(''); }}
               onDelete={handleDelete}
               onToggle={handleToggle}
+              canEdit={authenticated}
             />
           ))}
         </div>

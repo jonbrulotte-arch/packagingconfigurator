@@ -1,4 +1,4 @@
-import { Router, Request, Response } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import { createHash, randomBytes } from 'crypto';
 import db from '../db';
 
@@ -100,5 +100,14 @@ router.post('/emergency-reset', (req: Request, res: Response) => {
   sessions.clear();
   res.json({ success: true, message: 'Admin password cleared. Access admin pages without a password.' });
 });
+
+export function requireAuth(req: Request, res: Response, next: NextFunction) {
+  if (getStoredHash() === null) return next();
+  const token = req.headers['x-session-token'] as string | undefined;
+  if (!token || !isValidToken(token)) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+  next();
+}
 
 export default router;

@@ -3,6 +3,7 @@ import { Packaging as PkgType } from '../types';
 import { getPackaging, createPackaging, updatePackaging, deletePackaging, downloadPackagingTemplate, exportPackaging, importPackaging } from '../api';
 import Modal from '../components/Modal';
 import PackagingForm from '../components/PackagingForm';
+import { useAuth } from '../contexts/AuthContext';
 
 const TYPE_LABELS: Record<string, string> = {
   box: 'Box',
@@ -19,6 +20,7 @@ const TYPE_COLORS: Record<string, string> = {
 };
 
 export default function Packaging() {
+  const { authenticated } = useAuth();
   const [items, setItems] = useState<PkgType[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -84,22 +86,26 @@ export default function Packaging() {
           <p className="text-sm text-gray-500 mt-1">{items.length} option{items.length !== 1 ? 's' : ''}</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <button
-            onClick={downloadPackagingTemplate}
-            className="px-3 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50 flex items-center gap-2"
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-            </svg>
-            Template
-          </button>
-          <label className="cursor-pointer px-3 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50 flex items-center gap-2">
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l4-4m0 0l4 4m-4-4v12" />
-            </svg>
-            Import
-            <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" onChange={handleImport} className="hidden" />
-          </label>
+          {authenticated && (
+            <button
+              onClick={downloadPackagingTemplate}
+              className="px-3 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50 flex items-center gap-2"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
+              Template
+            </button>
+          )}
+          {authenticated && (
+            <label className="cursor-pointer px-3 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50 flex items-center gap-2">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l4-4m0 0l4 4m-4-4v12" />
+              </svg>
+              Import
+              <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" onChange={handleImport} className="hidden" />
+            </label>
+          )}
           <button
             onClick={exportPackaging}
             className="px-3 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50 flex items-center gap-2"
@@ -109,12 +115,14 @@ export default function Packaging() {
             </svg>
             Export
           </button>
-          <button
-            onClick={() => setModalOpen(true)}
-            className="px-3 py-2 text-sm bg-brand-600 text-white rounded hover:bg-brand-700"
-          >
-            + Add
-          </button>
+          {authenticated && (
+            <button
+              onClick={() => setModalOpen(true)}
+              className="px-3 py-2 text-sm bg-brand-600 text-white rounded hover:bg-brand-700"
+            >
+              + Add
+            </button>
+          )}
         </div>
       </div>
 
@@ -191,8 +199,12 @@ export default function Packaging() {
                     </td>
                     <td className="px-2 py-3 text-sm text-gray-500 max-w-[8rem] truncate">{pkg.notes ?? '—'}</td>
                     <td className="px-2 py-3 text-sm text-right whitespace-nowrap">
-                      <button onClick={() => setEditTarget(pkg)} className="text-brand-600 hover:text-brand-800 mr-3">Edit</button>
-                      <button onClick={() => handleDelete(pkg.id, pkg.name)} className="text-red-500 hover:text-red-700">Delete</button>
+                      {authenticated && (
+                        <>
+                          <button onClick={() => setEditTarget(pkg)} className="text-brand-600 hover:text-brand-800 mr-3">Edit</button>
+                          <button onClick={() => handleDelete(pkg.id, pkg.name)} className="text-red-500 hover:text-red-700">Delete</button>
+                        </>
+                      )}
                     </td>
                   </tr>
                 ))

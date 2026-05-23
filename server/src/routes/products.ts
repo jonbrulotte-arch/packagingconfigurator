@@ -1,16 +1,9 @@
 import { Router, Request, Response } from 'express';
-import { createHash } from 'crypto';
 import multer from 'multer';
 import * as XLSX from 'xlsx';
 import db from '../db';
 import { Product } from '../types';
-
-function sha256(s: string) { return createHash('sha256').update(s).digest('hex'); }
-function verifyAdminPassword(password: string | undefined): boolean {
-  const row = db.prepare("SELECT value FROM settings WHERE key = 'admin_password_hash'").get() as { value: string } | undefined;
-  if (!row) return true; // no password set
-  return !!password && sha256(password) === row.value;
-}
+import { requireAuth } from './auth';
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
@@ -71,7 +64,7 @@ router.get('/:id', (req: Request, res: Response) => {
   res.json(product);
 });
 
-router.post('/', (req: Request, res: Response) => {
+router.post('/', requireAuth, (req: Request, res: Response) => {
   const { id, name, height, width, length, weight, foldable, ships_in_own_packaging, upc } = req.body as Product;
   if (!id || !name || height == null || width == null || length == null || weight == null) {
     return res.status(400).json({ error: 'Missing required fields' });
@@ -86,7 +79,7 @@ router.post('/', (req: Request, res: Response) => {
   res.status(201).json(db.prepare('SELECT * FROM products WHERE id = ?').get(id));
 });
 
-router.put('/:id', (req: Request, res: Response) => {
+router.put('/:id', requireAuth, (req: Request, res: Response) => {
   const { name, height, width, length, weight, foldable, ships_in_own_packaging, upc } = req.body as Product;
   const existing = db.prepare('SELECT id FROM products WHERE id = ?').get(req.params.id);
   if (!existing) return res.status(404).json({ error: 'Product not found' });
@@ -99,14 +92,14 @@ router.put('/:id', (req: Request, res: Response) => {
   res.json(db.prepare('SELECT * FROM products WHERE id = ?').get(req.params.id));
 });
 
-router.delete('/:id', (req: Request, res: Response) => {
+router.delete('/:id', requireAuth, (req: Request, res: Response) => {
   const existing = db.prepare('SELECT id FROM products WHERE id = ?').get(req.params.id);
   if (!existing) return res.status(404).json({ error: 'Product not found' });
   db.prepare('DELETE FROM products WHERE id = ?').run(req.params.id);
   res.json({ success: true });
 });
 
-router.post('/import', upload.single('file'), (req: Request, res: Response) => {
+router.post('/import', requireAuth, upload.single('file'), (req: Request, res: Response) => {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
 
   const workbook = XLSX.read(req.file.buffer, { type: 'buffer' });
@@ -179,11 +172,7 @@ router.post('/import', upload.single('file'), (req: Request, res: Response) => {
   res.json(result);
 });
 
-router.post('/delete-all', (req: Request, res: Response) => {
-  const { password } = req.body as { password?: string };
-  if (!verifyAdminPassword(password)) {
-    return res.status(401).json({ error: 'Incorrect password' });
-  }
+router.post('/delete-all', requireAuth, (req: Request, res: Response) => {
   const result = db.prepare('DELETE FROM products').run();
   res.json({ success: true, deleted: result.changes });
 });

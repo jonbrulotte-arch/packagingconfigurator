@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import db from '../db';
 import { ShippingMethod } from '../types';
+import { requireAuth } from './auth';
 
 const router = Router();
 
@@ -8,7 +9,7 @@ router.get('/', (_req: Request, res: Response) => {
   res.json(db.prepare('SELECT * FROM shipping_methods ORDER BY sort_order, min_weight, id').all());
 });
 
-router.post('/', (req: Request, res: Response) => {
+router.post('/', requireAuth, (req: Request, res: Response) => {
   const { name, min_weight, max_weight, dim_divisor, dim_threshold, active, is_ltl, notes, sort_order } = req.body as Partial<ShippingMethod>;
   if (!name?.trim()) return res.status(400).json({ error: 'Name is required' });
   try {
@@ -33,7 +34,7 @@ router.post('/', (req: Request, res: Response) => {
   }
 });
 
-router.put('/:id', (req: Request, res: Response) => {
+router.put('/:id', requireAuth, (req: Request, res: Response) => {
   const id = Number(req.params.id);
   if (!db.prepare('SELECT id FROM shipping_methods WHERE id = ?').get(id)) {
     return res.status(404).json({ error: 'Method not found' });
@@ -65,7 +66,7 @@ router.put('/:id', (req: Request, res: Response) => {
   }
 });
 
-router.delete('/:id', (req: Request, res: Response) => {
+router.delete('/:id', requireAuth, (req: Request, res: Response) => {
   const id = Number(req.params.id);
   if (!db.prepare('SELECT id FROM shipping_methods WHERE id = ?').get(id)) {
     return res.status(404).json({ error: 'Method not found' });
