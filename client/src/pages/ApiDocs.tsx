@@ -405,34 +405,34 @@ export default function ApiDocs() {
         <Endpoint
           method="GET"
           path="/shipping"
-          description="Return all shipping methods ordered by sort_order, then min_weight."
+          description="Return all shipping methods ordered by sort_order, then min_weight. is_ltl: 1 marks LTL freight methods that are never billed by DIM."
           response={JSON.stringify([
-            { id: 1, name: 'UPS Ground', min_weight: 0, max_weight: 150, dim_divisor: 139, dim_threshold: null, active: 1, notes: null, sort_order: 0 },
-            { id: 2, name: 'USPS Priority Mail', min_weight: 0, max_weight: 70, dim_divisor: 166, dim_threshold: 1728, active: 1, notes: 'DIM only above 1728 in³', sort_order: 1 },
-            { id: 3, name: 'LTL Freight', min_weight: 150, max_weight: null, dim_divisor: null, dim_threshold: null, active: 1, notes: null, sort_order: 10 },
+            { id: 1, name: 'UPS Ground', min_weight: 0, max_weight: 150, dim_divisor: 139, dim_threshold: null, is_ltl: 0, active: 1, notes: null, sort_order: 0 },
+            { id: 2, name: 'USPS Priority Mail', min_weight: 0, max_weight: 70, dim_divisor: 166, dim_threshold: 1728, is_ltl: 0, active: 1, notes: 'DIM only above 1728 in³', sort_order: 1 },
+            { id: 3, name: 'LTL Freight', min_weight: 150, max_weight: null, dim_divisor: null, dim_threshold: null, is_ltl: 1, active: 1, notes: null, sort_order: 10 },
           ], null, 2)}
         />
 
         <Endpoint
           method="POST"
           path="/shipping"
-          description="Create a new shipping method. dim_divisor overrides the global setting for this method; leave null to use global. dim_threshold: if set, DIM billing only applies when box volume exceeds this value (in³). max_weight: null means unlimited."
+          description="Create a new shipping method. dim_divisor overrides the global setting; leave null to use global. dim_threshold: DIM billing only applies when box volume exceeds this value (in³). is_ltl: 1 marks this as an LTL freight method — DIM divisor and threshold are ignored; the method is billed at actual weight only and only appears when the shipment weight meets the LTL threshold."
           request={{
             headers: 'Content-Type: application/json',
-            body: JSON.stringify({ name: 'FedEx Ground', min_weight: 0, max_weight: 150, dim_divisor: 139, dim_threshold: null, active: 1, notes: null, sort_order: 0 }),
+            body: JSON.stringify({ name: 'FedEx Ground', min_weight: 0, max_weight: 150, dim_divisor: 139, dim_threshold: null, is_ltl: 0, active: 1, notes: null, sort_order: 0 }),
           }}
-          response={JSON.stringify({ id: 4, name: 'FedEx Ground', min_weight: 0, max_weight: 150, dim_divisor: 139, dim_threshold: null, active: 1, notes: null, sort_order: 0 }, null, 2)}
+          response={JSON.stringify({ id: 4, name: 'FedEx Ground', min_weight: 0, max_weight: 150, dim_divisor: 139, dim_threshold: null, is_ltl: 0, active: 1, notes: null, sort_order: 0 }, null, 2)}
         />
 
         <Endpoint
           method="PUT"
           path="/shipping/:id"
-          description="Update an existing shipping method. All fields can be changed."
+          description="Update an existing shipping method. All fields can be changed including is_ltl."
           request={{
             headers: 'Content-Type: application/json',
-            body: JSON.stringify({ name: 'FedEx Ground', min_weight: 0, max_weight: 150, dim_divisor: 139, dim_threshold: null, active: 0, notes: 'Temporarily disabled', sort_order: 0 }),
+            body: JSON.stringify({ name: 'FedEx Ground', min_weight: 0, max_weight: 150, dim_divisor: 139, dim_threshold: null, is_ltl: 0, active: 0, notes: 'Temporarily disabled', sort_order: 0 }),
           }}
-          response={JSON.stringify({ id: 4, name: 'FedEx Ground', min_weight: 0, max_weight: 150, dim_divisor: 139, dim_threshold: null, active: 0, notes: 'Temporarily disabled', sort_order: 0 }, null, 2)}
+          response={JSON.stringify({ id: 4, name: 'FedEx Ground', min_weight: 0, max_weight: 150, dim_divisor: 139, dim_threshold: null, is_ltl: 0, active: 0, notes: 'Temporarily disabled', sort_order: 0 }, null, 2)}
         />
 
         <Endpoint

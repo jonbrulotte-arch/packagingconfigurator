@@ -197,6 +197,7 @@ export async function computePackagingAnalysis(): Promise<void> {
     const dimDivisor = Number(s.dim_divisor ?? 139);
     const packEfficiency = Number(s.pack_efficiency ?? 0.70);
     const ltlThreshold = Number(s.ltl_threshold ?? 150);
+    const parcelMethods = shippingMethods.filter(m => !m.is_ltl);
 
     // Per-packaging accumulators
     const pkgAccum = new Map<number, {
@@ -220,9 +221,9 @@ export async function computePackagingAnalysis(): Promise<void> {
       });
     }
 
-    // Per-carrier DIM accumulator
+    // Per-carrier DIM accumulator (parcel methods only — LTL never bills by DIM)
     const carrierAccum = new Map<number, { method_name: string; count: number }>();
-    for (const m of shippingMethods) {
+    for (const m of parcelMethods) {
       carrierAccum.set(m.id, { method_name: m.name, count: 0 });
     }
 
@@ -255,7 +256,7 @@ export async function computePackagingAnalysis(): Promise<void> {
           const dimWt = roundWeight(vol / dimDivisor);
           hasPackagingCount++;
 
-          const shipping = computeShipping(vol, product.weight, dimDivisor, shippingMethods);
+          const shipping = computeShipping(vol, product.weight, dimDivisor, parcelMethods);
           let anyDimBilled = false;
           for (const sm of shipping) {
             if (sm.dim_applied) {
@@ -337,7 +338,7 @@ export async function computePackagingAnalysis(): Promise<void> {
           const totalActual = product.weight + pkgWt;
           const dimWt = roundWeight(dimVolume / dimDivisor);
           const volUtil = Math.round((productVol / boxVol) * 1000) / 10;
-          const shipping = computeShipping(dimVolume, totalActual, dimDivisor, shippingMethods);
+          const shipping = computeShipping(dimVolume, totalActual, dimDivisor, parcelMethods);
 
           fitResults.push({
             pkg,
@@ -478,7 +479,7 @@ export async function computePackagingAnalysis(): Promise<void> {
       settings: { dim_divisor: dimDivisor, pack_efficiency: packEfficiency, ltl_threshold: ltlThreshold },
       products_analyzed: products.length,
       packaging_evaluated: packaging.length,
-      shipping_methods_evaluated: shippingMethods.length,
+      shipping_methods_evaluated: parcelMethods.length,
       has_packaging_count: hasPackagingCount,
       no_packaging_count: noFitProducts.length,
       loose_only_count: looseOnlyProducts.length,

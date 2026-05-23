@@ -336,11 +336,12 @@ router.post('/analyze', (req: Request, res: Response) => {
     .prepare('SELECT * FROM packaging WHERE active = 1 ORDER BY height * width * length ASC')
     .all() as Packaging[];
   const shippingMethods = loadActiveShippingMethods();
+  const parcelMethods = shippingMethods.filter(m => !m.is_ltl);
   const results = packagedItems.length > 0
-    ? analyzeShipment(packagedItems, allPackaging, dimDivisor, packEfficiency, shippingMethods)
+    ? analyzeShipment(packagedItems, allPackaging, dimDivisor, packEfficiency, parcelMethods)
     : [];
   const standaloneResults = standaloneItems.map(si =>
-    computeStandaloneResult(si.product, si.quantity, dimDivisor, shippingMethods)
+    computeStandaloneResult(si.product, si.quantity, dimDivisor, parcelMethods)
   );
 
   const ltlRequired = totalActualWeight >= ltlThreshold;
@@ -401,11 +402,12 @@ router.post('/analyze-manual', (req: Request, res: Response) => {
     .prepare('SELECT * FROM packaging WHERE active = 1 ORDER BY height * width * length ASC')
     .all() as Packaging[];
   const shippingMethods = loadActiveShippingMethods();
+  const parcelMethods = shippingMethods.filter(m => !m.is_ltl);
   const results = packagedItems.length > 0
-    ? analyzeShipment(packagedItems, allPackaging, dimDivisor, packEfficiency, shippingMethods)
+    ? analyzeShipment(packagedItems, allPackaging, dimDivisor, packEfficiency, parcelMethods)
     : [];
   const standaloneResults = standaloneItems.map(si =>
-    computeStandaloneResult(si.product, si.quantity, dimDivisor, shippingMethods)
+    computeStandaloneResult(si.product, si.quantity, dimDivisor, parcelMethods)
   );
 
   const ltlRequired = totalActualWeight >= ltlThreshold;
@@ -545,6 +547,7 @@ router.post('/bulk', upload.single('file'), (req: Request, res: Response) => {
     .prepare('SELECT * FROM packaging WHERE active = 1 ORDER BY height * width * length ASC')
     .all() as Packaging[];
   const shippingMethods = loadActiveShippingMethods();
+  const parcelMethods = shippingMethods.filter(m => !m.is_ltl);
 
   // Analyze each shipment
   const shipments = [];
@@ -566,10 +569,10 @@ router.post('/bulk', upload.single('file'), (req: Request, res: Response) => {
     const ltlRequired = totalActualWeight >= ltlThreshold;
     const ltlShipping = ltlRequired ? computeLtlShipping(totalActualWeight, shippingMethods) : [];
     const results = packagedItems.length > 0
-      ? analyzeShipment(packagedItems, allPackaging, dimDivisor, packEfficiency, shippingMethods)
+      ? analyzeShipment(packagedItems, allPackaging, dimDivisor, packEfficiency, parcelMethods)
       : [];
     const standaloneResults = standaloneItems.map(si =>
-      computeStandaloneResult(si.product, si.quantity, dimDivisor, shippingMethods)
+      computeStandaloneResult(si.product, si.quantity, dimDivisor, parcelMethods)
     );
     const best = results[0] ?? null;
     const allItemsAreStandalone = packagedItems.length === 0 && standaloneItems.length > 0;

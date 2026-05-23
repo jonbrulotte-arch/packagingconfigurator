@@ -101,6 +101,13 @@ try {
   // Column already exists — safe to ignore
 }
 
+// Migrate: mark LTL freight methods so DIM is never applied to them
+try {
+  db.exec('ALTER TABLE shipping_methods ADD COLUMN is_ltl INTEGER NOT NULL DEFAULT 0');
+} catch {
+  // Column already exists — safe to ignore
+}
+
 // Report cache table — stores pre-computed analysis results
 db.exec(`
   CREATE TABLE IF NOT EXISTS report_cache (

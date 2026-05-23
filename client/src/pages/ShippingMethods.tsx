@@ -5,7 +5,7 @@ import { getShippingMethods, createShippingMethod, updateShippingMethod, deleteS
 const EMPTY: Omit<ShippingMethod, 'id'> = {
   name: '', min_weight: 0, max_weight: null,
   dim_divisor: null, dim_threshold: null,
-  active: 1, notes: null, sort_order: 0,
+  active: 1, is_ltl: 0, notes: null, sort_order: 0,
 };
 
 interface FormState {
@@ -16,6 +16,7 @@ interface FormState {
   dim_threshold: string;
   notes: string;
   active: boolean;
+  is_ltl: boolean;
 }
 
 function toForm(m?: ShippingMethod): FormState {
@@ -27,6 +28,7 @@ function toForm(m?: ShippingMethod): FormState {
     dim_threshold: m?.dim_threshold != null ? String(m.dim_threshold) : '',
     notes: m?.notes ?? '',
     active: m ? Boolean(m.active) : true,
+    is_ltl: m ? Boolean(m.is_ltl) : false,
   };
 }
 
@@ -35,9 +37,10 @@ function fromForm(f: FormState, existing?: ShippingMethod): Omit<ShippingMethod,
     name: f.name.trim(),
     min_weight: f.min_weight !== '' ? Number(f.min_weight) : 0,
     max_weight: f.max_weight !== '' ? Number(f.max_weight) : null,
-    dim_divisor: f.dim_divisor !== '' ? Number(f.dim_divisor) : null,
-    dim_threshold: f.dim_threshold !== '' ? Number(f.dim_threshold) : null,
+    dim_divisor: f.is_ltl ? null : (f.dim_divisor !== '' ? Number(f.dim_divisor) : null),
+    dim_threshold: f.is_ltl ? null : (f.dim_threshold !== '' ? Number(f.dim_threshold) : null),
     active: f.active ? 1 : 0,
+    is_ltl: f.is_ltl ? 1 : 0,
     notes: f.notes.trim() || null,
     sort_order: existing?.sort_order ?? 0,
   };
@@ -107,23 +110,25 @@ function MethodForm({
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">DIM Divisor</label>
+          <label className={`block text-xs font-medium mb-1 ${form.is_ltl ? 'text-gray-400' : 'text-gray-600'}`}>DIM Divisor</label>
           <input
             type="number" min="1" step="any" value={form.dim_divisor}
             onChange={e => set('dim_divisor', e.target.value)}
-            placeholder="Blank = use global setting"
-            className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+            disabled={form.is_ltl}
+            placeholder={form.is_ltl ? 'N/A — LTL does not use DIM' : 'Blank = use global setting'}
+            className={`w-full border rounded px-3 py-2 text-sm ${form.is_ltl ? 'bg-gray-50 text-gray-400 border-gray-200 cursor-not-allowed' : 'border-gray-300'}`}
           />
           <p className="mt-1 text-xs text-gray-400">139 UPS/FedEx · 166 USPS</p>
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">DIM Volume Threshold (in³)</label>
+          <label className={`block text-xs font-medium mb-1 ${form.is_ltl ? 'text-gray-400' : 'text-gray-600'}`}>DIM Volume Threshold (in³)</label>
           <input
             type="number" min="0" step="any" value={form.dim_threshold}
             onChange={e => set('dim_threshold', e.target.value)}
-            placeholder="Blank = always apply DIM"
-            className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+            disabled={form.is_ltl}
+            placeholder={form.is_ltl ? 'N/A — LTL does not use DIM' : 'Blank = always apply DIM'}
+            className={`w-full border rounded px-3 py-2 text-sm ${form.is_ltl ? 'bg-gray-50 text-gray-400 border-gray-200 cursor-not-allowed' : 'border-gray-300'}`}
           />
           <p className="mt-1 text-xs text-gray-400">1728 = USPS (DIM only if vol &gt; 1 ft³)</p>
         </div>
@@ -144,6 +149,18 @@ function MethodForm({
             className="rounded border-gray-300"
           />
           <label htmlFor="sm-active" className="text-sm text-gray-700">Active</label>
+        </div>
+
+        <div className="flex items-start gap-2">
+          <input
+            type="checkbox" id="sm-is-ltl" checked={form.is_ltl}
+            onChange={e => set('is_ltl', e.target.checked)}
+            className="rounded border-gray-300 mt-0.5"
+          />
+          <div>
+            <label htmlFor="sm-is-ltl" className="text-sm text-gray-700 font-medium">LTL Freight method</label>
+            <p className="text-xs text-gray-400 mt-0.5">Billed by actual weight only — DIM never applies. The configurator uses this method only when the shipment weight exceeds the LTL threshold.</p>
+          </div>
         </div>
       </div>
 
@@ -192,16 +209,22 @@ function MethodRow({
             <span className="text-xs font-mono text-gray-600 bg-gray-50 border border-gray-200 px-2 py-0.5 rounded">
               {weightRange}
             </span>
-            {method.dim_divisor != null
-              ? <span className="text-xs px-2 py-0.5 bg-blue-50 border border-blue-200 text-blue-700 rounded">DIM ÷{method.dim_divisor}</span>
-              : <span className="text-xs text-gray-400">DIM ÷global</span>
-            }
-            {method.dim_threshold != null
-              ? <span className="text-xs px-2 py-0.5 bg-amber-50 border border-amber-200 text-amber-700 rounded">
-                  Vol &gt; {method.dim_threshold.toLocaleString()} in³ for DIM
-                </span>
-              : <span className="text-xs text-gray-400">DIM always applies</span>
-            }
+            {method.is_ltl ? (
+              <span className="text-xs px-2 py-0.5 bg-orange-50 border border-orange-200 text-orange-700 rounded font-medium">LTL Freight — no DIM</span>
+            ) : (
+              <>
+                {method.dim_divisor != null
+                  ? <span className="text-xs px-2 py-0.5 bg-blue-50 border border-blue-200 text-blue-700 rounded">DIM ÷{method.dim_divisor}</span>
+                  : <span className="text-xs text-gray-400">DIM ÷global</span>
+                }
+                {method.dim_threshold != null
+                  ? <span className="text-xs px-2 py-0.5 bg-amber-50 border border-amber-200 text-amber-700 rounded">
+                      Vol &gt; {method.dim_threshold.toLocaleString()} in³ for DIM
+                    </span>
+                  : <span className="text-xs text-gray-400">DIM always applies</span>
+                }
+              </>
+            )}
             {method.notes && (
               <span className="text-xs text-gray-400 truncate max-w-xs">{method.notes}</span>
             )}
@@ -363,6 +386,7 @@ export default function ShippingMethodsPage() {
           <p><strong>Weight range:</strong> The carrier-specific billed weight must fall between Min and Max (inclusive) for this method to appear on a result.</p>
           <p><strong>DIM Divisor:</strong> Override the global DIM divisor for this carrier. Leave blank to inherit the global setting from the Settings page.</p>
           <p><strong>DIM Volume Threshold:</strong> DIM weight only applies when the package volume exceeds this value. Set to <strong>1728</strong> for USPS (DIM kicks in only when volume &gt; 1 ft³). Leave blank for carriers that always apply DIM (UPS, FedEx).</p>
+          <p><strong>LTL Freight:</strong> Mark a method as LTL to exclude it from DIM calculations entirely. LTL methods are matched by actual shipment weight only and only appear when the total shipment weight exceeds the LTL threshold set in Settings.</p>
         </div>
       )}
     </div>

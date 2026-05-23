@@ -172,6 +172,37 @@ Volume unchanged  →  2 × 1 × 12 × 9 = 1 × 12 × 18 = 216 in³`}
             import by including a <code>UPC</code> column.
           </p>
         </SubSection>
+
+        <SubSection title="URL deep links">
+          <p>
+            You can link directly to a product's edit form by adding <code>product_id</code> and{' '}
+            <code>edit=true</code> parameters to the Products URL. The page loads, finds the
+            matching product, and opens its edit modal automatically.
+          </p>
+          <table className="mt-3 w-full text-sm border border-gray-200 rounded overflow-hidden">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-3 py-2 text-left font-medium text-gray-600">URL format</th>
+                <th className="px-3 py-2 text-left font-medium text-gray-600">Result</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100 text-gray-700">
+              {[
+                ['/products?product_id=SKU-001&edit=true', 'Opens the Edit Product modal for SKU-001'],
+                ['/products?product_id=SKU-001', 'Filters the list to SKU-001 (no modal)'],
+              ].map(([url, desc]) => (
+                <tr key={url} className="even:bg-gray-50">
+                  <td className="px-3 py-2 font-mono text-xs text-brand-700 break-all">{url}</td>
+                  <td className="px-3 py-2 text-gray-600">{desc}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <Callout color="blue" label="Tip">
+            Combine both deep link types to build targeted workflows — for example, link from an
+            external system directly to a product's edit form to fix dimensions in place.
+          </Callout>
+        </SubSection>
       </Section>
 
       {/* ── PACKAGING ── */}
@@ -311,6 +342,26 @@ Every item in the shipment must fit within those reduced dimensions.`}
           </Callout>
           <p className="mt-2">
             Leave blank if the carrier always applies DIM billing regardless of package size.
+          </p>
+        </SubSection>
+        <SubSection title="LTL Freight methods">
+          <p>
+            Enable <strong>LTL Freight method</strong> on any shipping method to mark it as a
+            freight service that never bills by dimensional weight. When checked, the DIM Divisor
+            and DIM Threshold fields are ignored entirely — the method is always billed at actual
+            weight only.
+          </p>
+          <Callout color="blue" label="How LTL methods are matched">
+            <ul className="mt-1 space-y-1 list-disc list-inside text-sm">
+              <li>LTL methods are <strong>excluded</strong> from the per-packaging DIM analysis in the Configurator and in Reports.</li>
+              <li>They only appear in the results when the total shipment weight meets or exceeds the <strong>LTL Threshold</strong> set in Settings (default 150 lbs).</li>
+              <li>LTL results are always billed at actual shipment weight — DIM is never applied.</li>
+              <li>The Reports DIM Exposure analysis skips LTL methods entirely, so they cannot inflate your DIM exposure count.</li>
+            </ul>
+          </Callout>
+          <p className="mt-2">
+            Set <strong>Min Weight</strong> on your LTL method to match your LTL Threshold (e.g. 150 lbs) so the
+            weight range naturally aligns with when LTL kicks in.
           </p>
         </SubSection>
         <SubSection title="Sort order">

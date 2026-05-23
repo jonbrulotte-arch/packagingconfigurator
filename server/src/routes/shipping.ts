@@ -9,12 +9,12 @@ router.get('/', (_req: Request, res: Response) => {
 });
 
 router.post('/', (req: Request, res: Response) => {
-  const { name, min_weight, max_weight, dim_divisor, dim_threshold, active, notes, sort_order } = req.body as Partial<ShippingMethod>;
+  const { name, min_weight, max_weight, dim_divisor, dim_threshold, active, is_ltl, notes, sort_order } = req.body as Partial<ShippingMethod>;
   if (!name?.trim()) return res.status(400).json({ error: 'Name is required' });
   try {
     const result = db.prepare(`
-      INSERT INTO shipping_methods (name, min_weight, max_weight, dim_divisor, dim_threshold, active, notes, sort_order)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO shipping_methods (name, min_weight, max_weight, dim_divisor, dim_threshold, active, is_ltl, notes, sort_order)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       name.trim(),
       min_weight != null ? Number(min_weight) : 0,
@@ -22,6 +22,7 @@ router.post('/', (req: Request, res: Response) => {
       dim_divisor != null ? Number(dim_divisor) : null,
       dim_threshold != null ? Number(dim_threshold) : null,
       active !== undefined ? Number(active) : 1,
+      is_ltl !== undefined ? Number(is_ltl) : 0,
       notes?.trim() || null,
       sort_order != null ? Number(sort_order) : 0,
     );
@@ -37,12 +38,12 @@ router.put('/:id', (req: Request, res: Response) => {
   if (!db.prepare('SELECT id FROM shipping_methods WHERE id = ?').get(id)) {
     return res.status(404).json({ error: 'Method not found' });
   }
-  const { name, min_weight, max_weight, dim_divisor, dim_threshold, active, notes, sort_order } = req.body as Partial<ShippingMethod>;
+  const { name, min_weight, max_weight, dim_divisor, dim_threshold, active, is_ltl, notes, sort_order } = req.body as Partial<ShippingMethod>;
   if (!name?.trim()) return res.status(400).json({ error: 'Name is required' });
   try {
     db.prepare(`
       UPDATE shipping_methods SET name = ?, min_weight = ?, max_weight = ?,
-        dim_divisor = ?, dim_threshold = ?, active = ?, notes = ?, sort_order = ?,
+        dim_divisor = ?, dim_threshold = ?, active = ?, is_ltl = ?, notes = ?, sort_order = ?,
         updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `).run(
@@ -52,6 +53,7 @@ router.put('/:id', (req: Request, res: Response) => {
       dim_divisor != null ? Number(dim_divisor) : null,
       dim_threshold != null ? Number(dim_threshold) : null,
       active !== undefined ? Number(active) : 1,
+      is_ltl !== undefined ? Number(is_ltl) : 0,
       notes?.trim() || null,
       sort_order != null ? Number(sort_order) : 0,
       id,

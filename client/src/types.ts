@@ -40,6 +40,7 @@ export interface ShippingMethod {
   dim_divisor: number | null;
   dim_threshold: number | null;
   active: number;
+  is_ltl: number;
   notes: string | null;
   sort_order: number;
 }

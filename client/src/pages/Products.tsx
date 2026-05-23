@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Product } from '../types';
 import { getProducts, createProduct, updateProduct, deleteProduct, importProducts, downloadProductsTemplate, exportProducts } from '../api';
 import Modal from '../components/Modal';
@@ -15,6 +15,11 @@ export default function Products() {
   const [importMsg, setImportMsg] = useState('');
   const [importError, setImportError] = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const deepLinkRef = useRef({
+    productId: searchParams.get('product_id'),
+    edit: searchParams.get('edit') === 'true',
+  });
 
   const load = async () => {
     try {
@@ -27,6 +32,21 @@ export default function Products() {
   };
 
   useEffect(() => { load(); }, []);
+
+  // Apply deep-link once after products are loaded
+  useEffect(() => {
+    if (loading) return;
+    const { productId, edit } = deepLinkRef.current;
+    if (!productId) return;
+    deepLinkRef.current = { productId: null, edit: false };
+    setSearchParams({}, { replace: true });
+    const found = products.find(p => p.id === productId);
+    if (found && edit) {
+      setEditTarget(found);
+    } else if (!found) {
+      setFilter(productId);
+    }
+  }, [loading, products]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleAdd = async (data: Omit<Product, 'created_at' | 'updated_at'>) => {
     await createProduct(data);
