@@ -1,8 +1,16 @@
 import { Router, Request, Response } from 'express';
+import { createHash } from 'crypto';
 import multer from 'multer';
 import * as XLSX from 'xlsx';
 import db from '../db';
 import { Product } from '../types';
+
+function sha256(s: string) { return createHash('sha256').update(s).digest('hex'); }
+function verifyAdminPassword(password: string | undefined): boolean {
+  const row = db.prepare("SELECT value FROM settings WHERE key = 'admin_password_hash'").get() as { value: string } | undefined;
+  if (!row) return true; // no password set
+  return !!password && sha256(password) === row.value;
+}
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
@@ -169,6 +177,15 @@ router.post('/import', upload.single('file'), (req: Request, res: Response) => {
 
   const result = upsertMany(rows);
   res.json(result);
+});
+
+router.post('/delete-all', (req: Request, res: Response) => {
+  const { password } = req.body as { password?: string };
+  if (!verifyAdminPassword(password)) {
+    return res.status(401).json({ error: 'Incorrect password' });
+  }
+  const result = db.prepare('DELETE FROM products').run();
+  res.json({ success: true, deleted: result.changes });
 });
 
 export default router;

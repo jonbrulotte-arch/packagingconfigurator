@@ -36,6 +36,13 @@ export const importProducts = async (file: File): Promise<{ imported: number; er
   return request('/products/import', { method: 'POST', body: fd });
 };
 
+export const deleteAllProducts = (password: string) =>
+  request<{ success: boolean; deleted: number }>('/products/delete-all', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ password }),
+  });
+
 // Packaging
 export const getPackaging = () => request<Packaging[]>('/packaging');
 export const createPackaging = (data: Omit<Packaging, 'id'>) =>
@@ -62,6 +69,13 @@ export const importPackaging = async (file: File): Promise<{ imported: number; e
   fd.append('file', file);
   return request('/packaging/import', { method: 'POST', body: fd });
 };
+
+export const deleteAllPackaging = (password: string) =>
+  request<{ success: boolean; deleted: number }>('/packaging/delete-all', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ password }),
+  });
 
 // Configurator
 export const analyzeProducts = (items: RequestItem[]) =>

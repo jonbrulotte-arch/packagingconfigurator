@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Settings, BackupEntry } from '../types';
-import { getSettings, updateSettings, setPassword, removePassword, listBackups, createBackup, downloadBackup, restoreBackup, deleteBackup } from '../api';
+import { getSettings, updateSettings, setPassword, removePassword, listBackups, createBackup, downloadBackup, restoreBackup, deleteBackup, deleteAllProducts, deleteAllPackaging } from '../api';
 import { useAuth } from '../contexts/AuthContext';
 
 const HOURS = Array.from({ length: 24 }, (_, h) => ({
@@ -490,6 +490,134 @@ export default function SettingsPage() {
 
       <PasswordSection />
       <BackupSection />
+      <DangerZoneSection />
+    </div>
+  );
+}
+
+type DangerTarget = 'products' | 'packaging' | null;
+
+function DangerZoneSection() {
+  const { isProtected } = useAuth();
+  const [active, setActive] = useState<DangerTarget>(null);
+  const [password, setPasswordInput] = useState('');
+  const [deleting, setDeleting] = useState(false);
+  const [error, setError] = useState('');
+  const [done, setDone] = useState<{ target: DangerTarget; count: number } | null>(null);
+
+  const open = (target: DangerTarget) => {
+    setActive(target);
+    setPasswordInput('');
+    setError('');
+    setDone(null);
+  };
+
+  const cancel = () => { setActive(null); setError(''); setPasswordInput(''); };
+
+  const confirm = async () => {
+    if (!active) return;
+    setDeleting(true);
+    setError('');
+    try {
+      const fn = active === 'products' ? deleteAllProducts : deleteAllPackaging;
+      const result = await fn(password);
+      setDone({ target: active, count: result.deleted });
+      setActive(null);
+      setPasswordInput('');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Delete failed');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const items: { target: DangerTarget; label: string; description: string }[] = [
+    {
+      target: 'products',
+      label: 'Delete All Products',
+      description: 'Permanently removes every product from the catalog. This cannot be undone.',
+    },
+    {
+      target: 'packaging',
+      label: 'Delete All Packaging',
+      description: 'Permanently removes every packaging option. This cannot be undone.',
+    },
+  ];
+
+  return (
+    <div className="border border-red-200 rounded-lg overflow-hidden">
+      <div className="bg-red-50 px-5 py-3 border-b border-red-200">
+        <h2 className="text-sm font-semibold text-red-800 uppercase tracking-wide">Danger Zone</h2>
+      </div>
+
+      <div className="divide-y divide-red-100">
+        {items.map(({ target, label, description }) => (
+          <div key={target} className="bg-white px-5 py-4">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="text-sm font-medium text-gray-900">{label}</p>
+                <p className="text-xs text-gray-500 mt-0.5">{description}</p>
+              </div>
+              <button
+                onClick={() => open(target)}
+                disabled={active !== null}
+                className="flex-shrink-0 px-3 py-1.5 text-sm font-medium text-red-700 border border-red-300 rounded hover:bg-red-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                {label}
+              </button>
+            </div>
+
+            {active === target && (
+              <div className="mt-4 bg-red-50 border border-red-200 rounded-lg p-4 space-y-3">
+                <p className="text-sm font-semibold text-red-800">
+                  ⚠ This will permanently delete all {target}. This action cannot be undone.
+                </p>
+                {isProtected ? (
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                      Enter admin password to confirm
+                    </label>
+                    <input
+                      type="password"
+                      value={password}
+                      onChange={e => setPasswordInput(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && !deleting && confirm()}
+                      placeholder="Admin password"
+                      autoFocus
+                      className="w-full max-w-xs border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-400"
+                    />
+                  </div>
+                ) : (
+                  <p className="text-xs text-gray-600">No admin password is set. Click confirm to proceed.</p>
+                )}
+                {error && <p className="text-sm text-red-700 font-medium">{error}</p>}
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={confirm}
+                    disabled={deleting || (isProtected && !password)}
+                    className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {deleting ? 'Deleting…' : 'Confirm Delete'}
+                  </button>
+                  <button
+                    onClick={cancel}
+                    disabled={deleting}
+                    className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {done?.target === target && (
+              <p className="mt-3 text-sm text-green-700 font-medium">
+                Deleted {done.count} {target} successfully.
+              </p>
+            )}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
