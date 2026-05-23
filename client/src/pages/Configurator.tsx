@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { AnalyzeResponse, ConfiguratorResult, RequestItem, StandaloneResult } from '../types';
 import { analyzeProducts, importConfiguratorFile, downloadConfiguratorTemplate, exportResults } from '../api';
 
@@ -53,7 +54,25 @@ function loadSession(): { rows: Row[]; response: AnalyzeResponse | null } {
 }
 
 export default function Configurator() {
-  const initial = loadSession();
+  const [searchParams] = useSearchParams();
+
+  const urlProductIds = searchParams.getAll('product_id')
+    .flatMap(v => v.split(',').map(s => s.trim()))
+    .filter(Boolean);
+  const urlQty = searchParams.get('quantity');
+  const hasUrlParams = urlProductIds.length > 0;
+
+  const initial = hasUrlParams
+    ? {
+        rows: urlProductIds.map((pid, i) => ({
+          id: String(nextId++),
+          product_id: pid,
+          quantity: i === 0 && urlQty ? urlQty : '1',
+        })),
+        response: null,
+      }
+    : loadSession();
+
   const [rows, setRows] = useState<Row[]>(initial.rows);
   const [loading, setLoading] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -62,6 +81,7 @@ export default function Configurator() {
   const [importErrors, setImportErrors] = useState<string[]>([]);
   const [response, setResponse] = useState<AnalyzeResponse | null>(initial.response);
   const fileRef = useRef<HTMLInputElement>(null);
+  const didAutoAnalyze = useRef(false);
 
   const handleExport = async () => {
     if (!response) return;
@@ -83,6 +103,15 @@ export default function Configurator() {
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
   }, [rows, response]);
+
+  // Auto-analyze when product_id is supplied via URL query param
+  useEffect(() => {
+    if (hasUrlParams && !didAutoAnalyze.current) {
+      didAutoAnalyze.current = true;
+      handleAnalyze();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const updateRow = (id: string, field: keyof Omit<Row, 'id'>, value: string) =>
     setRows(rs => rs.map(r => (r.id === id ? { ...r, [field]: value } : r)));
