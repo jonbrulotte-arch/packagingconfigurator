@@ -148,11 +148,16 @@ export default function Products() {
           <table className="min-w-full divide-y divide-gray-200 whitespace-nowrap">
             <thead className="bg-gray-50">
               <tr>
-                {['Product ID', 'Name', 'H (in)', 'W (in)', 'L (in)', 'Weight (lbs)', 'Volume (in³)', 'Foldable', 'Ships Own', ''].map(h => (
-                  <th key={h} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {h}
-                  </th>
-                ))}
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-36">Product ID</th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[130px]">Name</th>
+                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-14">H (in)</th>
+                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-14">W (in)</th>
+                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-14">L (in)</th>
+                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">Wt (lbs)</th>
+                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">Vol (in³)</th>
+                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">Foldable</th>
+                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">Ships Own</th>
+                <th className="px-2 py-3 w-20"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
@@ -167,16 +172,16 @@ export default function Products() {
                   .filter(p => !filter || p.id.toLowerCase().includes(filter.toLowerCase()) || p.name.toLowerCase().includes(filter.toLowerCase()))
                   .map((p, i) => (
                   <tr key={p.id} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                    <td className="px-4 py-3 text-sm font-mono font-medium text-brand-700">{p.id}</td>
-                    <td className="px-4 py-3 text-sm text-gray-900 whitespace-normal max-w-[160px]">{p.name}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{p.height}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{p.width}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{p.length}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{p.weight}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">
+                    <td className="px-3 py-3 text-sm font-mono font-medium text-brand-700 truncate max-w-[9rem]">{p.id}</td>
+                    <td className="px-3 py-3 text-sm text-gray-900 whitespace-normal min-w-[130px]">{p.name}</td>
+                    <td className="px-2 py-3 text-sm text-gray-600">{p.height}</td>
+                    <td className="px-2 py-3 text-sm text-gray-600">{p.width}</td>
+                    <td className="px-2 py-3 text-sm text-gray-600">{p.length}</td>
+                    <td className="px-2 py-3 text-sm text-gray-600">{p.weight}</td>
+                    <td className="px-2 py-3 text-sm text-gray-600">
                       {(p.height * p.width * p.length).toFixed(1)}
                     </td>
-                    <td className="px-4 py-3 text-sm text-center">
+                    <td className="px-2 py-3 text-sm text-center">
                       {p.foldable ? (
                         <span className="inline-flex items-center gap-1 text-xs font-medium text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded">
                           ↕ Yes
@@ -185,7 +190,7 @@ export default function Products() {
                         <span className="text-gray-300">—</span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-sm text-center">
+                    <td className="px-2 py-3 text-sm text-center">
                       {p.ships_in_own_packaging ? (
                         <span className="inline-flex items-center gap-1 text-xs font-medium text-teal-700 bg-teal-50 border border-teal-200 px-2 py-0.5 rounded">
                           ✦ Yes
@@ -194,7 +199,7 @@ export default function Products() {
                         <span className="text-gray-300">—</span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-sm text-right">
+                    <td className="px-2 py-3 text-sm text-right whitespace-nowrap">
                       <button
                         onClick={() => setEditTarget(p)}
                         className="text-brand-600 hover:text-brand-800 mr-3"
