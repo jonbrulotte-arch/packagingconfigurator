@@ -154,7 +154,9 @@ sudo systemctl status packagingconfigurator
 
 ```bash
 cd /home/your-user/packagingconfigurator
-git pull origin main
+
+# Pull the latest changes from whatever branch you deployed
+git pull
 
 # Rebuild server and client
 cd server && npm install && npm run build && cd ..
@@ -163,6 +165,10 @@ cd client && npm install && npm run build && cd ..
 # Restart the service
 sudo systemctl restart packagingconfigurator
 ```
+
+> **Note:** `git pull` updates from the branch your local repo is already tracking.
+> If you're unsure which branch you're on, run `git branch` first.
+> If you cloned a specific branch (e.g. `git clone -b my-branch ...`), `git pull` will pull from that branch.
 
 ---
 
