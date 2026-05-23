@@ -331,6 +331,15 @@ export default function ApiDocs() {
           response={JSON.stringify({ imported: 42, errors: ['Row 7: missing Part Number — skipped'] }, null, 2)}
           note='File field name must be "file". Required columns: Part Number, Item Name, UPC Height (Inches), UPC Width (Inches), UPC Length (Inches), UPC Weight (Pounds). Optional: Foldable, Ships In Own Packaging, UPC.'
         />
+
+        <Endpoint
+          method="POST"
+          path="/products/delete-all"
+          description="Permanently delete every product in the catalog. Requires the admin password in the request body. If no admin password is set, any value (including empty string) is accepted."
+          request={{ body: JSON.stringify({ password: 'your-admin-password' }, null, 2) }}
+          response={JSON.stringify({ success: true, deleted: 8142 }, null, 2)}
+          note="This action is irreversible. Create a database backup before calling this endpoint."
+        />
       </Section>
 
       {/* ── PACKAGING ── */}
@@ -372,6 +381,15 @@ export default function ApiDocs() {
           path="/packaging/:id"
           description="Delete a packaging option by ID."
           response={JSON.stringify({ success: true }, null, 2)}
+        />
+
+        <Endpoint
+          method="POST"
+          path="/packaging/delete-all"
+          description="Permanently delete every packaging option. Requires the admin password in the request body. If no admin password is set, any value (including empty string) is accepted."
+          request={{ body: JSON.stringify({ password: 'your-admin-password' }, null, 2) }}
+          response={JSON.stringify({ success: true, deleted: 24 }, null, 2)}
+          note="This action is irreversible. Create a database backup before calling this endpoint."
         />
       </Section>
 

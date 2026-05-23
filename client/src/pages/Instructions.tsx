@@ -815,6 +815,21 @@ product sorted: [9,  6, 4]
             proceed carefully.
           </Callout>
         </SubSection>
+        <SubSection title="Danger Zone — bulk delete">
+          <p>
+            The <strong>Danger Zone</strong> section at the bottom of the <NavRef to="Settings" /> page provides two
+            bulk-delete actions: <strong>Delete All Products</strong> and <strong>Delete All Packaging</strong>.
+            Each action requires re-entering the admin password before it executes.
+          </p>
+          <Callout color="red" label="Irreversible">
+            Bulk deletes cannot be undone. Create a database backup before using these actions
+            if you may need to recover the data.
+          </Callout>
+          <p className="mt-2 text-sm text-gray-700">
+            If no admin password is set the confirmation prompt still appears, but no password field is shown —
+            click <strong>Confirm Delete</strong> to proceed.
+          </p>
+        </SubSection>
       </Section>
     </div>
     </TocLayout>
