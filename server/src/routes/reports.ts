@@ -688,4 +688,80 @@ router.get('/packaging-analysis/export', (_req, res) => {
   res.send(buf);
 });
 
+// ── Per-packaging SKU drill-down ──────────────────────────────────────────────
+
+router.get('/packaging-analysis/packaging/:id/products', (req, res) => {
+  const pkgId = Number(req.params.id);
+  const cached = db
+    .prepare("SELECT payload FROM report_cache WHERE type = 'packaging_analysis' AND status = 'ready'")
+    .get() as { payload: string } | undefined;
+  if (!cached) return res.status(400).json({ error: 'No analysis available. Run the report first.' });
+
+  const report: PackagingAnalysisReport = JSON.parse(cached.payload);
+  const stat = report.packaging_stats.find(s => s.packaging.id === pkgId);
+  if (!stat) return res.status(404).json({ error: 'Packaging not found in report.' });
+
+  const products = report.product_results.filter(p => p.best_packaging_id === pkgId);
+  res.json({ packaging: stat.packaging, products });
+});
+
+router.get('/packaging-analysis/packaging/:id/export', (req, res) => {
+  const pkgId = Number(req.params.id);
+  const cached = db
+    .prepare("SELECT payload, computed_at FROM report_cache WHERE type = 'packaging_analysis' AND status = 'ready'")
+    .get() as { payload: string; computed_at: string } | undefined;
+  if (!cached) return res.status(400).json({ error: 'No analysis available. Run the report first.' });
+
+  const report: PackagingAnalysisReport = JSON.parse(cached.payload);
+  const stat = report.packaging_stats.find(s => s.packaging.id === pkgId);
+  if (!stat) return res.status(404).json({ error: 'Packaging not found in report.' });
+
+  const products = report.product_results.filter(p => p.best_packaging_id === pkgId);
+  const pkgName = stat.packaging.name;
+
+  const wb = XLSX.utils.book_new();
+
+  // Summary row at top
+  const summaryRows = [
+    ['Packaging', pkgName],
+    ['Type', stat.packaging.type.replace(/_/g, ' ')],
+    ['Dimensions (in)', `${stat.packaging.height} H × ${stat.packaging.width} W × ${stat.packaging.length} L`],
+    ['Max Weight (lbs)', stat.packaging.max_weight ?? 'None'],
+    ['Total Products (Best Fit)', products.length],
+    ['Avg Utilization (%)', stat.avg_utilization ?? ''],
+    [],
+  ];
+
+  const header = [
+    'Product ID', 'Product Name', 'H (in)', 'W (in)', 'L (in)', 'Weight (lbs)',
+    'Foldable', 'Ships Own Pkg', 'Fit Quality', 'Utilization (%)',
+    'Actual Wt (lbs)', 'DIM Wt (lbs)', 'DIM Exposed', 'Compatible Options',
+  ];
+  const rows = products.map(p => [
+    p.id, p.name, p.height, p.width, p.length, p.weight,
+    p.foldable ? 'Yes' : 'No',
+    p.ships_in_own_packaging ? 'Yes' : 'No',
+    p.fit_quality ? p.fit_quality.charAt(0).toUpperCase() + p.fit_quality.slice(1) : '',
+    p.volume_utilization ?? '',
+    p.actual_weight ?? '',
+    p.dim_weight ?? '',
+    p.dim_exposed ? 'Yes' : 'No',
+    p.compatible_count,
+  ]);
+
+  const ws = XLSX.utils.aoa_to_sheet([...summaryRows, header, ...rows]);
+  ws['!cols'] = [
+    { wch: 16 }, { wch: 40 }, { wch: 8 }, { wch: 8 }, { wch: 8 }, { wch: 12 },
+    { wch: 10 }, { wch: 14 }, { wch: 12 }, { wch: 14 },
+    { wch: 14 }, { wch: 14 }, { wch: 12 }, { wch: 18 },
+  ];
+  XLSX.utils.book_append_sheet(wb, ws, 'SKU Report');
+
+  const safeName = pkgName.replace(/[^a-zA-Z0-9\-_. ]/g, '').slice(0, 40).trim();
+  const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+  res.setHeader('Content-Disposition', `attachment; filename="sku-report-${safeName}.xlsx"`);
+  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  res.send(buf);
+});
+
 export default router;

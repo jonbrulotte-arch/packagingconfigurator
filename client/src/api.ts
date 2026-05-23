@@ -1,4 +1,4 @@
-import { Product, Packaging, AnalyzeResponse, BulkAnalyzeResponse, BulkShipmentResult, Settings, RequestItem, ShippingMethod, BackupEntry, ReportState } from './types';
+import { Product, Packaging, AnalyzeResponse, BulkAnalyzeResponse, BulkShipmentResult, Settings, RequestItem, ShippingMethod, BackupEntry, ReportState, ProductResultEntry } from './types';
 
 const BASE = '/api';
 
@@ -262,4 +262,11 @@ export const runPackagingAnalysis = () =>
   request<{ status: string; message: string }>('/reports/packaging-analysis/run', { method: 'POST' });
 export const downloadPackagingAnalysisExport = () => {
   window.location.href = '/api/reports/packaging-analysis/export';
+};
+export const getPackagingSkuReport = (packagingId: number) =>
+  request<{ packaging: Packaging; products: ProductResultEntry[] }>(
+    `/reports/packaging-analysis/packaging/${packagingId}/products`
+  );
+export const downloadPackagingSkuExport = (packagingId: number) => {
+  window.location.href = `/api/reports/packaging-analysis/packaging/${packagingId}/export`;
 };

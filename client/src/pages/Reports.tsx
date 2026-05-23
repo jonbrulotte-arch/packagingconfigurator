@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { PackagingAnalysisReport, PackagingStatEntry, ReportState, DimExposedProduct } from '../types';
-import { getPackagingAnalysis, runPackagingAnalysis, downloadPackagingAnalysisExport } from '../api';
+import { PackagingAnalysisReport, PackagingStatEntry, ReportState, DimExposedProduct, ProductResultEntry, Packaging } from '../types';
+import { getPackagingAnalysis, runPackagingAnalysis, downloadPackagingAnalysisExport, getPackagingSkuReport, downloadPackagingSkuExport } from '../api';
 
 const TYPE_LABELS: Record<string, string> = {
   box: 'Box',
@@ -95,6 +95,188 @@ function SortTh({
   );
 }
 
+const FIT_QUALITY_COLORS: Record<string, string> = {
+  exact: 'bg-green-50 text-green-700 border-green-200',
+  good: 'bg-blue-50 text-blue-700 border-blue-200',
+  loose: 'bg-amber-50 text-amber-700 border-amber-200',
+  large: 'bg-red-50 text-red-600 border-red-200',
+};
+
+function PackagingSkuModal({
+  stat,
+  onClose,
+}: {
+  stat: PackagingStatEntry;
+  onClose: () => void;
+}) {
+  const [products, setProducts] = useState<ProductResultEntry[]>([]);
+  const [packaging, setPackaging] = useState<Packaging | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [filter, setFilter] = useState('');
+
+  useEffect(() => {
+    getPackagingSkuReport(stat.packaging.id)
+      .then(r => { setPackaging(r.packaging); setProducts(r.products); })
+      .catch(e => setError(e.message))
+      .finally(() => setLoading(false));
+  }, [stat.packaging.id]);
+
+  const filtered = filter
+    ? products.filter(p =>
+        p.id.toLowerCase().includes(filter.toLowerCase()) ||
+        p.name.toLowerCase().includes(filter.toLowerCase())
+      )
+    : products;
+
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col bg-white">
+      {/* Header */}
+      <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-gray-200 bg-white shadow-sm flex-shrink-0">
+        <div className="min-w-0">
+          <h2 className="text-base font-semibold text-gray-900 truncate">{stat.packaging.name}</h2>
+          <p className="text-xs text-gray-500 mt-0.5">
+            {loading ? 'Loading…' : `${products.length.toLocaleString()} best-fit product${products.length !== 1 ? 's' : ''}`}
+            {packaging && (
+              <span className="ml-2 text-gray-400">
+                · {packaging.height}" H × {packaging.width}" W × {packaging.length}" L
+                {packaging.max_weight ? ` · max ${packaging.max_weight} lbs` : ''}
+              </span>
+            )}
+          </p>
+        </div>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <button
+            onClick={() => downloadPackagingSkuExport(stat.packaging.id)}
+            disabled={loading || !!error}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-40"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            Export
+          </button>
+          <button
+            onClick={onClose}
+            className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded"
+            title="Close"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      {/* Filter bar */}
+      {!loading && !error && products.length > 0 && (
+        <div className="px-4 py-2 border-b border-gray-100 flex-shrink-0">
+          <div className="relative max-w-sm">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
+            </svg>
+            <input
+              type="text"
+              value={filter}
+              onChange={e => setFilter(e.target.value)}
+              placeholder="Filter by ID or name…"
+              className="w-full pl-9 pr-8 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-brand-500"
+            />
+            {filter && (
+              <button onClick={() => setFilter('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
+          </div>
+          {filter && (
+            <p className="text-xs text-gray-400 mt-1">{filtered.length.toLocaleString()} of {products.length.toLocaleString()} shown</p>
+          )}
+        </div>
+      )}
+
+      {/* Body */}
+      <div className="flex-1 overflow-auto">
+        {loading && (
+          <div className="flex items-center justify-center py-20 text-gray-400 text-sm">Loading…</div>
+        )}
+        {error && (
+          <div className="m-4 px-4 py-3 bg-red-50 border border-red-200 rounded text-sm text-red-700">{error}</div>
+        )}
+        {!loading && !error && filtered.length === 0 && (
+          <div className="flex items-center justify-center py-20 text-gray-400 text-sm">
+            {filter ? `No products match "${filter}".` : 'No best-fit products for this packaging.'}
+          </div>
+        )}
+        {!loading && !error && filtered.length > 0 && (
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-sm divide-y divide-gray-100 whitespace-nowrap">
+              <thead className="bg-gray-50 sticky top-0">
+                <tr>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product ID</th>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[180px] whitespace-normal">Name</th>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">H×W×L (in)</th>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Wt (lbs)</th>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fit</th>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Util %</th>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actual Wt</th>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">DIM Wt</th>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">DIM?</th>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Options</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {filtered.map((p, i) => (
+                  <tr key={p.id} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                    <td className="px-3 py-2 font-mono text-xs">
+                      <Link
+                        to={`/configurator?product_id=${encodeURIComponent(p.id)}`}
+                        className="text-brand-700 hover:text-brand-900 hover:underline"
+                        onClick={onClose}
+                        title="Open in Configurator"
+                      >
+                        {p.id}
+                      </Link>
+                    </td>
+                    <td className="px-3 py-2 text-gray-800 whitespace-normal max-w-[220px]">{p.name}</td>
+                    <td className="px-3 py-2 font-mono text-xs text-gray-600">{p.height}×{p.width}×{p.length}</td>
+                    <td className="px-3 py-2 font-mono text-xs text-gray-600">{p.weight}</td>
+                    <td className="px-3 py-2">
+                      {p.fit_quality ? (
+                        <span className={`text-xs border rounded px-1.5 py-0.5 font-medium ${FIT_QUALITY_COLORS[p.fit_quality] ?? 'bg-gray-50 text-gray-600 border-gray-200'}`}>
+                          {p.fit_quality.charAt(0).toUpperCase() + p.fit_quality.slice(1)}
+                        </span>
+                      ) : <span className="text-gray-300">—</span>}
+                    </td>
+                    <td className="px-3 py-2 font-mono text-xs text-gray-600">
+                      {p.volume_utilization != null ? `${p.volume_utilization}%` : '—'}
+                    </td>
+                    <td className="px-3 py-2 font-mono text-xs text-gray-600">
+                      {p.actual_weight != null ? `${p.actual_weight}` : '—'}
+                    </td>
+                    <td className="px-3 py-2 font-mono text-xs text-gray-600">
+                      {p.dim_weight != null ? `${p.dim_weight}` : '—'}
+                    </td>
+                    <td className="px-3 py-2">
+                      {p.dim_exposed ? (
+                        <span className="text-xs bg-amber-50 border border-amber-200 text-amber-700 px-1.5 py-0.5 rounded font-medium">DIM</span>
+                      ) : (
+                        <span className="text-gray-300">—</span>
+                      )}
+                    </td>
+                    <td className="px-3 py-2 font-mono text-xs text-gray-500">{p.compatible_count}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function Reports() {
   const [state, setState] = useState<ReportState>({ status: 'pending' });
   const [loading, setLoading] = useState(true);
@@ -104,6 +286,7 @@ export default function Reports() {
   const [showNoFit, setShowNoFit] = useState(false);
   const [showLooseOnly, setShowLooseOnly] = useState(false);
   const [showDimExposed, setShowDimExposed] = useState(false);
+  const [skuStat, setSkuStat] = useState<PackagingStatEntry | null>(null);
   const pollRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fetchState = async () => {
@@ -293,6 +476,7 @@ export default function Reports() {
               <p className="text-xs text-gray-500 mt-0.5">
                 Best Fit = number of products for which this is the top-ranked option.
                 Hover the quality bar for exact counts.
+                <span className="ml-1 text-brand-600">Click a packaging name to view its SKU report.</span>
               </p>
             </div>
             <div className="overflow-x-auto">
@@ -313,8 +497,14 @@ export default function Reports() {
                     const unused = stat.best_fit_count === 0;
                     return (
                       <tr key={stat.packaging.id} className={`${unused ? 'opacity-50' : ''} ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
-                        <td className="px-3 py-2.5 font-medium text-gray-900 whitespace-nowrap">
-                          {stat.packaging.name}
+                        <td className="px-3 py-2.5 font-medium whitespace-nowrap">
+                          <button
+                            onClick={() => setSkuStat(stat)}
+                            className="text-brand-700 hover:text-brand-900 hover:underline text-left font-medium"
+                            title="View SKU report for this packaging"
+                          >
+                            {stat.packaging.name}
+                          </button>
                           {unused && <span className="ml-2 text-xs text-gray-400 font-normal italic">never best fit</span>}
                         </td>
                         <td className="px-3 py-2.5 text-gray-500 whitespace-nowrap">
@@ -617,6 +807,11 @@ export default function Reports() {
             </div>
           )}
         </div>
+      )}
+
+      {/* SKU Drill-down Modal */}
+      {skuStat && (
+        <PackagingSkuModal stat={skuStat} onClose={() => setSkuStat(null)} />
       )}
     </div>
   );

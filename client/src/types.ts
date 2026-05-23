@@ -168,6 +168,25 @@ export interface TypeBreakdownEntry {
   avg_utilization: number | null;
 }
 
+export interface ProductResultEntry {
+  id: string;
+  name: string;
+  height: number;
+  width: number;
+  length: number;
+  weight: number;
+  foldable: number;
+  ships_in_own_packaging: number;
+  best_packaging_id: number | null;
+  best_packaging_name: string | null;
+  fit_quality: string | null;
+  volume_utilization: number | null;
+  actual_weight: number | null;
+  dim_weight: number | null;
+  dim_exposed: boolean;
+  compatible_count: number;
+}
+
 export interface PackagingAnalysisReport {
   computed_at: string;
   settings: { dim_divisor: number; pack_efficiency: number; ltl_threshold: number };
