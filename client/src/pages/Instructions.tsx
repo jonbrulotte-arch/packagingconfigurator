@@ -132,6 +132,7 @@ Volume unchanged  →  2 × 1 × 12 × 9 = 1 × 12 × 18 = 216 in³`}
                 ['Weight', 'UPC Weight (Pounds)', 'Weight (lbs), Weight'],
                 ['Foldable', 'Foldable', '(optional) 1, true, yes, or y to enable'],
                 ['Ships In Own Packaging', 'Ships In Own Packaging', '(optional) 1, true, yes, or y to enable'],
+                ['UPC', 'UPC', '(optional) UPC Code, Barcode — GS1 barcode for scanner lookup'],
               ].map(([field, primary, fallback]) => (
                 <tr key={field} className="even:bg-gray-50">
                   <td className="px-3 py-2 font-medium text-gray-800">{field}</td>
@@ -144,6 +145,29 @@ Volume unchanged  →  2 × 1 × 12 × 9 = 1 × 12 × 18 = 216 in³`}
           <p className="mt-3 text-sm text-gray-700">
             Importing is an <strong>upsert</strong> — if a Part Number already exists it will be
             updated, otherwise a new record is created. Re-uploading a revised spreadsheet is safe.
+          </p>
+          <p className="mt-2 text-sm text-gray-700">
+            Use <strong>Export</strong> to download your full product catalog as an Excel file in the
+            same format — useful for bulk editing (adding UPCs, updating dimensions) before re-importing.
+          </p>
+        </SubSection>
+
+        <SubSection title="UPC barcode scanner support">
+          <p>
+            Each product has an optional <strong>UPC</strong> field for its GS1 barcode. When set,
+            you can use a USB or Bluetooth barcode scanner on the Configurator page — the scanner
+            types the UPC into the Product ID field and the server resolves it to the correct product
+            automatically. No configuration needed; external scanners emulate keyboard input.
+          </p>
+          <Callout color="blue" label="How UPC lookup works">
+            When you submit a product lookup, the server checks{' '}
+            <code>WHERE id = ? OR upc = ?</code> — so both your internal Part Number and the
+            product's GS1 barcode resolve to the same record. You can mix Part Numbers and scanned
+            UPCs in the same Configurator session.
+          </Callout>
+          <p className="mt-2">
+            UPCs can be added individually via the Add/Edit form, or bulk-loaded via the Excel
+            import by including a <code>UPC</code> column.
           </p>
         </SubSection>
       </Section>

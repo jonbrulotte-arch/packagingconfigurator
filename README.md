@@ -243,10 +243,15 @@ Columns (order matters, header names must match):
 | `UPC Weight (Pounds)` | Weight in pounds |
 | `Foldable` | `1` = yes, `0` = no |
 | `Ships In Own Packaging` | `1` = yes, `0` = no |
+| `UPC` | *(optional)* GS1 barcode for desktop scanner lookup |
 
 Existing products are **upserted** by Part Number (new rows inserted, existing rows updated).
 
-Download the template from the Products page.
+Download the template from the Products page. Use **Export** to download your current catalog in this same format — edit in bulk (e.g. add UPCs) and re-import.
+
+### Barcode Scanner Support
+
+Products with a UPC can be looked up in the Configurator using a USB or Bluetooth barcode scanner. External scanners emulate keyboard input — focus the Product ID field, scan the barcode, and the server resolves the UPC to the matching product automatically. Both Part Number and UPC resolve to the same product record.
 
 ### Bulk Configurator Import
 
@@ -278,6 +283,7 @@ All endpoints are prefixed with `/api/configurator` unless noted.
 | `PUT` | `/api/products/:id` | Update a product |
 | `DELETE` | `/api/products/:id` | Delete a product |
 | `POST` | `/api/products/import` | Bulk import products from Excel |
+| `GET` | `/api/products/export` | Export all products as Excel (same format as import) |
 | `GET` | `/api/packaging` | List all packaging |
 | `POST` | `/api/packaging` | Create packaging |
 | `PUT` | `/api/packaging/:id` | Update packaging |
