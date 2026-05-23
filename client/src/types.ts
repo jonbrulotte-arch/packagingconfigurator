@@ -118,6 +118,69 @@ export interface BulkAnalyzeResponse {
   summary: { total: number; matched: number; flagged: number; ltl: number; errors: number };
 }
 
+// ── Packaging Analysis Report ─────────────────────────────────────────────────
+
+export interface PackagingStatEntry {
+  packaging: Packaging;
+  fits_count: number;
+  best_fit_count: number;
+  sole_option: boolean;
+  fit_quality_counts: { exact: number; good: number; loose: number; large: number };
+  avg_utilization: number | null;
+}
+
+export interface ProductGap {
+  id: string;
+  name: string;
+  height: number;
+  width: number;
+  length: number;
+  weight: number;
+  foldable: number;
+  ships_in_own_packaging: number;
+}
+
+export interface DimCarrierStat {
+  method_id: number;
+  method_name: string;
+  dim_billed_count: number;
+  pct_of_catalog: number;
+}
+
+export interface TypeBreakdownEntry {
+  type: string;
+  packaging_count: number;
+  best_fit_count: number;
+  avg_utilization: number | null;
+}
+
+export interface PackagingAnalysisReport {
+  computed_at: string;
+  settings: { dim_divisor: number; pack_efficiency: number; ltl_threshold: number };
+  products_analyzed: number;
+  packaging_evaluated: number;
+  shipping_methods_evaluated: number;
+  has_packaging_count: number;
+  no_packaging_count: number;
+  loose_only_count: number;
+  coverage_rate: number;
+  dim_exposure_count: number;
+  dim_exposure_rate: number;
+  packaging_stats: PackagingStatEntry[];
+  no_fit_products: ProductGap[];
+  loose_only_products: ProductGap[];
+  dim_by_carrier: DimCarrierStat[];
+  type_breakdown: TypeBreakdownEntry[];
+}
+
+export type ReportState =
+  | { status: 'pending' }
+  | { status: 'running'; started_at?: string }
+  | { status: 'error'; error: string }
+  | { status: 'ready'; computed_at: string; data: PackagingAnalysisReport };
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 export interface Settings {
   dim_divisor: string;
   pack_efficiency: string;

@@ -8,6 +8,7 @@ import authRouter from './routes/auth';
 import shippingRouter from './routes/shipping';
 import db from './db';
 import backupRouter, { createBackup, listRegularBackups, pruneOldBackups } from './routes/backup';
+import reportsRouter, { computePackagingAnalysis } from './routes/reports';
 
 const app = express();
 const PORT = process.env.PORT ?? 3002;
@@ -21,6 +22,7 @@ app.use('/api/packaging', packagingRouter);
 app.use('/api/configurator', configuratorRouter);
 app.use('/api/shipping', shippingRouter);
 app.use('/api/backup', backupRouter);
+app.use('/api/reports', reportsRouter);
 
 // Scheduled auto-backup — checks every hour, respects frequency/hour/max-count settings.
 async function runScheduledBackup() {
@@ -51,6 +53,46 @@ async function runScheduledBackup() {
 }
 
 setInterval(runScheduledBackup, 60 * 60 * 1000); // check every hour
+
+// Scheduled packaging analysis — runs every 6 hours, checks every hour
+function runScheduledAnalysis() {
+  try {
+    const cached = db
+      .prepare("SELECT computed_at FROM report_cache WHERE type = 'packaging_analysis' AND status = 'ready'")
+      .get() as { computed_at: string } | undefined;
+    if (!cached) {
+      computePackagingAnalysis();
+      return;
+    }
+    const ageHours = (Date.now() - new Date(cached.computed_at).getTime()) / (1000 * 60 * 60);
+    if (ageHours >= 6) computePackagingAnalysis();
+  } catch (err) {
+    console.error('[Reports] Scheduler error:', err);
+  }
+}
+
+setInterval(runScheduledAnalysis, 60 * 60 * 1000); // check every hour
+
+// On startup: run analysis if no cache exists or cache is stale
+setTimeout(() => {
+  try {
+    const cached = db
+      .prepare("SELECT computed_at FROM report_cache WHERE type = 'packaging_analysis' AND status = 'ready'")
+      .get() as { computed_at: string } | undefined;
+    if (!cached) {
+      console.log('[Reports] No cached analysis found — running initial analysis...');
+      computePackagingAnalysis();
+      return;
+    }
+    const ageHours = (Date.now() - new Date(cached.computed_at).getTime()) / (1000 * 60 * 60);
+    if (ageHours >= 6) {
+      console.log(`[Reports] Cache is ${ageHours.toFixed(1)}h old — refreshing...`);
+      computePackagingAnalysis();
+    }
+  } catch (err) {
+    console.error('[Reports] Startup analysis check failed:', err);
+  }
+}, 5000); // 5s after startup so the server is fully ready
 
 // Serve built React app in production
 const clientBuild = path.join(__dirname, '../../client/dist');

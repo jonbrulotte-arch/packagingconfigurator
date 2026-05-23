@@ -101,6 +101,18 @@ try {
   // Column already exists — safe to ignore
 }
 
+// Report cache table — stores pre-computed analysis results
+db.exec(`
+  CREATE TABLE IF NOT EXISTS report_cache (
+    type TEXT PRIMARY KEY,
+    status TEXT NOT NULL DEFAULT 'pending',
+    payload TEXT,
+    error TEXT,
+    computed_at TEXT,
+    started_at TEXT
+  );
+`);
+
 // Seed default settings
 const insertSetting = db.prepare(
   'INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)'

@@ -10,6 +10,7 @@ const navItems = [
   { to: '/packaging', label: 'Packaging' },
   { to: '/shipping', label: 'Shipping' },
   { to: '/settings', label: 'Settings' },
+  { to: '/reports', label: 'Reports' },
   { to: '/instructions', label: 'Instructions' },
   { to: '/api-docs', label: 'API Docs' },
 ];

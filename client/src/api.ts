@@ -1,4 +1,4 @@
-import { Product, Packaging, AnalyzeResponse, BulkAnalyzeResponse, BulkShipmentResult, Settings, RequestItem, ShippingMethod, BackupEntry } from './types';
+import { Product, Packaging, AnalyzeResponse, BulkAnalyzeResponse, BulkShipmentResult, Settings, RequestItem, ShippingMethod, BackupEntry, ReportState } from './types';
 
 const BASE = '/api';
 
@@ -241,3 +241,11 @@ export const updateSettings = (data: Partial<Settings>) =>
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
+
+// Reports
+export const getPackagingAnalysis = () => request<ReportState>('/reports/packaging-analysis');
+export const runPackagingAnalysis = () =>
+  request<{ status: string; message: string }>('/reports/packaging-analysis/run', { method: 'POST' });
+export const downloadPackagingAnalysisExport = () => {
+  window.location.href = '/api/reports/packaging-analysis/export';
+};
