@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import { PackagingAnalysisReport, PackagingStatEntry, ReportState, DimExposedProduct } from '../types';
 import { getPackagingAnalysis, runPackagingAnalysis, downloadPackagingAnalysisExport } from '../api';
 
@@ -468,7 +469,15 @@ export default function Reports() {
                         <tbody className="divide-y divide-gray-100">
                           {report.no_fit_products.map((p, i) => (
                             <tr key={p.id} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                              <td className="px-3 py-2 font-mono text-brand-700">{p.id}</td>
+                              <td className="px-3 py-2 font-mono">
+                                <Link
+                                  to={`/configurator?product_id=${encodeURIComponent(p.id)}`}
+                                  className="text-brand-700 hover:text-brand-900 hover:underline"
+                                  title={`Open ${p.id} in Configurator`}
+                                >
+                                  {p.id}
+                                </Link>
+                              </td>
                               <td className="px-3 py-2 text-gray-800">{p.name}</td>
                               <td className="px-3 py-2 font-mono text-gray-600">{p.height}</td>
                               <td className="px-3 py-2 font-mono text-gray-600">{p.width}</td>
@@ -514,7 +523,15 @@ export default function Reports() {
                         <tbody className="divide-y divide-gray-100">
                           {report.loose_only_products.map((p, i) => (
                             <tr key={p.id} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                              <td className="px-3 py-2 font-mono text-brand-700">{p.id}</td>
+                              <td className="px-3 py-2 font-mono">
+                                <Link
+                                  to={`/configurator?product_id=${encodeURIComponent(p.id)}`}
+                                  className="text-brand-700 hover:text-brand-900 hover:underline"
+                                  title={`Open ${p.id} in Configurator`}
+                                >
+                                  {p.id}
+                                </Link>
+                              </td>
                               <td className="px-3 py-2 text-gray-800">{p.name}</td>
                               <td className="px-3 py-2 font-mono text-gray-600">{p.height}</td>
                               <td className="px-3 py-2 font-mono text-gray-600">{p.width}</td>
@@ -559,7 +576,15 @@ export default function Reports() {
                         <tbody className="divide-y divide-gray-100">
                           {(report.dim_exposed_products as DimExposedProduct[]).map((p, i) => (
                             <tr key={p.id} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                              <td className="px-3 py-2 font-mono text-brand-700">{p.id}</td>
+                              <td className="px-3 py-2 font-mono">
+                                <Link
+                                  to={`/configurator?product_id=${encodeURIComponent(p.id)}`}
+                                  className="text-brand-700 hover:text-brand-900 hover:underline"
+                                  title={`Open ${p.id} in Configurator`}
+                                >
+                                  {p.id}
+                                </Link>
+                              </td>
                               <td className="px-3 py-2 text-gray-800">{p.name}</td>
                               <td className="px-3 py-2 text-gray-500 text-xs">{p.best_packaging_name ?? '—'}</td>
                               <td className="px-3 py-2 font-mono text-right text-gray-600">{p.actual_weight} lbs</td>
