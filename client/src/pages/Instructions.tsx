@@ -6,6 +6,7 @@ const TOC_ITEMS = [
   { id: 'packaging-tab', label: 'Packaging Tab' },
   { id: 'shipping-methods-tab', label: 'Shipping Methods' },
   { id: 'configurator-tab', label: 'Configurator' },
+  { id: 'manual-configurator-tab', label: 'Manual Configurator' },
   { id: 'bulk-configurator-tab', label: 'Bulk Configurator' },
   { id: 'how-results-are-calculated', label: 'How Results Work' },
   { id: 'settings-reference', label: 'Settings' },
@@ -339,6 +340,115 @@ Every item in the shipment must fit within those reduced dimensions.`}
           Packaging options are still shown when available (a heavy item may fit a box and ship LTL
           on a pallet), but you are warned that standard parcel carriers do not apply.
         </p>
+
+        <SubSection title="Entering products">
+          <p>
+            Type a Product ID (or UPC, if one is set) into each row. Press{' '}
+            <strong>Enter</strong> in any Product ID field to append a new row without reaching
+            for the mouse. Click the × to remove a row (the last row cannot be removed).
+          </p>
+          <p className="mt-2">
+            You can also load rows from an Excel file using <strong>Import from Excel</strong> —
+            use <strong>Download template</strong> to get a pre-formatted spreadsheet with
+            Product ID and Quantity columns.
+          </p>
+        </SubSection>
+
+        <SubSection title="Session persistence">
+          <p>
+            The Configurator automatically saves your last product list and results in your
+            browser's local storage. When you return to the page, your previous session is
+            restored — including the full results. Click <strong>Clear</strong> to start fresh.
+          </p>
+        </SubSection>
+
+        <SubSection title="URL deep links">
+          <p>
+            You can link directly to a pre-filled Configurator query by adding a{' '}
+            <code>product_id</code> parameter to the URL. The page will load with the product
+            pre-filled and run the analysis automatically.
+          </p>
+          <table className="mt-3 w-full text-sm border border-gray-200 rounded overflow-hidden">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-3 py-2 text-left font-medium text-gray-600">URL format</th>
+                <th className="px-3 py-2 text-left font-medium text-gray-600">Result</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100 text-gray-700">
+              {[
+                ['/configurator?product_id=SKU-001', 'Pre-fills SKU-001, qty 1, auto-analyzes'],
+                ['/configurator?product_id=SKU-001&quantity=3', 'Pre-fills SKU-001 with qty 3'],
+                ['/configurator?product_id=SKU-001,SKU-002', 'Pre-fills two products (comma-separated)'],
+                ['/configurator?product_id=SKU-001&product_id=SKU-002', 'Pre-fills two products (repeated param)'],
+              ].map(([url, desc]) => (
+                <tr key={url} className="even:bg-gray-50">
+                  <td className="px-3 py-2 font-mono text-xs text-brand-700 break-all">{url}</td>
+                  <td className="px-3 py-2 text-gray-600">{desc}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <Callout color="blue" label="Works with UPCs too">
+            Because the server resolves both Part Numbers and UPC barcodes, a URL like{' '}
+            <code>?product_id=012345678901</code> will find and load the matching product
+            just like typing the UPC into the Configurator directly.
+          </Callout>
+        </SubSection>
+
+        <SubSection title="Exporting results">
+          <p>
+            After running an analysis, click <strong>Export to Excel</strong> (shown above the
+            packaging results list) to download a spreadsheet with all compatible packaging
+            options, their weights, DIM weights, and matching shipping methods — useful for
+            record-keeping or sharing results with a team.
+          </p>
+        </SubSection>
+      </Section>
+
+      {/* ── MANUAL CONFIGURATOR ── */}
+      <Section id="manual-configurator-tab" title="Manual Configurator Tab">
+        <p className="text-sm text-gray-700">
+          The <strong>Manual</strong> tab works like the standard Configurator, but instead of
+          looking up a product by ID, you enter the dimensions and weight directly. No product
+          record in the database is required.
+        </p>
+        <p className="mt-2 text-sm text-gray-700">
+          This is useful for:
+        </p>
+        <ul className="mt-2 space-y-1 text-sm text-gray-700 list-disc list-inside">
+          <li>One-off items or samples that haven't been added to the product catalog yet.</li>
+          <li>Testing packaging options for hypothetical dimensions before committing to a product record.</li>
+          <li>Ad-hoc quotes where a customer provides dimensions on the fly.</li>
+        </ul>
+
+        <SubSection title="Adding items">
+          <p>
+            Each item card has fields for a label (optional, for your reference), height, width,
+            length (all in inches), weight (lbs), and quantity. Check <strong>Foldable</strong> or{' '}
+            <strong>Ships in Own Packaging</strong> to apply the same logic used for catalog products:
+          </p>
+          <ul className="mt-2 space-y-1 text-sm text-gray-700 list-disc list-inside">
+            <li><strong>Foldable</strong> — longest dimension is halved, thickness doubled before fit check.</li>
+            <li><strong>Ships in Own Packaging</strong> — no box assigned; DIM weight calculated from the item's own dimensions.</li>
+          </ul>
+          <p className="mt-2">
+            Click <strong>+ Add item</strong> to add more items to the same shipment. Click the × on
+            a card to remove it (at least one card must remain).
+          </p>
+        </SubSection>
+
+        <SubSection title="Results">
+          <p>
+            Click <strong>Find Best Packaging</strong>. Results are identical in format to the
+            standard Configurator — ranked packaging options, fit quality badges, weight tiles,
+            shipping method chips, and warning flags all work the same way.
+          </p>
+          <p className="mt-2">
+            Manual Configurator results are not persisted between sessions; refreshing the page
+            clears the form.
+          </p>
+        </SubSection>
       </Section>
 
       {/* ── BULK CONFIGURATOR ── */}
