@@ -345,6 +345,71 @@ router.post('/analyze', (req: Request, res: Response) => {
   });
 });
 
+router.post('/analyze-manual', (req: Request, res: Response) => {
+  interface ManualItem {
+    name?: string;
+    height: number;
+    width: number;
+    length: number;
+    weight: number;
+    quantity: number;
+    foldable?: number;
+    ships_in_own_packaging?: number;
+  }
+  const { items } = req.body as { items: ManualItem[] };
+  if (!Array.isArray(items) || items.length === 0)
+    return res.status(400).json({ error: 'items must be a non-empty array' });
+
+  const settingsRows = db.prepare('SELECT key, value FROM settings').all() as { key: string; value: string }[];
+  const s = Object.fromEntries(settingsRows.map(r => [r.key, r.value]));
+  const dimDivisor = Number(s.dim_divisor ?? 139);
+  const packEfficiency = Number(s.pack_efficiency ?? 0.70);
+  const ltlThreshold = Number(s.ltl_threshold ?? 150);
+
+  const resolvedItems: ResolvedItem[] = items.map((item, idx) => ({
+    product: {
+      id: `manual-${idx + 1}`,
+      name: item.name?.trim() || `Item ${idx + 1}`,
+      height: Number(item.height),
+      width: Number(item.width),
+      length: Number(item.length),
+      weight: Number(item.weight),
+      foldable: item.foldable ? 1 : 0,
+      ships_in_own_packaging: item.ships_in_own_packaging ? 1 : 0,
+    },
+    quantity: Math.max(1, Math.round(Number(item.quantity))),
+  }));
+
+  const standaloneItems = resolvedItems.filter(i => i.product.ships_in_own_packaging);
+  const packagedItems = resolvedItems.filter(i => !i.product.ships_in_own_packaging);
+  const totalActualWeight = Math.round(resolvedItems.reduce((sum, i) => sum + i.product.weight * i.quantity, 0) * 1000) / 1000;
+
+  const allPackaging = db
+    .prepare('SELECT * FROM packaging WHERE active = 1 ORDER BY height * width * length ASC')
+    .all() as Packaging[];
+  const shippingMethods = loadActiveShippingMethods();
+  const results = packagedItems.length > 0
+    ? analyzeShipment(packagedItems, allPackaging, dimDivisor, packEfficiency, shippingMethods)
+    : [];
+  const standaloneResults = standaloneItems.map(si =>
+    computeStandaloneResult(si.product, si.quantity, dimDivisor, shippingMethods)
+  );
+
+  const ltlRequired = totalActualWeight >= ltlThreshold;
+  const ltlShipping = ltlRequired ? computeLtlShipping(totalActualWeight, shippingMethods) : [];
+
+  res.json({
+    items: resolvedItems,
+    total_actual_weight: totalActualWeight,
+    total_item_count: resolvedItems.reduce((s, i) => s + i.quantity, 0),
+    settings: { dim_divisor: dimDivisor, pack_efficiency: packEfficiency, ltl_threshold: ltlThreshold },
+    results,
+    standalone_items: standaloneResults,
+    ltl_required: ltlRequired,
+    ltl_shipping: ltlShipping,
+  });
+});
+
 router.post('/export', (req: Request, res: Response) => {
   const { items, results, settings } = req.body as {
     items: { product: Product; quantity: number }[];

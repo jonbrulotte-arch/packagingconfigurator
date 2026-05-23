@@ -7,6 +7,7 @@ import Settings from './pages/Settings';
 import Instructions from './pages/Instructions';
 import BulkConfigurator from './pages/BulkConfigurator';
 import ApiDocs from './pages/ApiDocs';
+import ManualConfigurator from './pages/ManualConfigurator';
 import ShippingMethods from './pages/ShippingMethods';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import LoginModal from './components/LoginModal';
@@ -26,6 +27,7 @@ export default function App() {
           <Route element={<Layout />}>
             <Route index element={<Navigate to="/configurator" replace />} />
             <Route path="/configurator" element={<Configurator />} />
+            <Route path="/manual" element={<ManualConfigurator />} />
             <Route path="/bulk" element={<BulkConfigurator />} />
             <Route path="/instructions" element={<Instructions />} />
             <Route path="/api-docs" element={<ApiDocs />} />

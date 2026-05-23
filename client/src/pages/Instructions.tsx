@@ -1,6 +1,21 @@
+import TocLayout from '../components/TocLayout';
+
+const TOC_ITEMS = [
+  { id: 'getting-started', label: 'Getting Started' },
+  { id: 'products-tab', label: 'Products Tab' },
+  { id: 'packaging-tab', label: 'Packaging Tab' },
+  { id: 'shipping-methods-tab', label: 'Shipping Methods' },
+  { id: 'configurator-tab', label: 'Configurator' },
+  { id: 'bulk-configurator-tab', label: 'Bulk Configurator' },
+  { id: 'how-results-are-calculated', label: 'How Results Work' },
+  { id: 'settings-reference', label: 'Settings' },
+  { id: 'admin-security', label: 'Admin & Security' },
+];
+
 export default function Instructions() {
   return (
-    <div className="max-w-3xl space-y-8">
+    <TocLayout items={TOC_ITEMS}>
+    <div className="space-y-8">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Instructions &amp; How It Works</h1>
         <p className="mt-2 text-sm text-gray-500">
@@ -10,7 +25,7 @@ export default function Instructions() {
       </div>
 
       {/* ── SETUP ── */}
-      <Section title="Getting Started">
+      <Section id="getting-started" title="Getting Started">
         <p>There are four things to configure before using the Configurator:</p>
         <ol className="mt-3 space-y-2 list-decimal list-inside text-sm text-gray-700">
           <li>
@@ -39,7 +54,7 @@ export default function Instructions() {
       </Section>
 
       {/* ── PRODUCTS ── */}
-      <Section title="Products Tab">
+      <Section id="products-tab" title="Products Tab">
         <SubSection title="Manual entry">
           <p>
             Click <strong>+ Add Product</strong> and fill in all fields. The Product ID is your
@@ -134,7 +149,7 @@ Volume unchanged  →  2 × 1 × 12 × 9 = 1 × 12 × 18 = 216 in³`}
       </Section>
 
       {/* ── PACKAGING ── */}
-      <Section title="Packaging Tab">
+      <Section id="packaging-tab" title="Packaging Tab">
         <p className="text-sm text-gray-700">
           Add every container you ship in. Key fields:
         </p>
@@ -228,7 +243,7 @@ Every item in the shipment must fit within those reduced dimensions.`}
       </Section>
 
       {/* ── SHIPPING METHODS ── */}
-      <Section title="Shipping Methods Tab">
+      <Section id="shipping-methods-tab" title="Shipping Methods Tab">
         <p className="text-sm text-gray-700">
           Configure each carrier service you use. A shipping method is a specific service
           (e.g. "UPS Ground", "USPS Priority Mail", "FedEx 2Day") with its own weight range
@@ -282,7 +297,7 @@ Every item in the shipment must fit within those reduced dimensions.`}
       </Section>
 
       {/* ── CONFIGURATOR ── */}
-      <Section title="Configurator Tab">
+      <Section id="configurator-tab" title="Configurator Tab">
         <p className="text-sm text-gray-700">
           Enter one or more product IDs (one per row) and quantities, then click{' '}
           <strong>Find Best Packaging</strong>. The tool returns every active packaging option that
@@ -303,7 +318,7 @@ Every item in the shipment must fit within those reduced dimensions.`}
       </Section>
 
       {/* ── BULK CONFIGURATOR ── */}
-      <Section title="Bulk Configurator Tab">
+      <Section id="bulk-configurator-tab" title="Bulk Configurator Tab">
         <p className="text-sm text-gray-700">
           Upload an Excel spreadsheet with multiple shipments — one product row per line, grouped
           by Order ID. Required columns: <code>Order ID</code>, <code>Part Number</code>,{' '}
@@ -347,7 +362,7 @@ Every item in the shipment must fit within those reduced dimensions.`}
       </Section>
 
       {/* ── ALGORITHM ── */}
-      <Section title="How Results Are Calculated">
+      <Section id="how-results-are-calculated" title="How Results Are Calculated">
 
         <SubSection title="Step 1 — Can the products fit?">
           <p>For each active packaging option the tool checks whether all selected products can physically fit inside.</p>
@@ -510,7 +525,7 @@ product sorted: [9,  6, 4]
       </Section>
 
       {/* ── SETTINGS ── */}
-      <Section title="Settings Reference">
+      <Section id="settings-reference" title="Settings Reference">
         <table className="w-full text-sm border border-gray-200 rounded overflow-hidden">
           <thead className="bg-gray-50">
             <tr>
@@ -538,7 +553,7 @@ product sorted: [9,  6, 4]
       </Section>
 
       {/* ── ADMIN & SECURITY ── */}
-      <Section title="Admin &amp; Security">
+      <Section id="admin-security" title="Admin &amp; Security">
         <SubSection title="Admin password">
           <p>
             The Products, Packaging, Shipping, and Settings pages can be protected with a password.
@@ -586,14 +601,15 @@ product sorted: [9,  6, 4]
         </SubSection>
       </Section>
     </div>
+    </TocLayout>
   );
 }
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({ id, title, children }: { id?: string; title: string; children: React.ReactNode }) {
   return (
-    <section>
+    <section id={id} className="scroll-mt-6">
       <h2 className="text-lg font-semibold text-gray-900 border-b border-gray-200 pb-2 mb-4">{title}</h2>
       <div className="space-y-4 text-sm text-gray-700">{children}</div>
     </section>

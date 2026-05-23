@@ -1,10 +1,22 @@
 import { useState } from 'react';
+import TocLayout from '../components/TocLayout';
 
 const BASE = window.location.origin;
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+const TOC_ITEMS = [
+  { id: 'auth', label: 'Auth' },
+  { id: 'configurator', label: 'Configurator' },
+  { id: 'products', label: 'Products' },
+  { id: 'packaging', label: 'Packaging' },
+  { id: 'shipping-methods', label: 'Shipping Methods' },
+  { id: 'backups', label: 'Backups' },
+  { id: 'fit-quality-reference', label: 'Fit Quality' },
+  { id: 'error-responses', label: 'Error Responses' },
+];
+
+function Section({ id, title, children }: { id?: string; title: string; children: React.ReactNode }) {
   return (
-    <section className="space-y-4">
+    <section id={id} className="space-y-4 scroll-mt-6">
       <h2 className="text-lg font-semibold text-gray-900 border-b border-gray-200 pb-2">{title}</h2>
       {children}
     </section>
@@ -69,7 +81,8 @@ function Endpoint({
 
 export default function ApiDocs() {
   return (
-    <div className="max-w-4xl space-y-10">
+    <TocLayout items={TOC_ITEMS}>
+    <div className="space-y-10">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">API Reference</h1>
         <p className="text-sm text-gray-500 mt-2">
@@ -92,7 +105,7 @@ export default function ApiDocs() {
       </div>
 
       {/* ── AUTH ── */}
-      <Section title="Auth">
+      <Section id="auth" title="Auth">
         <p className="text-sm text-gray-600">
           When an admin password is configured, the Products, Packaging, Shipping, and Settings
           endpoints are protected. Obtain a session token via <code>POST /auth/login</code> and
@@ -158,7 +171,7 @@ export default function ApiDocs() {
       </Section>
 
       {/* ── CONFIGURATOR ── */}
-      <Section title="Configurator">
+      <Section id="configurator" title="Configurator">
         <Endpoint
           method="POST"
           path="/configurator/analyze"
@@ -256,7 +269,7 @@ export default function ApiDocs() {
       </Section>
 
       {/* ── PRODUCTS ── */}
-      <Section title="Products">
+      <Section id="products" title="Products">
         <Endpoint
           method="GET"
           path="/products"
@@ -314,7 +327,7 @@ export default function ApiDocs() {
       </Section>
 
       {/* ── PACKAGING ── */}
-      <Section title="Packaging">
+      <Section id="packaging" title="Packaging">
         <Endpoint
           method="GET"
           path="/packaging"
@@ -356,7 +369,7 @@ export default function ApiDocs() {
       </Section>
 
       {/* ── SHIPPING METHODS ── */}
-      <Section title="Shipping Methods">
+      <Section id="shipping-methods" title="Shipping Methods">
         <p className="text-sm text-gray-600">
           Shipping methods are discrete carrier services with a weight range. Every active method
           is evaluated per-result to find matches based on the carrier-specific billed weight.
@@ -406,7 +419,7 @@ export default function ApiDocs() {
       </Section>
 
       {/* ── BACKUP ── */}
-      <Section title="Backups">
+      <Section id="backups" title="Backups">
         <p className="text-sm text-gray-600">
           The SQLite database is backed up automatically every 6 hours. Backups are stored on the
           server and can be listed, downloaded, restored, or deleted via these endpoints. Restoring
@@ -454,7 +467,7 @@ export default function ApiDocs() {
       </Section>
 
       {/* ── FIT QUALITY ── */}
-      <Section title="Fit Quality Reference">
+      <Section id="fit-quality-reference" title="Fit Quality Reference">
         <div className="bg-white rounded-lg shadow border border-gray-200 overflow-hidden">
           <table className="min-w-full text-sm">
             <thead className="bg-gray-50">
@@ -485,7 +498,7 @@ export default function ApiDocs() {
       </Section>
 
       {/* ── ERROR FORMAT ── */}
-      <Section title="Error Responses">
+      <Section id="error-responses" title="Error Responses">
         <p className="text-sm text-gray-600">
           All errors return a non-2xx HTTP status code and a JSON body with an <code>error</code> field.
         </p>
@@ -506,5 +519,6 @@ ${JSON.stringify({ error: 'Product ID already exists' }, null, 2)}`}
         </div>
       </Section>
     </div>
+    </TocLayout>
   );
 }

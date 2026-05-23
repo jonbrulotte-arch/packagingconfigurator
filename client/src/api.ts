@@ -86,6 +86,24 @@ export const exportResults = async (payload: Pick<AnalyzeResponse, 'items' | 're
   URL.revokeObjectURL(url);
 };
 
+export interface ManualItem {
+  name: string;
+  height: number;
+  width: number;
+  length: number;
+  weight: number;
+  quantity: number;
+  foldable: number;
+  ships_in_own_packaging: number;
+}
+
+export const analyzeManual = (items: ManualItem[]) =>
+  request<AnalyzeResponse>('/configurator/analyze-manual', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ items }),
+  });
+
 export const importConfiguratorFile = async (
   file: File
 ): Promise<{ items: RequestItem[]; errors: string[] }> => {

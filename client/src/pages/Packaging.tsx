@@ -118,6 +118,14 @@ export default function Packaging() {
         </div>
       </div>
 
+      <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded text-xs text-blue-700">
+        <strong>Excel Import Format:</strong> Required columns: <code>Name</code>, <code>Type</code> (box / bubble_mailer / poly_mailer / other),{' '}
+        <code>Height (Inches)</code>, <code>Width (Inches)</code>, <code>Length (Inches)</code>.{' '}
+        Optional: <code>Max Height (Inches)</code> (mailers), <code>Max Weight (Pounds)</code>,{' '}
+        <code>Packaging Weight (Pounds)</code>, <code>Notes</code>, <code>Active</code> (1 or 0).{' '}
+        Existing options are updated by Name.
+      </div>
+
       {importMsg && (
         <div className="mb-4 px-4 py-3 bg-green-50 border border-green-200 rounded text-sm text-green-800">
           {importMsg}
@@ -131,11 +139,18 @@ export default function Packaging() {
           <table className="min-w-full divide-y divide-gray-200 whitespace-nowrap">
             <thead className="bg-gray-50">
               <tr>
-                {['Name', 'Type', 'H (in)', 'W (in)', 'L (in)', 'Max H (in)', 'Volume (in³)', 'Pkg Wt (lbs)', 'Max Wt (lbs)', 'Status', 'Notes', ''].map(h => (
-                  <th key={h} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {h}
-                  </th>
-                ))}
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[130px]">Name</th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-28">Type</th>
+                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-14">H</th>
+                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-14">W</th>
+                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-14">L</th>
+                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16">Max H</th>
+                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">Vol (in³)</th>
+                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">Pkg Wt</th>
+                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">Max Wt</th>
+                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">Status</th>
+                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">Notes</th>
+                <th className="px-2 py-3 w-20"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
@@ -146,36 +161,36 @@ export default function Packaging() {
               ) : (
                 items.map((pkg, i) => (
                   <tr key={pkg.id} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                    <td className="px-4 py-3 text-sm font-medium text-gray-900 whitespace-normal max-w-[160px]">{pkg.name}</td>
-                    <td className="px-4 py-3 text-sm">
+                    <td className="px-3 py-3 text-sm font-medium text-gray-900 whitespace-normal min-w-[130px]">{pkg.name}</td>
+                    <td className="px-3 py-3 text-sm">
                       <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${TYPE_COLORS[pkg.type] ?? TYPE_COLORS.other}`}>
                         {TYPE_LABELS[pkg.type] ?? pkg.type}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{pkg.height}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{pkg.width}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{pkg.length}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">
+                    <td className="px-2 py-3 text-sm text-gray-600">{pkg.height}</td>
+                    <td className="px-2 py-3 text-sm text-gray-600">{pkg.width}</td>
+                    <td className="px-2 py-3 text-sm text-gray-600">{pkg.length}</td>
+                    <td className="px-2 py-3 text-sm text-gray-600">
                       {(pkg.type === 'bubble_mailer' || pkg.type === 'poly_mailer') && pkg.max_height != null
                         ? <span className="font-medium text-indigo-700">{pkg.max_height}</span>
                         : <span className="text-gray-300">—</span>}
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-600">
+                    <td className="px-2 py-3 text-sm text-gray-600">
                       {(pkg.height * pkg.width * pkg.length).toFixed(1)}
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-600">
+                    <td className="px-2 py-3 text-sm text-gray-600">
                       {pkg.packaging_weight != null ? pkg.packaging_weight : '—'}
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-600">
+                    <td className="px-2 py-3 text-sm text-gray-600">
                       {pkg.max_weight != null ? pkg.max_weight : '—'}
                     </td>
-                    <td className="px-4 py-3 text-sm">
+                    <td className="px-2 py-3 text-sm">
                       <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${pkg.active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-500'}`}>
                         {pkg.active ? 'Active' : 'Inactive'}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-500 max-w-xs truncate">{pkg.notes ?? '—'}</td>
-                    <td className="px-4 py-3 text-sm text-right whitespace-nowrap" colSpan={1}>
+                    <td className="px-2 py-3 text-sm text-gray-500 max-w-[8rem] truncate">{pkg.notes ?? '—'}</td>
+                    <td className="px-2 py-3 text-sm text-right whitespace-nowrap">
                       <button onClick={() => setEditTarget(pkg)} className="text-brand-600 hover:text-brand-800 mr-3">Edit</button>
                       <button onClick={() => handleDelete(pkg.id, pkg.name)} className="text-red-500 hover:text-red-700">Delete</button>
                     </td>
@@ -185,14 +200,6 @@ export default function Packaging() {
             </tbody>
           </table>
         </div>
-      </div>
-
-      <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded text-xs text-blue-700">
-        <strong>Excel Import Format:</strong> Required columns: <code>Name</code>, <code>Type</code> (box / bubble_mailer / poly_mailer / other),{' '}
-        <code>Height (Inches)</code>, <code>Width (Inches)</code>, <code>Length (Inches)</code>.{' '}
-        Optional: <code>Max Height (Inches)</code> (mailers), <code>Max Weight (Pounds)</code>,{' '}
-        <code>Packaging Weight (Pounds)</code>, <code>Notes</code>, <code>Active</code> (1 or 0).{' '}
-        Existing options are updated by Name.
       </div>
 
       {modalOpen && (
