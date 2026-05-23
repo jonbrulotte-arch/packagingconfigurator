@@ -584,7 +584,7 @@ export default function Configurator() {
                         {r.packaging.height}" H × {r.packaging.width}" W × {r.packaging.length}" L
                         {r.packaging.max_weight != null && ` · max ${r.packaging.max_weight} lbs`}
                       </p>
-                      {(r.shipped_dims.height !== r.packaging.height ||
+                      {r.shipped_dims && (r.shipped_dims.height !== r.packaging.height ||
                         r.shipped_dims.width !== r.packaging.width ||
                         r.shipped_dims.length !== r.packaging.length) && (
                         <p className="text-sm text-indigo-600 font-mono mt-0.5">
