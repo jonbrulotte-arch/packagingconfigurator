@@ -32,9 +32,9 @@ export default function App() {
             <Route path="/bulk" element={<BulkConfigurator />} />
             <Route path="/instructions" element={<Instructions />} />
             <Route path="/api-docs" element={<ApiDocs />} />
-            <Route path="/products" element={<ProtectedPage><Products /></ProtectedPage>} />
-            <Route path="/packaging" element={<ProtectedPage><Packaging /></ProtectedPage>} />
-            <Route path="/shipping" element={<ProtectedPage><ShippingMethods /></ProtectedPage>} />
+            <Route path="/products" element={<Products />} />
+            <Route path="/packaging" element={<Packaging />} />
+            <Route path="/shipping" element={<ShippingMethods />} />
             <Route path="/settings" element={<ProtectedPage><Settings /></ProtectedPage>} />
             <Route path="/reports" element={<Reports />} />
           </Route>
