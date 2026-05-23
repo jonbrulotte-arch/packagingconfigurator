@@ -1,4 +1,4 @@
-import { Product, Packaging, AnalyzeResponse, BulkAnalyzeResponse, BulkShipmentResult, Settings, RequestItem, ShippingMethod, BackupEntry, ReportState, ProductResultEntry } from './types';
+import { Product, Packaging, AnalyzeResponse, BulkAnalyzeResponse, BulkShipmentResult, Settings, RequestItem, ShippingMethod, BackupEntry, ReportState, ProductResultEntry, CarrierSkuProduct } from './types';
 
 const BASE = '/api';
 
@@ -269,4 +269,18 @@ export const getPackagingSkuReport = (packagingId: number) =>
   );
 export const downloadPackagingSkuExport = (packagingId: number) => {
   window.location.href = `/api/reports/packaging-analysis/packaging/${packagingId}/export`;
+};
+export const getTypeSkuReport = (type: string) =>
+  request<{ type: string; type_label: string; products: ProductResultEntry[] }>(
+    `/reports/packaging-analysis/type/${encodeURIComponent(type)}/products`
+  );
+export const downloadTypeSkuExport = (type: string) => {
+  window.location.href = `/api/reports/packaging-analysis/type/${encodeURIComponent(type)}/export`;
+};
+export const getCarrierDimReport = (methodId: number) =>
+  request<{ method_name: string; products: CarrierSkuProduct[] }>(
+    `/reports/packaging-analysis/carrier/${methodId}/products`
+  );
+export const downloadCarrierDimExport = (methodId: number) => {
+  window.location.href = `/api/reports/packaging-analysis/carrier/${methodId}/export`;
 };

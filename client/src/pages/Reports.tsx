@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { PackagingAnalysisReport, PackagingStatEntry, ReportState, DimExposedProduct, ProductResultEntry, Packaging } from '../types';
-import { getPackagingAnalysis, runPackagingAnalysis, downloadPackagingAnalysisExport, getPackagingSkuReport, downloadPackagingSkuExport } from '../api';
+import { PackagingAnalysisReport, PackagingStatEntry, TypeBreakdownEntry, DimCarrierStat, ReportState, DimExposedProduct, ProductResultEntry, CarrierSkuProduct, Packaging } from '../types';
+import { getPackagingAnalysis, runPackagingAnalysis, downloadPackagingAnalysisExport, getPackagingSkuReport, downloadPackagingSkuExport, getTypeSkuReport, downloadTypeSkuExport, getCarrierDimReport, downloadCarrierDimExport } from '../api';
 
 const TYPE_LABELS: Record<string, string> = {
   box: 'Box',
@@ -277,6 +277,254 @@ function PackagingSkuModal({
   );
 }
 
+function TypeSkuModal({ entry, onClose }: { entry: TypeBreakdownEntry; onClose: () => void }) {
+  const [products, setProducts] = useState<ProductResultEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [filter, setFilter] = useState('');
+
+  useEffect(() => {
+    getTypeSkuReport(entry.type)
+      .then(r => setProducts(r.products))
+      .catch(e => setError(e.message))
+      .finally(() => setLoading(false));
+  }, [entry.type]);
+
+  const filtered = filter
+    ? products.filter(p =>
+        p.id.toLowerCase().includes(filter.toLowerCase()) ||
+        p.name.toLowerCase().includes(filter.toLowerCase()) ||
+        (p.best_packaging_name ?? '').toLowerCase().includes(filter.toLowerCase())
+      )
+    : products;
+
+  const title = TYPE_LABELS[entry.type] ?? entry.type;
+
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col bg-white">
+      <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-gray-200 bg-white shadow-sm flex-shrink-0">
+        <div className="min-w-0">
+          <h2 className="text-base font-semibold text-gray-900">{title} — SKU Report</h2>
+          <p className="text-xs text-gray-500 mt-0.5">
+            {loading ? 'Loading…' : `${products.length.toLocaleString()} product${products.length !== 1 ? 's' : ''} best-matched to ${title.toLowerCase()} options`}
+          </p>
+        </div>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <button onClick={() => downloadTypeSkuExport(entry.type)} disabled={loading || !!error}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-40">
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            Export
+          </button>
+          <button onClick={onClose} className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded">
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      </div>
+      {!loading && !error && products.length > 0 && (
+        <div className="px-4 py-2 border-b border-gray-100 flex-shrink-0">
+          <div className="relative max-w-sm">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
+            </svg>
+            <input type="text" value={filter} onChange={e => setFilter(e.target.value)}
+              placeholder="Filter by ID, name, or packaging…"
+              className="w-full pl-9 pr-8 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-brand-500" />
+            {filter && (
+              <button onClick={() => setFilter('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
+          </div>
+          {filter && <p className="text-xs text-gray-400 mt-1">{filtered.length.toLocaleString()} of {products.length.toLocaleString()} shown</p>}
+        </div>
+      )}
+      <div className="flex-1 overflow-auto">
+        {loading && <div className="flex items-center justify-center py-20 text-gray-400 text-sm">Loading…</div>}
+        {error && <div className="m-4 px-4 py-3 bg-red-50 border border-red-200 rounded text-sm text-red-700">{error}</div>}
+        {!loading && !error && filtered.length === 0 && (
+          <div className="flex items-center justify-center py-20 text-gray-400 text-sm">
+            {filter ? `No products match "${filter}".` : `No products best-matched to ${title.toLowerCase()} options.`}
+          </div>
+        )}
+        {!loading && !error && filtered.length > 0 && (
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-sm divide-y divide-gray-100 whitespace-nowrap">
+              <thead className="bg-gray-50 sticky top-0">
+                <tr>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product ID</th>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[160px] whitespace-normal">Name</th>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[160px] whitespace-normal">Best Packaging</th>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">H×W×L (in)</th>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Wt (lbs)</th>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fit</th>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Util %</th>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actual Wt</th>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">DIM Wt</th>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">DIM?</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {filtered.map((p, i) => (
+                  <tr key={p.id} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                    <td className="px-3 py-2 font-mono text-xs">
+                      <Link to={`/configurator?product_id=${encodeURIComponent(p.id)}`} onClick={onClose}
+                        className="text-brand-700 hover:text-brand-900 hover:underline" title="Open in Configurator">
+                        {p.id}
+                      </Link>
+                    </td>
+                    <td className="px-3 py-2 text-gray-800 whitespace-normal max-w-[220px]">{p.name}</td>
+                    <td className="px-3 py-2 text-gray-600 text-xs whitespace-normal max-w-[200px]">{p.best_packaging_name ?? '—'}</td>
+                    <td className="px-3 py-2 font-mono text-xs text-gray-600">{p.height}×{p.width}×{p.length}</td>
+                    <td className="px-3 py-2 font-mono text-xs text-gray-600">{p.weight}</td>
+                    <td className="px-3 py-2">
+                      {p.fit_quality ? (
+                        <span className={`text-xs border rounded px-1.5 py-0.5 font-medium ${FIT_QUALITY_COLORS[p.fit_quality] ?? 'bg-gray-50 text-gray-600 border-gray-200'}`}>
+                          {p.fit_quality.charAt(0).toUpperCase() + p.fit_quality.slice(1)}
+                        </span>
+                      ) : <span className="text-gray-300">—</span>}
+                    </td>
+                    <td className="px-3 py-2 font-mono text-xs text-gray-600">{p.volume_utilization != null ? `${p.volume_utilization}%` : '—'}</td>
+                    <td className="px-3 py-2 font-mono text-xs text-gray-600">{p.actual_weight != null ? `${p.actual_weight}` : '—'}</td>
+                    <td className="px-3 py-2 font-mono text-xs text-gray-600">{p.dim_weight != null ? `${p.dim_weight}` : '—'}</td>
+                    <td className="px-3 py-2">
+                      {p.dim_exposed
+                        ? <span className="text-xs bg-amber-50 border border-amber-200 text-amber-700 px-1.5 py-0.5 rounded font-medium">DIM</span>
+                        : <span className="text-gray-300">—</span>}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function CarrierDimModal({ carrier, onClose }: { carrier: DimCarrierStat; onClose: () => void }) {
+  const [products, setProducts] = useState<CarrierSkuProduct[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [filter, setFilter] = useState('');
+
+  useEffect(() => {
+    getCarrierDimReport(carrier.method_id)
+      .then(r => setProducts(r.products))
+      .catch(e => setError(e.message))
+      .finally(() => setLoading(false));
+  }, [carrier.method_id]);
+
+  const filtered = filter
+    ? products.filter(p =>
+        p.id.toLowerCase().includes(filter.toLowerCase()) ||
+        p.name.toLowerCase().includes(filter.toLowerCase()) ||
+        (p.best_packaging_name ?? '').toLowerCase().includes(filter.toLowerCase())
+      )
+    : products;
+
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col bg-white">
+      <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-gray-200 bg-white shadow-sm flex-shrink-0">
+        <div className="min-w-0">
+          <h2 className="text-base font-semibold text-gray-900">{carrier.method_name} — DIM Exposure Report</h2>
+          <p className="text-xs text-gray-500 mt-0.5">
+            {loading ? 'Loading…' : `${products.length.toLocaleString()} product${products.length !== 1 ? 's' : ''} DIM-billed by this carrier`}
+          </p>
+        </div>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <button onClick={() => downloadCarrierDimExport(carrier.method_id)} disabled={loading || !!error}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-40">
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            Export
+          </button>
+          <button onClick={onClose} className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded">
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      </div>
+      {!loading && !error && products.length > 0 && (
+        <div className="px-4 py-2 border-b border-gray-100 flex-shrink-0">
+          <div className="relative max-w-sm">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
+            </svg>
+            <input type="text" value={filter} onChange={e => setFilter(e.target.value)}
+              placeholder="Filter by ID, name, or packaging…"
+              className="w-full pl-9 pr-8 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-brand-500" />
+            {filter && (
+              <button onClick={() => setFilter('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
+          </div>
+          {filter && <p className="text-xs text-gray-400 mt-1">{filtered.length.toLocaleString()} of {products.length.toLocaleString()} shown</p>}
+        </div>
+      )}
+      <div className="flex-1 overflow-auto">
+        {loading && <div className="flex items-center justify-center py-20 text-gray-400 text-sm">Loading…</div>}
+        {error && <div className="m-4 px-4 py-3 bg-red-50 border border-red-200 rounded text-sm text-red-700">{error}</div>}
+        {!loading && !error && filtered.length === 0 && (
+          <div className="flex items-center justify-center py-20 text-gray-400 text-sm">
+            {filter ? `No products match "${filter}".` : 'No products DIM-billed by this carrier.'}
+          </div>
+        )}
+        {!loading && !error && filtered.length > 0 && (
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-sm divide-y divide-gray-100 whitespace-nowrap">
+              <thead className="bg-gray-50 sticky top-0">
+                <tr>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product ID</th>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[160px] whitespace-normal">Name</th>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[160px] whitespace-normal">Best Packaging</th>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">H×W×L (in)</th>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Wt (lbs)</th>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actual Wt</th>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">DIM Wt</th>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Billed Wt</th>
+                  <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Overage</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {filtered.map((p, i) => (
+                  <tr key={p.id} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                    <td className="px-3 py-2 font-mono text-xs">
+                      <Link to={`/configurator?product_id=${encodeURIComponent(p.id)}`} onClick={onClose}
+                        className="text-brand-700 hover:text-brand-900 hover:underline" title="Open in Configurator">
+                        {p.id}
+                      </Link>
+                    </td>
+                    <td className="px-3 py-2 text-gray-800 whitespace-normal max-w-[220px]">{p.name}</td>
+                    <td className="px-3 py-2 text-gray-600 text-xs whitespace-normal max-w-[200px]">{p.best_packaging_name ?? '—'}</td>
+                    <td className="px-3 py-2 font-mono text-xs text-gray-600">{p.height}×{p.width}×{p.length}</td>
+                    <td className="px-3 py-2 font-mono text-xs text-gray-600">{p.weight}</td>
+                    <td className="px-3 py-2 font-mono text-xs text-gray-600">{p.actual_weight}</td>
+                    <td className="px-3 py-2 font-mono text-xs text-amber-700 font-semibold">{p.dim_weight}</td>
+                    <td className="px-3 py-2 font-mono text-xs text-gray-900 font-semibold">{p.billed_weight}</td>
+                    <td className="px-3 py-2 font-mono text-xs text-red-600 font-semibold">+{p.overage}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function Reports() {
   const [state, setState] = useState<ReportState>({ status: 'pending' });
   const [loading, setLoading] = useState(true);
@@ -287,6 +535,8 @@ export default function Reports() {
   const [showLooseOnly, setShowLooseOnly] = useState(false);
   const [showDimExposed, setShowDimExposed] = useState(false);
   const [skuStat, setSkuStat] = useState<PackagingStatEntry | null>(null);
+  const [skuType, setSkuType] = useState<TypeBreakdownEntry | null>(null);
+  const [skuCarrier, setSkuCarrier] = useState<DimCarrierStat | null>(null);
   const pollRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fetchState = async () => {
@@ -553,6 +803,7 @@ export default function Reports() {
             <div className="bg-white rounded-lg shadow overflow-hidden">
               <div className="px-5 py-4 border-b border-gray-100">
                 <h2 className="text-base font-semibold text-gray-900">By Packaging Type</h2>
+                <p className="text-xs text-gray-500 mt-0.5">Click a type to view its SKU report.</p>
               </div>
               <table className="min-w-full text-sm divide-y divide-gray-100">
                 <thead className="bg-gray-50">
@@ -566,8 +817,14 @@ export default function Reports() {
                 <tbody className="divide-y divide-gray-100">
                   {report.type_breakdown.map((t, i) => (
                     <tr key={t.type} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                      <td className="px-4 py-2.5 font-medium text-gray-800">
-                        {TYPE_LABELS[t.type] ?? t.type}
+                      <td className="px-4 py-2.5 font-medium">
+                        <button
+                          onClick={() => setSkuType(t)}
+                          className="text-brand-700 hover:text-brand-900 hover:underline text-left font-medium"
+                          title="View SKU report for this packaging type"
+                        >
+                          {TYPE_LABELS[t.type] ?? t.type}
+                        </button>
                       </td>
                       <td className="px-4 py-2.5 font-mono text-gray-600">{t.packaging_count}</td>
                       <td className="px-4 py-2.5 font-mono font-semibold text-gray-900">{fmt(t.best_fit_count)}</td>
@@ -586,6 +843,7 @@ export default function Reports() {
                 <h2 className="text-base font-semibold text-gray-900">DIM Exposure by Carrier</h2>
                 <p className="text-xs text-gray-500 mt-0.5">
                   Products where a carrier's DIM weight exceeds actual weight on the best packaging option. A product may appear in multiple carriers if it qualifies for more than one method.
+                  <span className="ml-1 text-brand-600">Click a carrier to view its DIM exposure report.</span>
                 </p>
               </div>
               {report.dim_by_carrier.length === 0 ? (
@@ -602,7 +860,16 @@ export default function Reports() {
                   <tbody className="divide-y divide-gray-100">
                     {report.dim_by_carrier.map((c, i) => (
                       <tr key={c.method_id} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                        <td className="px-4 py-2.5 font-medium text-gray-800">{c.method_name}</td>
+                        <td className="px-4 py-2.5 font-medium">
+                          <button
+                            onClick={() => setSkuCarrier(c)}
+                            className="text-brand-700 hover:text-brand-900 hover:underline text-left font-medium disabled:text-gray-400 disabled:no-underline disabled:cursor-default"
+                            disabled={c.dim_billed_count === 0}
+                            title={c.dim_billed_count > 0 ? 'View DIM exposure report' : 'No DIM-billed products'}
+                          >
+                            {c.method_name}
+                          </button>
+                        </td>
                         <td className="px-4 py-2.5 font-mono font-semibold text-gray-900">{fmt(c.dim_billed_count)}</td>
                         <td className="px-4 py-2.5">
                           <div className="flex items-center gap-2">
@@ -809,10 +1076,9 @@ export default function Reports() {
         </div>
       )}
 
-      {/* SKU Drill-down Modal */}
-      {skuStat && (
-        <PackagingSkuModal stat={skuStat} onClose={() => setSkuStat(null)} />
-      )}
+      {skuStat && <PackagingSkuModal stat={skuStat} onClose={() => setSkuStat(null)} />}
+      {skuType && <TypeSkuModal entry={skuType} onClose={() => setSkuType(null)} />}
+      {skuCarrier && <CarrierDimModal carrier={skuCarrier} onClose={() => setSkuCarrier(null)} />}
     </div>
   );
 }

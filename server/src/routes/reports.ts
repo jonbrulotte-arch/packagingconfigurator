@@ -688,7 +688,147 @@ router.get('/packaging-analysis/export', (_req, res) => {
   res.send(buf);
 });
 
-// ── Per-packaging SKU drill-down ──────────────────────────────────────────────
+// ── Per-type SKU drill-down ───────────────────────────────────────────────────
+
+router.get('/packaging-analysis/type/:type/products', (req, res) => {
+  const type = req.params.type;
+  const cached = db
+    .prepare("SELECT payload FROM report_cache WHERE type = 'packaging_analysis' AND status = 'ready'")
+    .get() as { payload: string } | undefined;
+  if (!cached) return res.status(400).json({ error: 'No analysis available. Run the report first.' });
+
+  const report: PackagingAnalysisReport = JSON.parse(cached.payload);
+  const pkgIdsOfType = new Set(
+    report.packaging_stats
+      .filter(s => s.packaging.type === type)
+      .map(s => s.packaging.id)
+  );
+  const products = report.product_results.filter(
+    p => p.best_packaging_id != null && pkgIdsOfType.has(p.best_packaging_id)
+  );
+  const typeStat = report.type_breakdown.find(t => t.type === type);
+  res.json({ type, type_label: type.replace(/_/g, ' '), type_stat: typeStat ?? null, products });
+});
+
+router.get('/packaging-analysis/type/:type/export', (req, res) => {
+  const type = req.params.type;
+  const cached = db
+    .prepare("SELECT payload, computed_at FROM report_cache WHERE type = 'packaging_analysis' AND status = 'ready'")
+    .get() as { payload: string; computed_at: string } | undefined;
+  if (!cached) return res.status(400).json({ error: 'No analysis available. Run the report first.' });
+
+  const report: PackagingAnalysisReport = JSON.parse(cached.payload);
+  const pkgIdsOfType = new Set(
+    report.packaging_stats.filter(s => s.packaging.type === type).map(s => s.packaging.id)
+  );
+  const products = report.product_results.filter(
+    p => p.best_packaging_id != null && pkgIdsOfType.has(p.best_packaging_id)
+  );
+  const typeLabel = type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+
+  const wb = XLSX.utils.book_new();
+  const header = [
+    'Product ID', 'Product Name', 'H (in)', 'W (in)', 'L (in)', 'Weight (lbs)',
+    'Foldable', 'Ships Own Pkg', 'Best Packaging', 'Fit Quality', 'Utilization (%)',
+    'Actual Wt (lbs)', 'DIM Wt (lbs)', 'DIM Exposed', 'Compatible Options',
+  ];
+  const rows = products.map(p => [
+    p.id, p.name, p.height, p.width, p.length, p.weight,
+    p.foldable ? 'Yes' : 'No', p.ships_in_own_packaging ? 'Yes' : 'No',
+    p.best_packaging_name ?? '',
+    p.fit_quality ? p.fit_quality.charAt(0).toUpperCase() + p.fit_quality.slice(1) : '',
+    p.volume_utilization ?? '', p.actual_weight ?? '', p.dim_weight ?? '',
+    p.dim_exposed ? 'Yes' : 'No', p.compatible_count,
+  ]);
+  const ws = XLSX.utils.aoa_to_sheet([header, ...rows]);
+  ws['!cols'] = [
+    { wch: 16 }, { wch: 40 }, { wch: 8 }, { wch: 8 }, { wch: 8 }, { wch: 12 },
+    { wch: 10 }, { wch: 14 }, { wch: 28 }, { wch: 12 }, { wch: 14 },
+    { wch: 14 }, { wch: 14 }, { wch: 12 }, { wch: 18 },
+  ];
+  XLSX.utils.book_append_sheet(wb, ws, 'SKU Report');
+  const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+  res.setHeader('Content-Disposition', `attachment; filename="sku-report-${type}.xlsx"`);
+  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  res.send(buf);
+});
+
+// ── Per-carrier DIM drill-down ────────────────────────────────────────────────
+
+router.get('/packaging-analysis/carrier/:methodId/products', (req, res) => {
+  const methodId = Number(req.params.methodId);
+  const cached = db
+    .prepare("SELECT payload FROM report_cache WHERE type = 'packaging_analysis' AND status = 'ready'")
+    .get() as { payload: string } | undefined;
+  if (!cached) return res.status(400).json({ error: 'No analysis available. Run the report first.' });
+
+  const report: PackagingAnalysisReport = JSON.parse(cached.payload);
+  const carrierStat = report.dim_by_carrier.find(c => c.method_id === methodId);
+  if (!carrierStat) return res.status(404).json({ error: 'Carrier not found in report.' });
+
+  const products = report.dim_exposed_products
+    .map(p => {
+      const carrier = p.dim_carriers.find(c => {
+        // DimCarrierStat doesn't store method_id in dim_carriers — match by name
+        return c.method_name === carrierStat.method_name;
+      });
+      if (!carrier) return null;
+      return {
+        id: p.id, name: p.name,
+        height: p.height, width: p.width, length: p.length, weight: p.weight,
+        actual_weight: p.actual_weight,
+        best_packaging_name: p.best_packaging_name,
+        dim_weight: carrier.dim_weight,
+        billed_weight: carrier.billed_weight,
+        overage: Math.round((carrier.billed_weight - p.actual_weight) * 1000) / 1000,
+      };
+    })
+    .filter(Boolean);
+
+  res.json({ method_name: carrierStat.method_name, products });
+});
+
+router.get('/packaging-analysis/carrier/:methodId/export', (req, res) => {
+  const methodId = Number(req.params.methodId);
+  const cached = db
+    .prepare("SELECT payload, computed_at FROM report_cache WHERE type = 'packaging_analysis' AND status = 'ready'")
+    .get() as { payload: string; computed_at: string } | undefined;
+  if (!cached) return res.status(400).json({ error: 'No analysis available. Run the report first.' });
+
+  const report: PackagingAnalysisReport = JSON.parse(cached.payload);
+  const carrierStat = report.dim_by_carrier.find(c => c.method_id === methodId);
+  if (!carrierStat) return res.status(404).json({ error: 'Carrier not found in report.' });
+
+  const rows = report.dim_exposed_products
+    .map(p => {
+      const carrier = p.dim_carriers.find(c => c.method_name === carrierStat.method_name);
+      if (!carrier) return null;
+      return [
+        p.id, p.name, p.height, p.width, p.length, p.weight,
+        p.best_packaging_name ?? '', p.actual_weight,
+        carrier.dim_weight, carrier.billed_weight,
+        Math.round((carrier.billed_weight - p.actual_weight) * 1000) / 1000,
+      ];
+    })
+    .filter(Boolean) as (string | number)[][];
+
+  const header = [
+    'Product ID', 'Product Name', 'H (in)', 'W (in)', 'L (in)', 'Weight (lbs)',
+    'Best Packaging', 'Actual Wt (lbs)', 'DIM Wt (lbs)', 'Billed Wt (lbs)', 'Overage (lbs)',
+  ];
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet([header, ...rows]);
+  ws['!cols'] = [
+    { wch: 16 }, { wch: 40 }, { wch: 8 }, { wch: 8 }, { wch: 8 }, { wch: 12 },
+    { wch: 28 }, { wch: 16 }, { wch: 14 }, { wch: 14 }, { wch: 14 },
+  ];
+  XLSX.utils.book_append_sheet(wb, ws, 'DIM Exposure');
+  const safeName = carrierStat.method_name.replace(/[^a-zA-Z0-9\-_. ]/g, '').slice(0, 40).trim();
+  const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+  res.setHeader('Content-Disposition', `attachment; filename="dim-report-${safeName}.xlsx"`);
+  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  res.send(buf);
+});
 
 router.get('/packaging-analysis/packaging/:id/products', (req, res) => {
   const pkgId = Number(req.params.id);

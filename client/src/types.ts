@@ -187,6 +187,20 @@ export interface ProductResultEntry {
   compatible_count: number;
 }
 
+export interface CarrierSkuProduct {
+  id: string;
+  name: string;
+  height: number;
+  width: number;
+  length: number;
+  weight: number;
+  actual_weight: number;
+  best_packaging_name: string | null;
+  dim_weight: number;
+  billed_weight: number;
+  overage: number;
+}
+
 export interface PackagingAnalysisReport {
   computed_at: string;
   settings: { dim_divisor: number; pack_efficiency: number; ltl_threshold: number };
