@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
 import { AnalyzeResponse, ConfiguratorResult, RequestItem, StandaloneResult } from '../types';
 import { analyzeProducts, importConfiguratorFile, downloadConfiguratorTemplate, exportResults } from '../api';
 
@@ -366,7 +366,15 @@ export default function Configurator() {
                 <tbody className="divide-y divide-gray-100">
                   {response.items.map(({ product: p, quantity: qty }) => (
                     <tr key={p.id}>
-                      <td className="py-2 pr-4 font-mono text-brand-700">{p.id}</td>
+                      <td className="py-2 pr-4 font-mono">
+                        <Link
+                          to={`/products?product_id=${encodeURIComponent(p.id)}&edit=true`}
+                          className="text-brand-700 hover:text-brand-900 hover:underline"
+                          title={`Edit ${p.id}`}
+                        >
+                          {p.id}
+                        </Link>
+                      </td>
                       <td className="py-2 pr-4 whitespace-normal">
                         {p.name}
                         {!!p.foldable && (
