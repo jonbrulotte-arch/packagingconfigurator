@@ -16,10 +16,6 @@ export default function Products() {
   const [importError, setImportError] = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
   const [searchParams, setSearchParams] = useSearchParams();
-  const deepLinkRef = useRef({
-    productId: searchParams.get('product_id'),
-    edit: searchParams.get('edit') === 'true',
-  });
 
   const load = async () => {
     try {
@@ -33,20 +29,31 @@ export default function Products() {
 
   useEffect(() => { load(); }, []);
 
-  // Apply deep-link once after products are loaded
+  // Apply deep-link once after products are loaded.
+  // Handles both correct (&edit=true) and common typo (?edit=true) URL formats.
   useEffect(() => {
     if (loading) return;
-    const { productId, edit } = deepLinkRef.current;
+    let productId = searchParams.get('product_id') ?? '';
+    let shouldEdit = searchParams.get('edit') === 'true';
     if (!productId) return;
-    deepLinkRef.current = { productId: null, edit: false };
+
+    // If user typed ?product_id=SKU?edit=true (second ? instead of &),
+    // the entire "SKU?edit=true" lands as the product_id value — split it out.
+    const qIdx = productId.indexOf('?');
+    if (qIdx !== -1) {
+      const extra = productId.slice(qIdx + 1);
+      productId = productId.slice(0, qIdx);
+      if (extra.includes('edit=true')) shouldEdit = true;
+    }
+
     setSearchParams({}, { replace: true });
     const found = products.find(p => p.id === productId);
-    if (found && edit) {
+    if (found && shouldEdit) {
       setEditTarget(found);
     } else if (!found) {
       setFilter(productId);
     }
-  }, [loading, products]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [loading]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleAdd = async (data: Omit<Product, 'created_at' | 'updated_at'>) => {
     await createProduct(data);
