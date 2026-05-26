@@ -42,21 +42,23 @@ function isFlexibleMailer(box: Packaging): boolean {
   return (box.type === 'bubble_mailer' || box.type === 'poly_mailer') && box.max_height != null;
 }
 
-function productFitsInBox(product: Product, box: Packaging): boolean {
+function productFitsInBox(product: Product, box: Packaging, clearance = 0): boolean {
   const [pd1, pd2, pd3] = sortedDims(product.height, product.width, product.length);
   if (isFlexibleMailer(box)) {
     // Envelope physics: inserting a product of thickness pd3 into a bubble/poly mailer
     // causes the flat dimensions to shrink by pd3 as the material wraps around both faces.
     const flatD1 = Math.max(box.width, box.length);
     const flatD2 = Math.min(box.width, box.length);
-    return box.max_height! >= pd3 && (flatD1 - pd3) >= pd1 && (flatD2 - pd3) >= pd2;
+    return box.max_height! >= pd3 + clearance &&
+      (flatD1 - pd3) >= pd1 + clearance &&
+      (flatD2 - pd3) >= pd2 + clearance;
   }
   const [bd1, bd2, bd3] = effectiveBoxDims(box);
-  return bd1 >= pd1 && bd2 >= pd2 && bd3 >= pd3;
+  return bd1 >= pd1 + clearance && bd2 >= pd2 + clearance && bd3 >= pd3 + clearance;
 }
 
-function allItemsFitInBox(items: ResolvedItem[], box: Packaging, packEfficiency: number): boolean {
-  if (!items.every(i => productFitsInBox(i.product, box))) return false;
+function allItemsFitInBox(items: ResolvedItem[], box: Packaging, packEfficiency: number, clearance = 0): boolean {
+  if (!items.every(i => productFitsInBox(i.product, box, clearance))) return false;
   const totalQty = items.reduce((sum, i) => sum + i.quantity, 0);
   if (totalQty === 1) return true;
 
@@ -67,7 +69,7 @@ function allItemsFitInBox(items: ResolvedItem[], box: Packaging, packEfficiency:
       const [, , thickness] = sortedDims(i.product.height, i.product.width, i.product.length);
       return sum + thickness * i.quantity;
     }, 0);
-    if (totalThickness > box.max_height) return false;
+    if (totalThickness + clearance > box.max_height) return false;
     // For flexible mailers: the full stacked thickness shrinks both flat dimensions.
     // Check that every product still fits within the corrected available flat area.
     if (isFlexibleMailer(box)) {
@@ -75,7 +77,7 @@ function allItemsFitInBox(items: ResolvedItem[], box: Packaging, packEfficiency:
       const flatD2 = Math.min(box.width, box.length);
       return items.every(item => {
         const [pd1, pd2] = sortedDims(item.product.height, item.product.width, item.product.length);
-        return pd1 <= flatD1 - totalThickness && pd2 <= flatD2 - totalThickness;
+        return pd1 + clearance <= flatD1 - totalThickness && pd2 + clearance <= flatD2 - totalThickness;
       });
     }
     return true;
@@ -170,6 +172,7 @@ function analyzeShipment(
   allPackaging: Packaging[],
   dimDivisor: number,
   packEfficiency: number,
+  fitClearance: number,
   shippingMethods: ShippingMethod[] = []
 ): ConfiguratorResult[] {
   const hasFoldedItems = items.some(i => i.product.foldable);
@@ -185,7 +188,7 @@ function analyzeShipment(
   const results: ConfiguratorResult[] = [];
 
   for (const pkg of allPackaging) {
-    if (!allItemsFitInBox(effectiveItems, pkg, packEfficiency)) continue;
+    if (!allItemsFitInBox(effectiveItems, pkg, packEfficiency, fitClearance)) continue;
     const [ed1, ed2, ed3] = effectiveBoxDims(pkg);
     const boxVolume = ed1 * ed2 * ed3;
 
@@ -313,6 +316,7 @@ router.post('/analyze', (req: Request, res: Response) => {
   const dimDivisor = Number(s.dim_divisor ?? 139);
   const packEfficiency = Number(s.pack_efficiency ?? 0.70);
   const ltlThreshold = Number(s.ltl_threshold ?? 150);
+  const fitClearance = Number(s.fit_clearance ?? 0.5);
 
   const uniqueIds = [...new Set(items.map(i => i.product_id))];
   const products = db
@@ -338,7 +342,7 @@ router.post('/analyze', (req: Request, res: Response) => {
   const shippingMethods = loadActiveShippingMethods();
   const parcelMethods = shippingMethods.filter(m => !m.is_ltl);
   const results = packagedItems.length > 0
-    ? analyzeShipment(packagedItems, allPackaging, dimDivisor, packEfficiency, parcelMethods)
+    ? analyzeShipment(packagedItems, allPackaging, dimDivisor, packEfficiency, fitClearance, parcelMethods)
     : [];
   const standaloneResults = standaloneItems.map(si =>
     computeStandaloneResult(si.product, si.quantity, dimDivisor, parcelMethods)
@@ -379,6 +383,7 @@ router.post('/analyze-manual', (req: Request, res: Response) => {
   const dimDivisor = Number(s.dim_divisor ?? 139);
   const packEfficiency = Number(s.pack_efficiency ?? 0.70);
   const ltlThreshold = Number(s.ltl_threshold ?? 150);
+  const fitClearance = Number(s.fit_clearance ?? 0.5);
 
   const resolvedItems: ResolvedItem[] = items.map((item, idx) => ({
     product: {
@@ -404,7 +409,7 @@ router.post('/analyze-manual', (req: Request, res: Response) => {
   const shippingMethods = loadActiveShippingMethods();
   const parcelMethods = shippingMethods.filter(m => !m.is_ltl);
   const results = packagedItems.length > 0
-    ? analyzeShipment(packagedItems, allPackaging, dimDivisor, packEfficiency, parcelMethods)
+    ? analyzeShipment(packagedItems, allPackaging, dimDivisor, packEfficiency, fitClearance, parcelMethods)
     : [];
   const standaloneResults = standaloneItems.map(si =>
     computeStandaloneResult(si.product, si.quantity, dimDivisor, parcelMethods)
@@ -542,6 +547,7 @@ router.post('/bulk', upload.single('file'), (req: Request, res: Response) => {
   const dimDivisor = Number(s.dim_divisor ?? 139);
   const packEfficiency = Number(s.pack_efficiency ?? 0.70);
   const ltlThreshold = Number(s.ltl_threshold ?? 150);
+  const fitClearance = Number(s.fit_clearance ?? 0.5);
 
   const allPackaging = db
     .prepare('SELECT * FROM packaging WHERE active = 1 ORDER BY height * width * length ASC')
@@ -569,7 +575,7 @@ router.post('/bulk', upload.single('file'), (req: Request, res: Response) => {
     const ltlRequired = totalActualWeight >= ltlThreshold;
     const ltlShipping = ltlRequired ? computeLtlShipping(totalActualWeight, shippingMethods) : [];
     const results = packagedItems.length > 0
-      ? analyzeShipment(packagedItems, allPackaging, dimDivisor, packEfficiency, parcelMethods)
+      ? analyzeShipment(packagedItems, allPackaging, dimDivisor, packEfficiency, fitClearance, parcelMethods)
       : [];
     const standaloneResults = standaloneItems.map(si =>
       computeStandaloneResult(si.product, si.quantity, dimDivisor, parcelMethods)
@@ -687,7 +693,7 @@ router.get('/settings', (_req, res) => {
 });
 
 router.put('/settings', (req: Request, res: Response) => {
-  const { dim_divisor, pack_efficiency, weight_unit, dim_unit, ltl_threshold,
+  const { dim_divisor, pack_efficiency, weight_unit, dim_unit, ltl_threshold, fit_clearance,
           backup_frequency, backup_hour, backup_max_count } = req.body;
   const upsert = db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)');
   db.transaction(() => {
@@ -696,6 +702,7 @@ router.put('/settings', (req: Request, res: Response) => {
     if (weight_unit) upsert.run('weight_unit', weight_unit);
     if (dim_unit) upsert.run('dim_unit', dim_unit);
     if (ltl_threshold != null) upsert.run('ltl_threshold', String(Number(ltl_threshold)));
+    if (fit_clearance != null) upsert.run('fit_clearance', String(Number(fit_clearance)));
     if (backup_frequency) upsert.run('backup_frequency', backup_frequency);
     if (backup_hour != null) upsert.run('backup_hour', String(Number(backup_hour)));
     if (backup_max_count != null) upsert.run('backup_max_count', String(Number(backup_max_count)));

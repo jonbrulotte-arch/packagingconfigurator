@@ -26,15 +26,17 @@ function isFlexibleMailer(box: Packaging): boolean {
   return (box.type === 'bubble_mailer' || box.type === 'poly_mailer') && box.max_height != null;
 }
 
-function productFitsInBox(product: Product, box: Packaging): boolean {
+function productFitsInBox(product: Product, box: Packaging, clearance = 0): boolean {
   const [pd1, pd2, pd3] = sortedDims(product.height, product.width, product.length);
   if (isFlexibleMailer(box)) {
     const flatD1 = Math.max(box.width, box.length);
     const flatD2 = Math.min(box.width, box.length);
-    return box.max_height! >= pd3 && (flatD1 - pd3) >= pd1 && (flatD2 - pd3) >= pd2;
+    return box.max_height! >= pd3 + clearance &&
+      (flatD1 - pd3) >= pd1 + clearance &&
+      (flatD2 - pd3) >= pd2 + clearance;
   }
   const [bd1, bd2, bd3] = effectiveBoxDims(box);
-  return bd1 >= pd1 && bd2 >= pd2 && bd3 >= pd3;
+  return bd1 >= pd1 + clearance && bd2 >= pd2 + clearance && bd3 >= pd3 + clearance;
 }
 
 function roundWeight(w: number): number {
@@ -197,6 +199,7 @@ export async function computePackagingAnalysis(): Promise<void> {
     const dimDivisor = Number(s.dim_divisor ?? 139);
     const packEfficiency = Number(s.pack_efficiency ?? 0.70);
     const ltlThreshold = Number(s.ltl_threshold ?? 150);
+    const fitClearance = Number(s.fit_clearance ?? 0.5);
     const parcelMethods = shippingMethods.filter(m => !m.is_ltl);
 
     // Per-packaging accumulators
@@ -313,7 +316,7 @@ export async function computePackagingAnalysis(): Promise<void> {
         const fitResults: FitResult[] = [];
 
         for (const pkg of packaging) {
-          if (!productFitsInBox(effectiveProduct, pkg)) continue;
+          if (!productFitsInBox(effectiveProduct, pkg, fitClearance)) continue;
 
           const [ed1, ed2, ed3] = effectiveBoxDims(pkg);
           const boxVol = ed1 * ed2 * ed3;

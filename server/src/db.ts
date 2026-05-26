@@ -129,5 +129,6 @@ insertSetting.run('pack_efficiency', '0.70');
 insertSetting.run('weight_unit', 'lbs');
 insertSetting.run('dim_unit', 'in');
 insertSetting.run('ltl_threshold', '150');
+insertSetting.run('fit_clearance', '0.5');
 
 export default db;

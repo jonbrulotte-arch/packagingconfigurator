@@ -359,6 +359,7 @@ export default function SettingsPage() {
     weight_unit: 'lbs',
     dim_unit: 'in',
     ltl_threshold: '150',
+    fit_clearance: '0.5',
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -457,6 +458,24 @@ export default function SettingsPage() {
           />
           <p className="mt-1 text-xs text-gray-500">
             Shipments at or above this weight are flagged as LTL Freight. Standard industry threshold is 150 lbs.
+          </p>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Minimum Fit Clearance (in)
+          </label>
+          <input
+            type="number"
+            min="0"
+            step="0.25"
+            value={settings.fit_clearance}
+            onChange={e => setSettings(s => ({ ...s, fit_clearance: e.target.value }))}
+            className="w-40 border border-gray-300 rounded px-3 py-2 text-sm"
+          />
+          <p className="mt-1 text-xs text-gray-500">
+            Minimum breathing room required between item and box in every dimension. A product that exactly matches
+            a box dimension won't be considered a fit. 0.5" is a practical default; set to 0 to disable.
           </p>
         </div>
 
