@@ -200,6 +200,11 @@ function authHeaders(): Record<string, string> {
 
 export const getAuthStatus = () => request<{ protected: boolean }>('/auth/status');
 
+// API Key
+export const getApiKeyStatus = () => request<{ active: boolean }>('/auth/api-key');
+export const generateApiKey = () => request<{ key: string }>('/auth/api-key/generate', { method: 'POST' });
+export const revokeApiKey = () => request<{ success: boolean }>('/auth/api-key', { method: 'DELETE' });
+
 export const verifySession = () =>
   fetch('/api/auth/verify', { headers: authHeaders() })
     .then(r => r.json() as Promise<{ authenticated: boolean }>);

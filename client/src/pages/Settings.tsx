@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Settings, BackupEntry } from '../types';
-import { getSettings, updateSettings, setPassword, removePassword, listBackups, createBackup, downloadBackup, restoreBackup, deleteBackup, deleteAllProducts, deleteAllPackaging } from '../api';
+import { getSettings, updateSettings, setPassword, removePassword, listBackups, createBackup, downloadBackup, restoreBackup, deleteBackup, deleteAllProducts, deleteAllPackaging, getApiKeyStatus, generateApiKey, revokeApiKey } from '../api';
 import { useAuth } from '../contexts/AuthContext';
 
 const HOURS = Array.from({ length: 24 }, (_, h) => ({
@@ -352,6 +352,121 @@ function PasswordSection() {
   );
 }
 
+function ApiKeySection() {
+  const [active, setActive] = useState<boolean | null>(null);
+  const [revealedKey, setRevealedKey] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [working, setWorking] = useState(false);
+  const [err, setErr] = useState('');
+
+  useEffect(() => {
+    getApiKeyStatus()
+      .then(r => setActive(r.active))
+      .catch(() => setErr('Failed to load API key status'))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const handleGenerate = async () => {
+    if (active && !confirm('This will invalidate the current API key. Any integrations using it will stop working. Continue?')) return;
+    setWorking(true); setErr(''); setRevealedKey(null);
+    try {
+      const result = await generateApiKey();
+      setRevealedKey(result.key);
+      setActive(true);
+    } catch {
+      setErr('Failed to generate API key');
+    } finally {
+      setWorking(false);
+    }
+  };
+
+  const handleRevoke = async () => {
+    if (!confirm('Revoke the API key? Any integrations using it will stop working immediately.')) return;
+    setWorking(true); setErr('');
+    try {
+      await revokeApiKey();
+      setActive(false);
+      setRevealedKey(null);
+    } catch {
+      setErr('Failed to revoke API key');
+    } finally {
+      setWorking(false);
+    }
+  };
+
+  const handleCopy = () => {
+    if (!revealedKey) return;
+    navigator.clipboard.writeText(revealedKey);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="bg-white rounded-lg shadow p-6">
+      <h2 className="text-base font-semibold text-gray-900 mb-1">API Key</h2>
+      <p className="text-sm text-gray-500 mb-4">
+        A 64-character hex key for authenticating machine-to-machine API calls. Send it as the{' '}
+        <code className="text-xs bg-gray-100 px-1 py-0.5 rounded">x-api-key</code> request header.
+        Independent of the admin password — rotate it at any time without affecting the UI.
+      </p>
+
+      {err && <div className="mb-3 px-3 py-2 bg-red-50 border border-red-200 rounded text-sm text-red-800">{err}</div>}
+
+      {loading ? (
+        <p className="text-sm text-gray-400">Loading…</p>
+      ) : (
+        <>
+          <div className="flex items-center gap-3 mb-4">
+            <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full ${active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-500'}`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${active ? 'bg-green-500' : 'bg-gray-400'}`} />
+              {active ? 'Key active' : 'No key configured'}
+            </span>
+          </div>
+
+          {revealedKey && (
+            <div className="mb-4 p-4 bg-amber-50 border border-amber-300 rounded-lg">
+              <p className="text-xs font-semibold text-amber-800 mb-2">
+                Copy this key now — it will not be shown again.
+              </p>
+              <div className="flex items-start gap-2">
+                <code className="flex-1 font-mono text-xs bg-white border border-amber-200 rounded px-3 py-2 break-all text-gray-800 select-all leading-relaxed">
+                  {revealedKey}
+                </code>
+                <button
+                  onClick={handleCopy}
+                  className="flex-shrink-0 px-3 py-2 text-xs font-medium border border-amber-300 rounded hover:bg-amber-100 text-amber-800 whitespace-nowrap"
+                >
+                  {copied ? 'Copied!' : 'Copy'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          <div className="flex gap-2">
+            <button
+              onClick={handleGenerate}
+              disabled={working}
+              className="px-4 py-2 bg-brand-600 text-white text-sm font-medium rounded hover:bg-brand-700 disabled:opacity-50"
+            >
+              {working ? 'Generating…' : active ? 'Regenerate Key' : 'Generate Key'}
+            </button>
+            {active && !revealedKey && (
+              <button
+                onClick={handleRevoke}
+                disabled={working}
+                className="px-4 py-2 text-sm text-red-600 border border-red-300 rounded hover:bg-red-50 disabled:opacity-50"
+              >
+                Revoke Key
+              </button>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 export default function SettingsPage() {
   const [settings, setSettings] = useState<Settings>({
     dim_divisor: '139',
@@ -508,6 +623,7 @@ export default function SettingsPage() {
       </form>
 
       <PasswordSection />
+      <ApiKeySection />
       <BackupSection />
       <DangerZoneSection />
     </div>

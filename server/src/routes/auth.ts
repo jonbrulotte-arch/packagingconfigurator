@@ -28,6 +28,17 @@ function isValidToken(token: string): boolean {
   return true;
 }
 
+function getStoredApiKeyHash(): string | null {
+  const row = db.prepare('SELECT value FROM settings WHERE key = ?').get('api_key_hash') as { value: string } | undefined;
+  return row?.value ?? null;
+}
+
+function isValidApiKey(key: string): boolean {
+  const hash = getStoredApiKeyHash();
+  if (!hash) return false;
+  return sha256(key) === hash;
+}
+
 // Is a password set?
 router.get('/status', (_req: Request, res: Response) => {
   res.json({ protected: getStoredHash() !== null });
@@ -104,10 +115,38 @@ router.post('/emergency-reset', (req: Request, res: Response) => {
 export function requireAuth(req: Request, res: Response, next: NextFunction) {
   if (getStoredHash() === null) return next();
   const token = req.headers['x-session-token'] as string | undefined;
+  if (token && isValidToken(token)) return next();
+  const apiKey = req.headers['x-api-key'] as string | undefined;
+  if (apiKey && isValidApiKey(apiKey)) return next();
+  return res.status(401).json({ error: 'Authentication required' });
+}
+
+// Session-token only — used for API key management so key holders can't manage their own key.
+function requireSessionAuth(req: Request, res: Response, next: NextFunction) {
+  if (getStoredHash() === null) return next();
+  const token = req.headers['x-session-token'] as string | undefined;
   if (!token || !isValidToken(token)) {
-    return res.status(401).json({ error: 'Authentication required' });
+    return res.status(401).json({ error: 'Admin session required' });
   }
   next();
 }
+
+// API key status (is one configured?)
+router.get('/api-key', requireSessionAuth, (_req: Request, res: Response) => {
+  res.json({ active: getStoredApiKeyHash() !== null });
+});
+
+// Generate (or regenerate) the API key — returns the raw key once, stores only its hash.
+router.post('/api-key/generate', requireSessionAuth, (_req: Request, res: Response) => {
+  const key = randomBytes(32).toString('hex'); // 64 hex chars
+  db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)').run('api_key_hash', sha256(key));
+  res.json({ key });
+});
+
+// Revoke the API key
+router.delete('/api-key', requireSessionAuth, (_req: Request, res: Response) => {
+  db.prepare('DELETE FROM settings WHERE key = ?').run('api_key_hash');
+  res.json({ success: true });
+});
 
 export default router;
