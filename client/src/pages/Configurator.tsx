@@ -122,11 +122,10 @@ export default function Configurator() {
 
   const addRow = () => setRows(rs => [...rs, makeRow()]);
 
-  const handleKeyDown = (e: React.KeyboardEvent, rowId: string) => {
+  const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       e.preventDefault();
-      const idx = rows.findIndex(r => r.id === rowId);
-      if (idx === rows.length - 1) addRow();
+      handleAnalyze();
     }
   };
 
@@ -243,7 +242,7 @@ export default function Configurator() {
                 <input
                   value={row.product_id}
                   onChange={e => updateRow(row.id, 'product_id', e.target.value)}
-                  onKeyDown={e => handleKeyDown(e, row.id)}
+                  onKeyDown={handleKeyDown}
                   placeholder={`SKU-00${idx + 1}`}
                   className="border border-gray-300 rounded px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-brand-500"
                   autoFocus={idx === rows.length - 1 && idx > 0}
@@ -339,7 +338,7 @@ export default function Configurator() {
         </div>
 
         <p className="mt-3 text-xs text-gray-400">
-          Tip: press Enter in a product ID field to add the next row.
+          Tip: press Enter in a product ID field to find packaging.
         </p>
       </div>
       )}
