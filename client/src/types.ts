@@ -282,6 +282,56 @@ export interface SmtpConfig {
   has_password: boolean;
 }
 
+// ── Salsify ───────────────────────────────────────────────────────────────────
+
+export interface SalsifyFieldMapping {
+  id: string;
+  name: string;
+  height: string;
+  width: string;
+  length: string;
+  weight: string;
+  upc: string;
+  foldable: string;
+  ships_in_own_packaging: string;
+  product_cost: string;
+  retail_price: string;
+}
+
+export interface SalsifySettings {
+  salsify_enabled: boolean;
+  salsify_org_id: string;
+  salsify_channel_url: string;
+  salsify_attr_length: string;
+  salsify_attr_width: string;
+  salsify_attr_height: string;
+  salsify_attr_weight: string;
+  field_mapping: SalsifyFieldMapping;
+}
+
+export interface SalsifyPullResult {
+  total: number;
+  created: number;
+  updated: number;
+  pricing_updated: number;
+  skipped: number;
+  errors: string[];
+}
+
+export interface SalsifyPushResult {
+  total: number;
+  pushed: number;
+  failed: number;
+  skipped: number;
+  errors: string[];
+}
+
+export type SalsifyJobState<T> =
+  | { status: 'pending' }
+  | { status: 'running'; started_at?: string }
+  | { status: 'error'; error: string }
+  | { status: 'ready'; computed_at: string; data: T | { progress: number; total: number } | null };
+
 // ─────────────────────────────────────────────────────────────────────────────
 
 export interface Settings {

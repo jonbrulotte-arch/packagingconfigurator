@@ -10,6 +10,7 @@ import db from './db';
 import backupRouter, { createBackup, listRegularBackups, pruneOldBackups } from './routes/backup';
 import reportsRouter, { computePackagingAnalysis } from './routes/reports';
 import usersRouter from './routes/users';
+import salsifyRouter from './routes/salsify';
 
 const app = express();
 const PORT = process.env.PORT ?? 3002;
@@ -25,6 +26,7 @@ app.use('/api/shipping', shippingRouter);
 app.use('/api/backup', backupRouter);
 app.use('/api/reports', reportsRouter);
 app.use('/api/users', usersRouter);
+app.use('/api/salsify', salsifyRouter);
 
 // Scheduled auto-backup — checks every hour, respects frequency/hour/max-count settings.
 async function runScheduledBackup() {

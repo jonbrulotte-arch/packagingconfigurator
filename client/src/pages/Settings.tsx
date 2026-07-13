@@ -5,7 +5,9 @@ import {
   deleteAllProducts, deleteAllPackaging, getApiKeyStatus, generateApiKey, revokeApiKey,
   listUsers, createUser, updateUser, deleteUser, setUserPassword, sendUserInvite, getMe, updateMe,
   getSmtpConfig, updateSmtpConfig, testSmtp,
+  getSalsifySettings, updateSalsifySettings, startSalsifyPull, getSalsifyPullStatus, startSalsifyPush, getSalsifyPushStatus,
 } from '../api';
+import { SalsifySettings, SalsifyFieldMapping, SalsifyPullResult, SalsifyPushResult } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 
 const MODULE_LABELS: { key: Module; label: string }[] = [
@@ -892,6 +894,237 @@ function SmtpSection() {
   );
 }
 
+// ── Salsify (admin) ───────────────────────────────────────────────────────────
+
+const MAPPING_LABELS: { key: keyof SalsifyFieldMapping; label: string }[] = [
+  { key: 'id', label: 'Product ID' },
+  { key: 'name', label: 'Product Name' },
+  { key: 'height', label: 'Height (in)' },
+  { key: 'width', label: 'Width (in)' },
+  { key: 'length', label: 'Length (in)' },
+  { key: 'weight', label: 'Weight (lbs)' },
+  { key: 'upc', label: 'UPC' },
+  { key: 'foldable', label: 'Foldable' },
+  { key: 'ships_in_own_packaging', label: 'Ships in Own Pkg' },
+  { key: 'product_cost', label: 'Product Cost' },
+  { key: 'retail_price', label: 'Retail Price' },
+];
+
+function SalsifySection() {
+  const [config, setConfig] = useState<SalsifySettings | null>(null);
+  const [msg, setMsg] = useState('');
+  const [err, setErr] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [pullState, setPullState] = useState('');
+  const [pushState, setPushState] = useState('');
+  const [pullErrors, setPullErrors] = useState<string[]>([]);
+  const [pushErrors, setPushErrors] = useState<string[]>([]);
+  const [showMapping, setShowMapping] = useState(false);
+
+  useEffect(() => {
+    getSalsifySettings().then(setConfig).catch(() => setErr('Failed to load Salsify settings'));
+  }, []);
+
+  const set = (key: keyof SalsifySettings, value: unknown) =>
+    setConfig(c => (c ? { ...c, [key]: value } : c));
+
+  const setMap = (key: keyof SalsifyFieldMapping, value: string) =>
+    setConfig(c => (c ? { ...c, field_mapping: { ...c.field_mapping, [key]: value } } : c));
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!config) return;
+    setSaving(true); setMsg(''); setErr('');
+    try {
+      await updateSalsifySettings(config);
+      setMsg('Salsify settings saved.');
+      setTimeout(() => setMsg(''), 3000);
+    } catch (e: unknown) {
+      setErr(e instanceof Error ? e.message : 'Save failed');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const pollPull = () => {
+    const timer = setInterval(async () => {
+      try {
+        const state = await getSalsifyPullStatus();
+        if (state.status === 'running') { setPullState('Pull running…'); return; }
+        clearInterval(timer);
+        if (state.status === 'error') {
+          setPullState(`Pull failed: ${state.error}`);
+        } else if (state.status === 'ready' && state.data && 'created' in state.data) {
+          const d = state.data as SalsifyPullResult;
+          setPullState(`Pull complete — ${d.created} created, ${d.updated} updated, ${d.pricing_updated} pricing rows, ${d.skipped} skipped.`);
+          setPullErrors(d.errors ?? []);
+        }
+      } catch { clearInterval(timer); }
+    }, 1500);
+  };
+
+  const pollPush = () => {
+    const timer = setInterval(async () => {
+      try {
+        const state = await getSalsifyPushStatus();
+        if (state.status === 'running') {
+          setPushState('Push running…');
+          return;
+        }
+        clearInterval(timer);
+        if (state.status === 'error') {
+          setPushState(`Push failed: ${state.error}`);
+        } else if (state.status === 'ready' && state.data && 'pushed' in state.data) {
+          const d = state.data as SalsifyPushResult;
+          setPushState(`Push complete — ${d.pushed} pushed, ${d.failed} failed, ${d.skipped} skipped (no best fit).`);
+          setPushErrors(d.errors ?? []);
+        }
+      } catch { clearInterval(timer); }
+    }, 1500);
+  };
+
+  const handlePull = async () => {
+    setPullState(''); setPullErrors([]); setErr('');
+    try {
+      await startSalsifyPull();
+      setPullState('Pull running…');
+      pollPull();
+    } catch (e: unknown) {
+      setErr(e instanceof Error ? e.message : 'Pull failed to start');
+    }
+  };
+
+  const handlePush = async () => {
+    if (!confirm('Push calculated shipping dimensions and weight for every analyzed product to Salsify?')) return;
+    setPushState(''); setPushErrors([]); setErr('');
+    try {
+      const started = await startSalsifyPush();
+      setPushState(`Push running — ${started.total} products…`);
+      pollPush();
+    } catch (e: unknown) {
+      setErr(e instanceof Error ? e.message : 'Push failed to start');
+    }
+  };
+
+  if (!config) return (
+    <div className="bg-white rounded-lg shadow p-6">
+      <h2 className="text-base font-semibold text-gray-900 mb-1">Salsify Integration</h2>
+      {err ? <p className="text-sm text-red-600">{err}</p> : <p className="text-sm text-gray-400">Loading…</p>}
+    </div>
+  );
+
+  return (
+    <div className="bg-white rounded-lg shadow p-6">
+      <h2 className="text-base font-semibold text-gray-900 mb-1">Salsify Integration</h2>
+      <p className="text-sm text-gray-500 mb-4">
+        Pull products and pricing from a Salsify channel, and push calculated shipping dimensions
+        back to Salsify. API keys are personal — each user stores theirs under My Profile.
+      </p>
+
+      {msg && <div className="mb-3 px-3 py-2 bg-green-50 border border-green-200 rounded text-sm text-green-800">{msg}</div>}
+      {err && <div className="mb-3 px-3 py-2 bg-red-50 border border-red-200 rounded text-sm text-red-800">{err}</div>}
+
+      <form onSubmit={handleSave} className="space-y-3">
+        <label className="flex items-center gap-2 text-sm text-gray-700 font-medium">
+          <input type="checkbox" checked={config.salsify_enabled}
+            onChange={e => set('salsify_enabled', e.target.checked)} className="rounded border-gray-300" />
+          Enable Salsify sync
+        </label>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Salsify Org ID</label>
+            <input value={config.salsify_org_id} onChange={e => set('salsify_org_id', e.target.value)}
+              placeholder="s-xxxxxxxx" className="w-full border border-gray-300 rounded px-3 py-2 text-sm" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Channel Endpoint URL (pull)</label>
+            <input value={config.salsify_channel_url} onChange={e => set('salsify_channel_url', e.target.value)}
+              placeholder="https://…salsify…/channel.json" className="w-full border border-gray-300 rounded px-3 py-2 text-sm" />
+          </div>
+        </div>
+
+        <div>
+          <p className="text-xs font-medium text-gray-600 mb-1.5">Pushed attribute IDs (calculated shipping data)</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {([
+              ['salsify_attr_length', 'Length attribute'],
+              ['salsify_attr_width', 'Width attribute'],
+              ['salsify_attr_height', 'Height attribute'],
+              ['salsify_attr_weight', 'Weight attribute'],
+            ] as const).map(([key, label]) => (
+              <div key={key}>
+                <label className="block text-[11px] text-gray-500 mb-0.5">{label}</label>
+                <input value={config[key]} onChange={e => set(key, e.target.value)}
+                  className="w-full border border-gray-300 rounded px-2 py-1.5 text-xs" />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <button type="button" onClick={() => setShowMapping(s => !s)}
+            className="text-xs text-brand-600 hover:text-brand-800 font-medium">
+            {showMapping ? '▾ Hide' : '▸ Show'} channel JSON field mapping
+          </button>
+          {showMapping && (
+            <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {MAPPING_LABELS.map(({ key, label }) => (
+                <div key={key}>
+                  <label className="block text-[11px] text-gray-500 mb-0.5">{label}</label>
+                  <input value={config.field_mapping[key]} onChange={e => setMap(key, e.target.value)}
+                    className="w-full border border-gray-300 rounded px-2 py-1.5 text-xs" />
+                </div>
+              ))}
+              <p className="col-span-full text-[11px] text-gray-400">
+                Each entry is the attribute name as it appears in the channel JSON rows.
+              </p>
+            </div>
+          )}
+        </div>
+
+        <button type="submit" disabled={saving}
+          className="px-4 py-2 bg-brand-600 text-white text-sm font-medium rounded hover:bg-brand-700 disabled:opacity-50">
+          {saving ? 'Saving…' : 'Save Salsify Settings'}
+        </button>
+      </form>
+
+      <div className="mt-5 pt-4 border-t border-gray-100 space-y-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <button onClick={handlePull} disabled={!config.salsify_enabled}
+            className="px-4 py-2 text-sm font-medium border border-brand-300 text-brand-700 rounded hover:bg-brand-50 disabled:opacity-50">
+            ⇣ Pull Products Now
+          </button>
+          <button onClick={handlePush} disabled={!config.salsify_enabled}
+            className="px-4 py-2 text-sm font-medium border border-brand-300 text-brand-700 rounded hover:bg-brand-50 disabled:opacity-50">
+            ⇡ Push Calculated Shipping Data
+          </button>
+          {!config.salsify_enabled && <span className="text-xs text-gray-400">Enable Salsify sync to run pull/push.</span>}
+        </div>
+        {pullState && <p className="text-sm text-gray-700">{pullState}</p>}
+        {pullErrors.length > 0 && (
+          <details className="text-xs text-amber-700">
+            <summary className="cursor-pointer font-medium">{pullErrors.length} pull warning(s)</summary>
+            <ul className="mt-1 list-disc list-inside space-y-0.5">{pullErrors.map((e, i) => <li key={i}>{e}</li>)}</ul>
+          </details>
+        )}
+        {pushState && <p className="text-sm text-gray-700">{pushState}</p>}
+        {pushErrors.length > 0 && (
+          <details className="text-xs text-amber-700">
+            <summary className="cursor-pointer font-medium">{pushErrors.length} push warning(s)</summary>
+            <ul className="mt-1 list-disc list-inside space-y-0.5">{pushErrors.map((e, i) => <li key={i}>{e}</li>)}</ul>
+          </details>
+        )}
+        <p className="text-xs text-gray-400">
+          Pull uses <em>your</em> Salsify API key (My Profile) against the channel URL and upserts the
+          Products catalog + pricing. Push writes each product's best-fit shipped dimensions and billed
+          weight from the latest Packaging Analysis report to the attribute IDs configured above.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 // ── Profile (any signed-in user) ──────────────────────────────────────────────
 
 function ProfileSection() {
@@ -1160,6 +1393,7 @@ function SettingsSections() {
       {user && <ProfileSection />}
       {isAdmin && <UsersSection />}
       {isAdmin && <SmtpSection />}
+      {isAdmin && <SalsifySection />}
       {isAdmin && <PasswordSection />}
       {isAdmin && <ApiKeySection />}
       {isAdmin && <BackupSection />}

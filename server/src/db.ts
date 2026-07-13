@@ -168,6 +168,16 @@ db.exec(`
   );
 `);
 
+// Per-product pricing data (populated by Salsify pull or manual entry; consumed by Pricing/ROI)
+db.exec(`
+  CREATE TABLE IF NOT EXISTS product_pricing (
+    product_id TEXT PRIMARY KEY REFERENCES products(id) ON DELETE CASCADE,
+    product_cost REAL,
+    retail_price REAL,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+`);
+
 // Seed default settings
 const insertSetting = db.prepare(
   'INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)'

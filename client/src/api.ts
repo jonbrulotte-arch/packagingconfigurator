@@ -1,4 +1,4 @@
-import { Product, Packaging, AnalyzeResponse, BulkAnalyzeResponse, BulkShipmentResult, Settings, RequestItem, ShippingMethod, ShippingRate, BackupEntry, ReportState, ProductResultEntry, CarrierSkuProduct, AuthUser, UserAccount, ModulePrivileges, SmtpConfig } from './types';
+import { Product, Packaging, AnalyzeResponse, BulkAnalyzeResponse, BulkShipmentResult, Settings, RequestItem, ShippingMethod, ShippingRate, BackupEntry, ReportState, ProductResultEntry, CarrierSkuProduct, AuthUser, UserAccount, ModulePrivileges, SmtpConfig, SalsifySettings, SalsifyJobState, SalsifyPullResult, SalsifyPushResult } from './types';
 
 const BASE = '/api';
 
@@ -344,6 +344,27 @@ export const testSmtp = (to: string) =>
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ to }),
   });
+
+// Salsify
+export const getSalsifySettings = () => request<SalsifySettings>('/salsify/settings');
+export const updateSalsifySettings = (data: Partial<SalsifySettings>) =>
+  request<{ success: boolean }>('/salsify/settings', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+export const startSalsifyPull = () =>
+  request<{ status: string }>('/salsify/pull', { method: 'POST' });
+export const getSalsifyPullStatus = () =>
+  request<SalsifyJobState<SalsifyPullResult>>('/salsify/pull/status');
+export const startSalsifyPush = (productIds?: string[]) =>
+  request<{ status: string; total: number; report_computed_at: string }>('/salsify/push', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(productIds ? { product_ids: productIds } : {}),
+  });
+export const getSalsifyPushStatus = () =>
+  request<SalsifyJobState<SalsifyPushResult>>('/salsify/push/status');
 
 // Backups
 export const listBackups = () => request<BackupEntry[]>('/backup');

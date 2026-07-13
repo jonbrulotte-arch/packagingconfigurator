@@ -838,6 +838,36 @@ product sorted: [9,  6, 4]
             ))}
           </tbody>
         </table>
+        <SubSection title="Salsify Integration">
+          <p>
+            The optional <strong>Salsify Integration</strong> section (admin only) syncs the product
+            catalog with your Salsify PIM. Toggle <strong>Enable Salsify sync</strong> to activate it.
+          </p>
+          <ul className="mt-2 space-y-1 text-sm text-gray-700 list-disc list-inside">
+            <li>
+              <strong>Pull Products</strong> — fetches the configured <strong>Channel Endpoint URL</strong>{' '}
+              (a JSON export from a Salsify channel) and upserts the Products catalog, including UPC,
+              foldable and ships-in-own-packaging flags, plus <strong>Product Cost</strong> and{' '}
+              <strong>Retail Price</strong> used by the Pricing / ROI module. Products never get deleted
+              by a pull; rows with missing data are skipped and reported.
+            </li>
+            <li>
+              <strong>Push Calculated Shipping Data</strong> — writes each product's best-fit shipped
+              dimensions and billed weight (from the latest Packaging Analysis report) to four Salsify
+              attributes, by default <em>Calculated Shipping Length/Width/Height (Inches)</em> and{' '}
+              <em>Calculated Shipping Weight (Pounds)</em>. The attribute IDs are customizable.
+            </li>
+            <li>
+              <strong>Field mapping</strong> — if your channel JSON uses different attribute names,
+              remap every incoming field under "channel JSON field mapping".
+            </li>
+            <li>
+              <strong>API keys are personal</strong> — Salsify issues keys per user, so pull/push run
+              with the signed-in user's key from <strong>Settings → My Profile</strong>. The Org ID is a
+              global admin setting.
+            </li>
+          </ul>
+        </SubSection>
       </Section>
 
       {/* ── ADMIN & SECURITY ── */}
