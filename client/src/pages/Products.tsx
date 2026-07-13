@@ -1,0 +1,293 @@
+import { useState, useEffect, useRef } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { Product } from '../types';
+import { getProducts, createProduct, updateProduct, deleteProduct, importProducts, downloadProductsTemplate, exportProducts } from '../api';
+import Modal from '../components/Modal';
+import ProductForm from '../components/ProductForm';
+import { useAuth } from '../contexts/AuthContext';
+
+export default function Products() {
+  const { authenticated } = useAuth();
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [filter, setFilter] = useState('');
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editTarget, setEditTarget] = useState<Product | null>(null);
+  const [importMsg, setImportMsg] = useState('');
+  const [importError, setImportError] = useState('');
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const load = async () => {
+    try {
+      setProducts(await getProducts());
+    } catch {
+      setError('Failed to load products');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { load(); }, []);
+
+  // Apply deep-link once after products are loaded.
+  // Handles both correct (&edit=true) and common typo (?edit=true) URL formats.
+  useEffect(() => {
+    if (loading) return;
+    let productId = searchParams.get('product_id') ?? '';
+    let shouldEdit = searchParams.get('edit') === 'true';
+    if (!productId) return;
+
+    // If user typed ?product_id=SKU?edit=true (second ? instead of &),
+    // the entire "SKU?edit=true" lands as the product_id value — split it out.
+    const qIdx = productId.indexOf('?');
+    if (qIdx !== -1) {
+      const extra = productId.slice(qIdx + 1);
+      productId = productId.slice(0, qIdx);
+      if (extra.includes('edit=true')) shouldEdit = true;
+    }
+
+    setSearchParams({}, { replace: true });
+    const found = products.find(p => p.id === productId);
+    if (found && shouldEdit) {
+      setEditTarget(found);
+    } else if (!found) {
+      setFilter(productId);
+    }
+  }, [loading]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleAdd = async (data: Omit<Product, 'created_at' | 'updated_at'>) => {
+    await createProduct(data);
+    setModalOpen(false);
+    load();
+  };
+
+  const handleEdit = async (data: Omit<Product, 'created_at' | 'updated_at'>) => {
+    await updateProduct(editTarget!.id, data);
+    setEditTarget(null);
+    load();
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm(`Delete product "${id}"?`)) return;
+    await deleteProduct(id);
+    load();
+  };
+
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImportMsg('');
+    setImportError('');
+    try {
+      const result = await importProducts(file);
+      setImportMsg(`Imported ${result.imported} product(s).`);
+      if (result.errors.length > 0) {
+        setImportError(result.errors.join('\n'));
+      }
+      load();
+    } catch (err: unknown) {
+      setImportError(err instanceof Error ? err.message : 'Import failed');
+    } finally {
+      if (fileRef.current) fileRef.current.value = '';
+    }
+  };
+
+  return (
+    <div>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Products</h1>
+          <p className="text-sm text-gray-500 mt-1">
+            {filter
+              ? `${products.filter(p => p.id.toLowerCase().includes(filter.toLowerCase()) || p.name.toLowerCase().includes(filter.toLowerCase())).length} of ${products.length} product${products.length !== 1 ? 's' : ''}`
+              : `${products.length} product${products.length !== 1 ? 's' : ''}`}
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {authenticated && (
+            <button
+              onClick={downloadProductsTemplate}
+              className="px-3 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50 flex items-center gap-2"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
+              Template
+            </button>
+          )}
+          {authenticated && (
+            <label className="cursor-pointer px-3 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50 flex items-center gap-2">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+              </svg>
+              Import
+              <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" onChange={handleImport} className="hidden" />
+            </label>
+          )}
+          <button
+            onClick={exportProducts}
+            className="px-3 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50 flex items-center gap-2"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            Export
+          </button>
+          {authenticated && (
+            <button
+              onClick={() => setModalOpen(true)}
+              className="px-3 py-2 text-sm bg-brand-600 text-white rounded hover:bg-brand-700"
+            >
+              + Add Product
+            </button>
+          )}
+        </div>
+      </div>
+
+      <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded text-xs text-blue-700">
+        <strong>Excel Import Format:</strong> Columns:{' '}
+        <code>Part Number</code>, <code>Item Name</code>, <code>UPC Height (Inches)</code>,{' '}
+        <code>UPC Width (Inches)</code>, <code>UPC Length (Inches)</code>, <code>UPC Weight (Pounds)</code>,{' '}
+        <code>Foldable</code> (0/1), <code>Ships In Own Packaging</code> (0/1), <code>UPC</code> (optional barcode).{' '}
+        Existing products are updated by Part Number. Use <strong>Export</strong> to download current data for bulk editing.
+      </div>
+
+      <div className="mb-4 flex items-center gap-2 max-w-sm">
+        <div className="relative flex-1">
+          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
+          </svg>
+          <input
+            type="text"
+            value={filter}
+            onChange={e => setFilter(e.target.value)}
+            placeholder="Filter by ID or name…"
+            className="w-full pl-9 pr-8 py-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-brand-500"
+          />
+          {filter && (
+            <button
+              onClick={() => setFilter('')}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              title="Clear filter"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
+        </div>
+      </div>
+
+      {importMsg && (
+        <div className="mb-4 px-4 py-3 bg-green-50 border border-green-200 rounded text-sm text-green-800">
+          {importMsg}
+          {importError && <pre className="mt-1 text-red-600 whitespace-pre-wrap text-xs">{importError}</pre>}
+        </div>
+      )}
+      {error && <div className="mb-4 px-4 py-3 bg-red-50 border border-red-200 rounded text-sm text-red-800">{error}</div>}
+
+      <div className="bg-white rounded-lg shadow overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200 whitespace-nowrap">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-36">Product ID</th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[130px]">Name</th>
+                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-14">H (in)</th>
+                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-14">W (in)</th>
+                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-14">L (in)</th>
+                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">Wt (lbs)</th>
+                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">Vol (in³)</th>
+                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">Foldable</th>
+                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">Ships Own</th>
+                <th className="px-2 py-3 w-20"></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              {loading ? (
+                <tr><td colSpan={9} className="px-4 py-8 text-center text-gray-400">Loading…</td></tr>
+              ) : products.length === 0 ? (
+                <tr><td colSpan={10} className="px-4 py-8 text-center text-gray-400">No products yet. Add one or import an Excel file.</td></tr>
+              ) : filter && !products.some(p => p.id.toLowerCase().includes(filter.toLowerCase()) || p.name.toLowerCase().includes(filter.toLowerCase())) ? (
+                <tr><td colSpan={10} className="px-4 py-8 text-center text-gray-400">No products match "{filter}".</td></tr>
+              ) : (
+                products
+                  .filter(p => !filter || p.id.toLowerCase().includes(filter.toLowerCase()) || p.name.toLowerCase().includes(filter.toLowerCase()))
+                  .map((p, i) => (
+                  <tr key={p.id} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                    <td className="px-3 py-3 text-sm font-mono font-medium truncate max-w-[9rem]">
+                      <Link
+                        to={`/configurator?product_id=${encodeURIComponent(p.id)}`}
+                        className="text-brand-700 hover:text-brand-900 hover:underline"
+                        title={`Open ${p.id} in Configurator`}
+                      >
+                        {p.id}
+                      </Link>
+                    </td>
+                    <td className="px-3 py-3 text-sm text-gray-900 whitespace-normal min-w-[130px]">{p.name}</td>
+                    <td className="px-2 py-3 text-sm text-gray-600">{p.height}</td>
+                    <td className="px-2 py-3 text-sm text-gray-600">{p.width}</td>
+                    <td className="px-2 py-3 text-sm text-gray-600">{p.length}</td>
+                    <td className="px-2 py-3 text-sm text-gray-600">{p.weight}</td>
+                    <td className="px-2 py-3 text-sm text-gray-600">
+                      {(p.height * p.width * p.length).toFixed(1)}
+                    </td>
+                    <td className="px-2 py-3 text-sm text-center">
+                      {p.foldable ? (
+                        <span className="inline-flex items-center gap-1 text-xs font-medium text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded">
+                          ↕ Yes
+                        </span>
+                      ) : (
+                        <span className="text-gray-300">—</span>
+                      )}
+                    </td>
+                    <td className="px-2 py-3 text-sm text-center">
+                      {p.ships_in_own_packaging ? (
+                        <span className="inline-flex items-center gap-1 text-xs font-medium text-teal-700 bg-teal-50 border border-teal-200 px-2 py-0.5 rounded">
+                          ✦ Yes
+                        </span>
+                      ) : (
+                        <span className="text-gray-300">—</span>
+                      )}
+                    </td>
+                    <td className="px-2 py-3 text-sm text-right whitespace-nowrap">
+                      {authenticated && (
+                        <>
+                          <button
+                            onClick={() => setEditTarget(p)}
+                            className="text-brand-600 hover:text-brand-800 mr-3"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleDelete(p.id)}
+                            className="text-red-500 hover:text-red-700"
+                          >
+                            Delete
+                          </button>
+                        </>
+                      )}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {modalOpen && (
+        <Modal title="Add Product" onClose={() => setModalOpen(false)}>
+          <ProductForm onSubmit={handleAdd} onCancel={() => setModalOpen(false)} />
+        </Modal>
+      )}
+      {editTarget && (
+        <Modal title="Edit Product" onClose={() => setEditTarget(null)}>
+          <ProductForm initial={editTarget} onSubmit={handleEdit} onCancel={() => setEditTarget(null)} isEdit />
+        </Modal>
+      )}
+    </div>
+  );
+}
