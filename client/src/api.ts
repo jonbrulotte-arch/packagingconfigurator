@@ -1,4 +1,4 @@
-import { Product, Packaging, AnalyzeResponse, BulkAnalyzeResponse, BulkShipmentResult, Settings, RequestItem, ShippingMethod, ShippingRate, BackupEntry, ReportState, ProductResultEntry, CarrierSkuProduct } from './types';
+import { Product, Packaging, AnalyzeResponse, BulkAnalyzeResponse, BulkShipmentResult, Settings, RequestItem, ShippingMethod, ShippingRate, BackupEntry, ReportState, ProductResultEntry, CarrierSkuProduct, AuthUser, UserAccount, ModulePrivileges, SmtpConfig } from './types';
 
 const BASE = '/api';
 
@@ -227,13 +227,13 @@ export const revokeApiKey = () => request<{ success: boolean }>('/auth/api-key',
 
 export const verifySession = () =>
   fetch('/api/auth/verify', { headers: authHeaders() })
-    .then(r => r.json() as Promise<{ authenticated: boolean }>);
+    .then(r => r.json() as Promise<{ authenticated: boolean; user: AuthUser | null }>);
 
-export const login = async (password: string): Promise<{ success: boolean; error?: string }> => {
+export const login = async (password: string, email?: string): Promise<{ success: boolean; error?: string }> => {
   const res = await fetch('/api/auth/login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ password }),
+    body: JSON.stringify(email ? { email, password } : { password }),
   });
   const body = await res.json();
   if (!res.ok) return { success: false, error: body.error };
@@ -269,6 +269,81 @@ export const removePassword = async (currentPassword: string): Promise<{ success
   localStorage.removeItem(TOKEN_KEY);
   return { success: true };
 };
+
+// Users
+export const listUsers = () => request<UserAccount[]>('/users');
+
+export const createUser = (data: { email: string; name?: string; is_admin?: boolean; privileges?: Partial<ModulePrivileges>; send_invite?: boolean }) =>
+  request<UserAccount & { invite_sent: boolean; invite_error: string | null }>('/users', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+
+export const updateUser = (id: number, data: { name?: string; is_admin?: boolean; active?: boolean; privileges?: Partial<ModulePrivileges> }) =>
+  request<UserAccount>(`/users/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+
+export const deleteUser = (id: number) =>
+  request<{ success: boolean }>(`/users/${id}`, { method: 'DELETE' });
+
+export const setUserPassword = (id: number, newPassword: string) =>
+  request<{ success: boolean }>(`/users/${id}/set-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ newPassword }),
+  });
+
+export const sendUserInvite = (id: number) =>
+  request<{ success: boolean }>(`/users/${id}/invite`, { method: 'POST' });
+
+export const getMe = () => request<UserAccount>('/users/me');
+
+export const updateMe = (data: { name?: string; currentPassword?: string; newPassword?: string; salsify_api_key?: string | null }) =>
+  request<UserAccount>('/users/me', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+
+export const forgotPassword = (email: string) =>
+  request<{ success: boolean; message: string }>('/users/forgot-password', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email }),
+  });
+
+export const resetPassword = (token: string, newPassword: string) =>
+  request<{ success: boolean }>('/users/reset-password', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token, newPassword }),
+  });
+
+export const acceptInvite = (token: string, newPassword: string) =>
+  request<{ success: boolean; email: string }>('/users/accept-invite', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token, newPassword }),
+  });
+
+// SMTP
+export const getSmtpConfig = () => request<SmtpConfig>('/users/smtp');
+export const updateSmtpConfig = (data: Partial<SmtpConfig> & { smtp_pass?: string }) =>
+  request<{ success: boolean }>('/users/smtp', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+export const testSmtp = (to: string) =>
+  request<{ success: boolean }>('/users/smtp/test', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ to }),
+  });
 
 // Backups
 export const listBackups = () => request<BackupEntry[]>('/backup');

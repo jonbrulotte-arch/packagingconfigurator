@@ -246,6 +246,42 @@ export type ReportState =
   | { status: 'error'; error: string }
   | { status: 'ready'; computed_at: string; data: PackagingAnalysisReport };
 
+// ── Users & auth ──────────────────────────────────────────────────────────────
+
+export type Module = 'products' | 'packaging' | 'shipping' | 'configurator' | 'reports' | 'pricing' | 'settings';
+export type PrivilegeLevel = 'none' | 'view' | 'edit';
+export type ModulePrivileges = Record<Module, PrivilegeLevel>;
+
+export interface AuthUser {
+  id: number;
+  email: string;
+  name: string | null;
+  is_admin: number;
+  privileges: ModulePrivileges;
+}
+
+export interface UserAccount {
+  id: number;
+  email: string;
+  name: string | null;
+  is_admin: number;
+  active: number;
+  has_password: boolean;
+  has_salsify_key: boolean;
+  created_at: string;
+  privileges: ModulePrivileges;
+}
+
+export interface SmtpConfig {
+  smtp_host: string;
+  smtp_port: string;
+  smtp_secure: string;
+  smtp_user: string;
+  smtp_from: string;
+  app_base_url: string;
+  has_password: boolean;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 
 export interface Settings {

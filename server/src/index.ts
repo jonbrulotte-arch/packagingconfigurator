@@ -9,6 +9,7 @@ import shippingRouter from './routes/shipping';
 import db from './db';
 import backupRouter, { createBackup, listRegularBackups, pruneOldBackups } from './routes/backup';
 import reportsRouter, { computePackagingAnalysis } from './routes/reports';
+import usersRouter from './routes/users';
 
 const app = express();
 const PORT = process.env.PORT ?? 3002;
@@ -23,6 +24,7 @@ app.use('/api/configurator', configuratorRouter);
 app.use('/api/shipping', shippingRouter);
 app.use('/api/backup', backupRouter);
 app.use('/api/reports', reportsRouter);
+app.use('/api/users', usersRouter);
 
 // Scheduled auto-backup — checks every hour, respects frequency/hour/max-count settings.
 async function runScheduledBackup() {

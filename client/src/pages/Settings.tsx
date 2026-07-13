@@ -1,7 +1,22 @@
 import { useState, useEffect } from 'react';
-import { Settings, BackupEntry } from '../types';
-import { getSettings, updateSettings, setPassword, removePassword, listBackups, createBackup, downloadBackup, restoreBackup, deleteBackup, deleteAllProducts, deleteAllPackaging, getApiKeyStatus, generateApiKey, revokeApiKey } from '../api';
+import { Settings, BackupEntry, UserAccount, ModulePrivileges, Module, PrivilegeLevel, SmtpConfig } from '../types';
+import {
+  getSettings, updateSettings, setPassword, removePassword, listBackups, createBackup, downloadBackup, restoreBackup, deleteBackup,
+  deleteAllProducts, deleteAllPackaging, getApiKeyStatus, generateApiKey, revokeApiKey,
+  listUsers, createUser, updateUser, deleteUser, setUserPassword, sendUserInvite, getMe, updateMe,
+  getSmtpConfig, updateSmtpConfig, testSmtp,
+} from '../api';
 import { useAuth } from '../contexts/AuthContext';
+
+const MODULE_LABELS: { key: Module; label: string }[] = [
+  { key: 'products', label: 'Products' },
+  { key: 'packaging', label: 'Packaging' },
+  { key: 'shipping', label: 'Shipping' },
+  { key: 'configurator', label: 'Configurator' },
+  { key: 'reports', label: 'Reports' },
+  { key: 'pricing', label: 'Pricing / ROI' },
+  { key: 'settings', label: 'Settings' },
+];
 
 const HOURS = Array.from({ length: 24 }, (_, h) => ({
   value: String(h),
@@ -269,11 +284,11 @@ function PasswordSection() {
 
   return (
     <div className="bg-white rounded-lg shadow p-6">
-      <h2 className="text-base font-semibold text-gray-900 mb-1">Admin Password</h2>
+      <h2 className="text-base font-semibold text-gray-900 mb-1">Legacy Admin Password</h2>
       <p className="text-sm text-gray-500 mb-4">
         {isProtected
-          ? 'Admin pages (Products, Packaging, Settings) are password-protected.'
-          : 'No password is set — admin pages are open to anyone.'}
+          ? 'The shared admin password grants full access to everything. Kept as a break-glass login alongside user accounts.'
+          : 'No password is set — the entire app is open to anyone on the network. Set one to enable access control and user accounts.'}
       </p>
 
       {msg && <div className="mb-3 px-3 py-2 bg-green-50 border border-green-200 rounded text-sm text-green-800">{msg}</div>}
@@ -467,6 +482,517 @@ function ApiKeySection() {
   );
 }
 
+// ── User management (admin) ───────────────────────────────────────────────────
+
+const DEFAULT_PRIVS: ModulePrivileges = {
+  products: 'view', packaging: 'view', shipping: 'view', configurator: 'view',
+  reports: 'view', pricing: 'none', settings: 'none',
+};
+
+function PrivilegeGrid({ privileges, onChange, disabled }: {
+  privileges: ModulePrivileges;
+  onChange: (p: ModulePrivileges) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+      {MODULE_LABELS.map(({ key, label }) => (
+        <div key={key}>
+          <label className="block text-[11px] font-medium text-gray-500 mb-0.5">{label}</label>
+          <select
+            value={privileges[key]}
+            onChange={e => onChange({ ...privileges, [key]: e.target.value as PrivilegeLevel })}
+            disabled={disabled}
+            className="w-full border border-gray-300 rounded px-2 py-1 text-xs disabled:bg-gray-50 disabled:text-gray-400"
+          >
+            <option value="none">None</option>
+            <option value="view">View</option>
+            <option value="edit">Edit</option>
+          </select>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function UserEditor({ user, onSaved, onCancel }: {
+  user: UserAccount | null; // null = create
+  onSaved: () => void;
+  onCancel: () => void;
+}) {
+  const [email, setEmail] = useState(user?.email ?? '');
+  const [name, setName] = useState(user?.name ?? '');
+  const [isAdminFlag, setIsAdminFlag] = useState(Boolean(user?.is_admin));
+  const [activeFlag, setActiveFlag] = useState(user ? Boolean(user.active) : true);
+  const [privs, setPrivs] = useState<ModulePrivileges>(user?.privileges ?? { ...DEFAULT_PRIVS });
+  const [sendInvite, setSendInvite] = useState(true);
+  const [err, setErr] = useState('');
+  const [info, setInfo] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErr(''); setInfo('');
+    setSaving(true);
+    try {
+      if (user) {
+        await updateUser(user.id, { name, is_admin: isAdminFlag, active: activeFlag, privileges: privs });
+        onSaved();
+      } else {
+        const result = await createUser({ email, name, is_admin: isAdminFlag, privileges: privs, send_invite: sendInvite });
+        if (result.invite_error) {
+          setInfo(`User created. Invitation not sent: ${result.invite_error}`);
+          setTimeout(onSaved, 3500);
+        } else {
+          onSaved();
+        }
+      }
+    } catch (e: unknown) {
+      setErr(e instanceof Error ? e.message : 'Save failed');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSave} className="p-4 bg-gray-50 rounded-lg border border-gray-200 space-y-3">
+      <h3 className="text-sm font-semibold text-gray-700">{user ? `Edit ${user.email}` : 'Add User'}</h3>
+      {err && <p className="text-sm text-red-600">{err}</p>}
+      {info && <p className="text-sm text-amber-700">{info}</p>}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {!user && (
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Email <span className="text-red-500">*</span></label>
+            <input type="email" value={email} onChange={e => setEmail(e.target.value)} required
+              className="w-full border border-gray-300 rounded px-3 py-2 text-sm" />
+          </div>
+        )}
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">Name</label>
+          <input value={name} onChange={e => setName(e.target.value)}
+            className="w-full border border-gray-300 rounded px-3 py-2 text-sm" />
+        </div>
+      </div>
+      <div className="flex flex-wrap items-center gap-4">
+        <label className="flex items-center gap-2 text-sm text-gray-700">
+          <input type="checkbox" checked={isAdminFlag} onChange={e => setIsAdminFlag(e.target.checked)} className="rounded border-gray-300" />
+          Administrator (full access to everything)
+        </label>
+        {user && (
+          <label className="flex items-center gap-2 text-sm text-gray-700">
+            <input type="checkbox" checked={activeFlag} onChange={e => setActiveFlag(e.target.checked)} className="rounded border-gray-300" />
+            Active
+          </label>
+        )}
+        {!user && (
+          <label className="flex items-center gap-2 text-sm text-gray-700">
+            <input type="checkbox" checked={sendInvite} onChange={e => setSendInvite(e.target.checked)} className="rounded border-gray-300" />
+            Email an invitation link
+          </label>
+        )}
+      </div>
+      {!isAdminFlag && (
+        <div>
+          <p className="text-xs font-medium text-gray-600 mb-1.5">Module access</p>
+          <PrivilegeGrid privileges={privs} onChange={setPrivs} />
+        </div>
+      )}
+      <div className="flex gap-2 pt-1">
+        <button type="submit" disabled={saving}
+          className="px-4 py-2 bg-brand-600 text-white text-sm font-medium rounded hover:bg-brand-700 disabled:opacity-50">
+          {saving ? 'Saving…' : user ? 'Save Changes' : 'Create User'}
+        </button>
+        <button type="button" onClick={onCancel}
+          className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded hover:bg-gray-50">
+          Cancel
+        </button>
+      </div>
+    </form>
+  );
+}
+
+function UsersSection() {
+  const [users, setUsers] = useState<UserAccount[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState<UserAccount | null>(null);
+  const [adding, setAdding] = useState(false);
+  const [msg, setMsg] = useState('');
+  const [err, setErr] = useState('');
+  const [pwTarget, setPwTarget] = useState<UserAccount | null>(null);
+  const [pwValue, setPwValue] = useState('');
+
+  const load = async () => {
+    try {
+      setUsers(await listUsers());
+    } catch {
+      setErr('Failed to load users');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const flash = (m: string) => { setMsg(m); setTimeout(() => setMsg(''), 3000); };
+
+  const handleDelete = async (u: UserAccount) => {
+    if (!confirm(`Delete user "${u.email}"? Their sessions end immediately.`)) return;
+    setErr('');
+    try {
+      await deleteUser(u.id);
+      flash('User deleted.');
+      load();
+    } catch (e: unknown) {
+      setErr(e instanceof Error ? e.message : 'Delete failed');
+    }
+  };
+
+  const handleInvite = async (u: UserAccount) => {
+    setErr('');
+    try {
+      await sendUserInvite(u.id);
+      flash(`Invitation sent to ${u.email}.`);
+    } catch (e: unknown) {
+      setErr(e instanceof Error ? e.message : 'Invite failed');
+    }
+  };
+
+  const handleSetPassword = async () => {
+    if (!pwTarget) return;
+    setErr('');
+    try {
+      await setUserPassword(pwTarget.id, pwValue);
+      flash(`Password set for ${pwTarget.email}.`);
+      setPwTarget(null);
+      setPwValue('');
+      load();
+    } catch (e: unknown) {
+      setErr(e instanceof Error ? e.message : 'Failed to set password');
+    }
+  };
+
+  return (
+    <div className="bg-white rounded-lg shadow p-6">
+      <div className="flex items-center justify-between mb-1">
+        <h2 className="text-base font-semibold text-gray-900">User Accounts</h2>
+        {!adding && !editing && (
+          <button onClick={() => setAdding(true)}
+            className="px-4 py-2 bg-brand-600 text-white text-sm font-medium rounded hover:bg-brand-700">
+            + Add User
+          </button>
+        )}
+      </div>
+      <p className="text-sm text-gray-500 mb-4">
+        Users sign in with email + password. Admins have full access; other users get per-module privileges.
+        Invitations and password recovery require SMTP to be configured below.
+      </p>
+
+      {msg && <div className="mb-3 px-3 py-2 bg-green-50 border border-green-200 rounded text-sm text-green-800">{msg}</div>}
+      {err && <div className="mb-3 px-3 py-2 bg-red-50 border border-red-200 rounded text-sm text-red-800">{err}</div>}
+
+      {(adding || editing) && (
+        <div className="mb-4">
+          <UserEditor
+            user={editing}
+            onSaved={() => { setAdding(false); setEditing(null); load(); }}
+            onCancel={() => { setAdding(false); setEditing(null); }}
+          />
+        </div>
+      )}
+
+      {pwTarget && (
+        <div className="mb-4 p-4 bg-amber-50 rounded-lg border border-amber-200 space-y-2">
+          <p className="text-sm font-medium text-amber-800">Set password for {pwTarget.email}</p>
+          <div className="flex gap-2">
+            <input type="password" value={pwValue} onChange={e => setPwValue(e.target.value)}
+              placeholder="New password (min 8 chars)" minLength={8}
+              className="flex-1 border border-amber-300 rounded px-3 py-2 text-sm" />
+            <button onClick={handleSetPassword} disabled={pwValue.length < 8}
+              className="px-4 py-2 bg-brand-600 text-white text-sm font-medium rounded hover:bg-brand-700 disabled:opacity-50">
+              Set
+            </button>
+            <button onClick={() => { setPwTarget(null); setPwValue(''); }}
+              className="px-3 py-2 text-sm text-gray-600 border border-gray-300 rounded hover:bg-gray-50">
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {loading ? (
+        <p className="text-sm text-gray-400">Loading…</p>
+      ) : users.length === 0 ? (
+        <p className="text-sm text-gray-400">No user accounts yet. The legacy admin password still works — add accounts to give teammates their own logins.</p>
+      ) : (
+        <div className="divide-y divide-gray-100 border border-gray-200 rounded overflow-hidden">
+          {users.map(u => (
+            <div key={u.id} className="px-4 py-3 hover:bg-gray-50">
+              <div className="flex items-center gap-3 flex-wrap">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-sm font-medium text-gray-900">{u.email}</span>
+                    {u.name && <span className="text-xs text-gray-500">{u.name}</span>}
+                    {Boolean(u.is_admin) && (
+                      <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded">Admin</span>
+                    )}
+                    {!u.active && (
+                      <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded">Inactive</span>
+                    )}
+                    {!u.has_password && (
+                      <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded" title="No password yet — send an invite or set one manually">No password</span>
+                    )}
+                  </div>
+                  {!u.is_admin && (
+                    <p className="text-[11px] text-gray-400 mt-0.5 truncate">
+                      {MODULE_LABELS.filter(m => u.privileges[m.key] === 'edit').map(m => m.label).join(', ') || 'View only'}
+                      {MODULE_LABELS.some(m => u.privileges[m.key] === 'edit') && ' (edit)'}
+                    </p>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0 text-xs">
+                  <button onClick={() => { setEditing(u); setAdding(false); }} className="text-brand-600 hover:text-brand-800">Edit</button>
+                  <button onClick={() => handleInvite(u)} className="text-gray-500 hover:text-gray-700" title="Send or re-send invitation email">Invite</button>
+                  <button onClick={() => { setPwTarget(u); setPwValue(''); }} className="text-gray-500 hover:text-gray-700">Password</button>
+                  <button onClick={() => handleDelete(u)} className="text-red-500 hover:text-red-700">Delete</button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── SMTP (admin) ──────────────────────────────────────────────────────────────
+
+function SmtpSection() {
+  const [config, setConfig] = useState<SmtpConfig | null>(null);
+  const [pass, setPass] = useState('');
+  const [testTo, setTestTo] = useState('');
+  const [msg, setMsg] = useState('');
+  const [err, setErr] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [testing, setTesting] = useState(false);
+
+  useEffect(() => {
+    getSmtpConfig().then(setConfig).catch(() => setErr('Failed to load SMTP settings'));
+  }, []);
+
+  const set = (key: keyof SmtpConfig, value: string) =>
+    setConfig(c => (c ? { ...c, [key]: value } : c));
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!config) return;
+    setSaving(true); setMsg(''); setErr('');
+    try {
+      await updateSmtpConfig({ ...config, smtp_pass: pass });
+      setPass('');
+      setMsg('SMTP settings saved.');
+      setTimeout(() => setMsg(''), 3000);
+      setConfig(await getSmtpConfig());
+    } catch (e: unknown) {
+      setErr(e instanceof Error ? e.message : 'Save failed');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleTest = async () => {
+    setTesting(true); setMsg(''); setErr('');
+    try {
+      await testSmtp(testTo);
+      setMsg(`Test email sent to ${testTo}.`);
+    } catch (e: unknown) {
+      setErr(e instanceof Error ? e.message : 'Test failed');
+    } finally {
+      setTesting(false);
+    }
+  };
+
+  if (!config) return (
+    <div className="bg-white rounded-lg shadow p-6">
+      <h2 className="text-base font-semibold text-gray-900 mb-1">Email (SMTP)</h2>
+      {err ? <p className="text-sm text-red-600">{err}</p> : <p className="text-sm text-gray-400">Loading…</p>}
+    </div>
+  );
+
+  return (
+    <div className="bg-white rounded-lg shadow p-6">
+      <h2 className="text-base font-semibold text-gray-900 mb-1">Email (SMTP)</h2>
+      <p className="text-sm text-gray-500 mb-4">
+        Used for account invitations and password-recovery emails. Leave the password blank to keep the saved one.
+      </p>
+
+      {msg && <div className="mb-3 px-3 py-2 bg-green-50 border border-green-200 rounded text-sm text-green-800">{msg}</div>}
+      {err && <div className="mb-3 px-3 py-2 bg-red-50 border border-red-200 rounded text-sm text-red-800">{err}</div>}
+
+      <form onSubmit={handleSave} className="space-y-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="sm:col-span-2">
+            <label className="block text-xs font-medium text-gray-600 mb-1">SMTP Host</label>
+            <input value={config.smtp_host} onChange={e => set('smtp_host', e.target.value)}
+              placeholder="smtp.example.com" className="w-full border border-gray-300 rounded px-3 py-2 text-sm" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Port</label>
+            <input type="number" value={config.smtp_port} onChange={e => set('smtp_port', e.target.value)}
+              placeholder="587" className="w-full border border-gray-300 rounded px-3 py-2 text-sm" />
+          </div>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Username</label>
+            <input value={config.smtp_user} onChange={e => set('smtp_user', e.target.value)}
+              className="w-full border border-gray-300 rounded px-3 py-2 text-sm" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">
+              Password {config.has_password && <span className="text-gray-400">(saved — blank keeps it)</span>}
+            </label>
+            <input type="password" value={pass} onChange={e => setPass(e.target.value)}
+              className="w-full border border-gray-300 rounded px-3 py-2 text-sm" />
+          </div>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">From Address</label>
+            <input value={config.smtp_from} onChange={e => set('smtp_from', e.target.value)}
+              placeholder="configurator@example.com" className="w-full border border-gray-300 rounded px-3 py-2 text-sm" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">App Base URL</label>
+            <input value={config.app_base_url} onChange={e => set('app_base_url', e.target.value)}
+              placeholder="http://192.168.1.10:3002" className="w-full border border-gray-300 rounded px-3 py-2 text-sm" />
+            <p className="mt-1 text-xs text-gray-400">Used to build the links inside invitation and reset emails.</p>
+          </div>
+        </div>
+        <label className="flex items-center gap-2 text-sm text-gray-700">
+          <input type="checkbox" checked={config.smtp_secure === '1'}
+            onChange={e => set('smtp_secure', e.target.checked ? '1' : '0')} className="rounded border-gray-300" />
+          Use TLS/SSL (port 465)
+        </label>
+        <div className="flex flex-wrap items-center gap-3 pt-1">
+          <button type="submit" disabled={saving}
+            className="px-4 py-2 bg-brand-600 text-white text-sm font-medium rounded hover:bg-brand-700 disabled:opacity-50">
+            {saving ? 'Saving…' : 'Save SMTP Settings'}
+          </button>
+          <div className="flex items-center gap-2">
+            <input type="email" value={testTo} onChange={e => setTestTo(e.target.value)} placeholder="test@example.com"
+              className="border border-gray-300 rounded px-3 py-2 text-sm w-52" />
+            <button type="button" onClick={handleTest} disabled={testing || !testTo}
+              className="px-3 py-2 text-sm text-gray-600 border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50">
+              {testing ? 'Sending…' : 'Send Test'}
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+// ── Profile (any signed-in user) ──────────────────────────────────────────────
+
+function ProfileSection() {
+  const [me, setMe] = useState<UserAccount | null>(null);
+  const [name, setName] = useState('');
+  const [currentPw, setCurrentPw] = useState('');
+  const [newPw, setNewPw] = useState('');
+  const [salsifyKey, setSalsifyKey] = useState('');
+  const [msg, setMsg] = useState('');
+  const [err, setErr] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    getMe().then(u => { setMe(u); setName(u.name ?? ''); }).catch(() => {});
+  }, []);
+
+  if (!me) return null;
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true); setMsg(''); setErr('');
+    try {
+      const data: Parameters<typeof updateMe>[0] = { name };
+      if (newPw) { data.currentPassword = currentPw; data.newPassword = newPw; }
+      if (salsifyKey) data.salsify_api_key = salsifyKey;
+      const updated = await updateMe(data);
+      setMe(updated);
+      setCurrentPw(''); setNewPw(''); setSalsifyKey('');
+      setMsg('Profile updated.');
+      setTimeout(() => setMsg(''), 3000);
+    } catch (e: unknown) {
+      setErr(e instanceof Error ? e.message : 'Update failed');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const clearSalsifyKey = async () => {
+    if (!confirm('Remove your Salsify API key?')) return;
+    try {
+      setMe(await updateMe({ salsify_api_key: null }));
+      setMsg('Salsify API key removed.');
+      setTimeout(() => setMsg(''), 3000);
+    } catch (e: unknown) {
+      setErr(e instanceof Error ? e.message : 'Failed');
+    }
+  };
+
+  return (
+    <div className="bg-white rounded-lg shadow p-6">
+      <h2 className="text-base font-semibold text-gray-900 mb-1">My Profile</h2>
+      <p className="text-sm text-gray-500 mb-4">Signed in as <strong>{me.email}</strong></p>
+
+      {msg && <div className="mb-3 px-3 py-2 bg-green-50 border border-green-200 rounded text-sm text-green-800">{msg}</div>}
+      {err && <div className="mb-3 px-3 py-2 bg-red-50 border border-red-200 rounded text-sm text-red-800">{err}</div>}
+
+      <form onSubmit={handleSave} className="space-y-3 max-w-md">
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">Name</label>
+          <input value={name} onChange={e => setName(e.target.value)}
+            className="w-full border border-gray-300 rounded px-3 py-2 text-sm" />
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Current Password</label>
+            <input type="password" value={currentPw} onChange={e => setCurrentPw(e.target.value)}
+              className="w-full border border-gray-300 rounded px-3 py-2 text-sm" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">New Password</label>
+            <input type="password" value={newPw} onChange={e => setNewPw(e.target.value)} minLength={8}
+              placeholder="Leave blank to keep"
+              className="w-full border border-gray-300 rounded px-3 py-2 text-sm" />
+          </div>
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">
+            Salsify API Key {me.has_salsify_key && <span className="text-green-600">(saved)</span>}
+          </label>
+          <div className="flex gap-2">
+            <input type="password" value={salsifyKey} onChange={e => setSalsifyKey(e.target.value)}
+              placeholder={me.has_salsify_key ? 'Enter a new key to replace' : 'Your personal Salsify API key'}
+              className="flex-1 border border-gray-300 rounded px-3 py-2 text-sm" />
+            {me.has_salsify_key && (
+              <button type="button" onClick={clearSalsifyKey}
+                className="px-3 py-2 text-xs text-red-600 border border-red-300 rounded hover:bg-red-50">
+                Remove
+              </button>
+            )}
+          </div>
+          <p className="mt-1 text-xs text-gray-400">Used for Salsify pull/push operations. Never shown again once saved.</p>
+        </div>
+        <button type="submit" disabled={saving}
+          className="px-4 py-2 bg-brand-600 text-white text-sm font-medium rounded hover:bg-brand-700 disabled:opacity-50">
+          {saving ? 'Saving…' : 'Save Profile'}
+        </button>
+      </form>
+    </div>
+  );
+}
+
 export default function SettingsPage() {
   const [settings, setSettings] = useState<Settings>({
     dim_divisor: '139',
@@ -622,11 +1148,23 @@ export default function SettingsPage() {
         </button>
       </form>
 
-      <PasswordSection />
-      <ApiKeySection />
-      <BackupSection />
-      <DangerZoneSection />
+      <SettingsSections />
     </div>
+  );
+}
+
+function SettingsSections() {
+  const { isAdmin, user } = useAuth();
+  return (
+    <>
+      {user && <ProfileSection />}
+      {isAdmin && <UsersSection />}
+      {isAdmin && <SmtpSection />}
+      {isAdmin && <PasswordSection />}
+      {isAdmin && <ApiKeySection />}
+      {isAdmin && <BackupSection />}
+      {isAdmin && <DangerZoneSection />}
+    </>
   );
 }
 

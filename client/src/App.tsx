@@ -10,6 +10,8 @@ import ApiDocs from './pages/ApiDocs';
 import ManualConfigurator from './pages/ManualConfigurator';
 import ShippingMethods from './pages/ShippingMethods';
 import Reports from './pages/Reports';
+import AcceptInvite from './pages/AcceptInvite';
+import ResetPassword from './pages/ResetPassword';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import LoginModal from './components/LoginModal';
 
@@ -37,6 +39,8 @@ export default function App() {
             <Route path="/shipping" element={<ShippingMethods />} />
             <Route path="/settings" element={<ProtectedPage><Settings /></ProtectedPage>} />
             <Route path="/reports" element={<Reports />} />
+            <Route path="/accept-invite" element={<AcceptInvite />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
           </Route>
         </Routes>
       </BrowserRouter>

@@ -842,19 +842,47 @@ product sorted: [9,  6, 4]
 
       {/* ── ADMIN & SECURITY ── */}
       <Section id="admin-security" title="Admin &amp; Security">
-        <SubSection title="Admin password">
+        <SubSection title="User accounts">
           <p>
-            The Products, Packaging, Shipping, and Settings pages can be protected with a password.
-            Set one from the <NavRef to="Settings" /> page under <strong>Admin Password</strong>.
-            Once set, a <strong>Lock</strong> button appears in the navigation — click it to lock
-            the session. The Configurator, Bulk Configurator, and Instructions pages are always
-            accessible without a password.
+            The app supports individual user accounts that sign in with <strong>email + password</strong>.
+            Administrators manage accounts from the <NavRef to="Settings" /> page under{' '}
+            <strong>User Accounts</strong>: add users, send email invitations, set or reset a user's
+            password, deactivate, or delete. Each non-admin user gets per-module access privileges
+            (<strong>None / View / Edit</strong>) for Products, Packaging, Shipping, Configurator,
+            Reports, Pricing, and Settings. Admin users have full access to everything.
+          </p>
+          <Callout color="blue" label="How access works">
+            <ul className="mt-1 space-y-1 list-disc list-inside text-sm">
+              <li>Anonymous visitors keep <strong>read-only</strong> access to the catalog pages — accounts control who can <strong>edit</strong>.</li>
+              <li>Invitations and self-service password recovery are sent by email and require SMTP to be configured (Settings → Email).</li>
+              <li>Each user can store a personal <strong>Salsify API key</strong> in My Profile.</li>
+              <li>Sessions last 24 hours and survive server restarts.</li>
+            </ul>
+          </Callout>
+        </SubSection>
+        <SubSection title="Legacy admin password">
+          <p>
+            The original shared admin password still works as a break-glass, full-access login —
+            choose <strong>"Use admin password instead"</strong> on the sign-in dialog. Set or change
+            it from the <NavRef to="Settings" /> page under <strong>Legacy Admin Password</strong>.
+            Once any password protection is active, a <strong>Lock / Sign Out</strong> button appears in the navigation.
+          </p>
+        </SubSection>
+        <SubSection title="Email (SMTP)">
+          <p>
+            Configure an SMTP server under <strong>Settings → Email (SMTP)</strong> to enable
+            account invitations and password-recovery emails: host, port, TLS, credentials, the From
+            address, and the <strong>App Base URL</strong> (used to build the links inside those emails —
+            e.g. <code>http://192.168.1.10:3002</code>). Use <strong>Send Test</strong> to verify the
+            configuration before relying on it.
           </p>
         </SubSection>
         <SubSection title="Password recovery">
           <p>
-            If you forget the admin password, a one-time recovery token is printed to the server
-            console every time the server starts:
+            Users can reset their own password with the <strong>Forgot password?</strong> link on the
+            sign-in dialog (requires SMTP). An admin can also set any user's password directly from
+            the User Accounts section. If you forget the <strong>legacy admin</strong> password, a
+            one-time recovery token is printed to the server console every time the server starts:
           </p>
           <Code>
             {`[Auth] Emergency recovery token: a3f9...

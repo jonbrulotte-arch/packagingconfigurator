@@ -4,6 +4,7 @@ import * as XLSX from 'xlsx';
 import db from '../db';
 import { Product, Packaging, ConfiguratorResult, ShippingMethod, ShippingMatch, StandaloneResult } from '../types';
 import { loadRatesByMethod, rateForWeight, RatesByMethod } from '../rates';
+import { requireEdit } from './auth';
 
 const upload = multer({ storage: multer.memoryStorage() });
 const router = Router();
@@ -711,12 +712,21 @@ function buildShipmentRow(_: unknown) { return _; }
 
 // ── Settings ──────────────────────────────────────────────────────────────────
 
-router.get('/settings', (_req, res) => {
+// Secrets and credentials must never leave through the public settings endpoint.
+const SENSITIVE_SETTINGS = new Set([
+  'admin_password_hash', 'api_key_hash', 'smtp_pass', 'smtp_user', 'salsify_org_id',
+]);
+
+function publicSettings(): Record<string, string> {
   const rows = db.prepare('SELECT key, value FROM settings').all() as { key: string; value: string }[];
-  res.json(Object.fromEntries(rows.map(r => [r.key, r.value])));
+  return Object.fromEntries(rows.filter(r => !SENSITIVE_SETTINGS.has(r.key)).map(r => [r.key, r.value]));
+}
+
+router.get('/settings', (_req, res) => {
+  res.json(publicSettings());
 });
 
-router.put('/settings', (req: Request, res: Response) => {
+router.put('/settings', requireEdit('settings'), (req: Request, res: Response) => {
   const { dim_divisor, pack_efficiency, weight_unit, dim_unit, ltl_threshold, fit_clearance,
           backup_frequency, backup_hour, backup_max_count } = req.body;
   const upsert = db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)');
@@ -731,8 +741,7 @@ router.put('/settings', (req: Request, res: Response) => {
     if (backup_hour != null) upsert.run('backup_hour', String(Number(backup_hour)));
     if (backup_max_count != null) upsert.run('backup_max_count', String(Number(backup_max_count)));
   })();
-  const rows = db.prepare('SELECT key, value FROM settings').all() as { key: string; value: string }[];
-  res.json(Object.fromEntries(rows.map(r => [r.key, r.value])));
+  res.json(publicSettings());
 });
 
 export default router;

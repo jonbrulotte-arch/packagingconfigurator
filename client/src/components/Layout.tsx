@@ -16,7 +16,7 @@ const navItems = [
 ];
 
 export default function Layout() {
-  const { isProtected, authenticated, logout } = useAuth();
+  const { isProtected, authenticated, user, logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const navigate = useNavigate();
 
@@ -57,9 +57,10 @@ export default function Layout() {
               {isProtected && authenticated && (
                 <button
                   onClick={logout}
-                  className="ml-2 px-3 py-1.5 text-xs font-medium text-blue-200 border border-blue-400/40 rounded hover:bg-brand-700 hover:text-white transition-colors"
+                  title={user ? `Signed in as ${user.email} — click to sign out` : 'Click to lock'}
+                  className="ml-2 px-3 py-1.5 text-xs font-medium text-blue-200 border border-blue-400/40 rounded hover:bg-brand-700 hover:text-white transition-colors max-w-[180px] truncate"
                 >
-                  Lock
+                  {user ? `${user.email} · Sign Out` : 'Lock'}
                 </button>
               )}
             </nav>

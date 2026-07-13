@@ -107,10 +107,17 @@ export default function ApiDocs() {
       {/* ── AUTH ── */}
       <Section id="auth" title="Auth">
         <p className="text-sm text-gray-600">
-          When an admin password is configured, the Products, Packaging, Shipping, and Settings
-          endpoints are protected. Obtain a session token via <code>POST /auth/login</code> and
-          pass it as <code>X-Session-Token: &lt;token&gt;</code> on subsequent requests.
-          Tokens expire after 24 hours.
+          When an admin password is configured, write endpoints are protected. Authenticate one of
+          three ways: a <strong>user account</strong> (email + password login), the{' '}
+          <strong>legacy admin password</strong>, or an <strong>API key</strong> sent as{' '}
+          <code>X-API-Key: &lt;key&gt;</code> (best for integrations — generate one in Settings).
+          Logins return a session token passed as <code>X-Session-Token: &lt;token&gt;</code>;
+          tokens expire after 24 hours and survive server restarts. User accounts carry per-module
+          privileges (none/view/edit); legacy-password sessions and API keys have full access.
+          User management endpoints live under <code>/users</code> (admin session required):
+          create/update/delete users, send invitations, set passwords, plus public{' '}
+          <code>/users/forgot-password</code>, <code>/users/reset-password</code>, and{' '}
+          <code>/users/accept-invite</code> flows and admin SMTP configuration under <code>/users/smtp</code>.
         </p>
 
         <Endpoint
@@ -123,12 +130,20 @@ export default function ApiDocs() {
         <Endpoint
           method="POST"
           path="/auth/login"
-          description="Log in with the admin password. Returns a session token on success."
+          description="Log in. With an email field this is a user-account login; without, it's the legacy admin password. Returns a session token on success."
           request={{
             headers: 'Content-Type: application/json',
-            body: JSON.stringify({ password: 'yourpassword' }),
+            body: JSON.stringify({ email: 'you@example.com', password: 'yourpassword' }),
           }}
           response={JSON.stringify({ token: 'abc123...', success: true }, null, 2)}
+        />
+
+        <Endpoint
+          method="GET"
+          path="/auth/verify"
+          description="Validate the current session. For user-account sessions the response includes the user and their per-module privileges; legacy/API-key sessions return user: null (full access)."
+          request={{ headers: 'X-Session-Token: abc123...' }}
+          response={JSON.stringify({ authenticated: true, user: { id: 1, email: 'you@example.com', name: 'You', is_admin: 0, privileges: { products: 'edit', packaging: 'view', shipping: 'view', configurator: 'view', reports: 'view', pricing: 'none', settings: 'none' } } }, null, 2)}
         />
 
         <Endpoint

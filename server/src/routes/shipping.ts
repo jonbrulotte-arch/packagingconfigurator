@@ -3,7 +3,7 @@ import multer from 'multer';
 import * as XLSX from 'xlsx';
 import db from '../db';
 import { ShippingMethod, ShippingRate } from '../types';
-import { requireAuth } from './auth';
+import { requireEdit } from './auth';
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
@@ -14,7 +14,7 @@ router.get('/', (_req: Request, res: Response) => {
   res.json(db.prepare('SELECT * FROM shipping_methods ORDER BY sort_order, min_weight, id').all());
 });
 
-router.post('/', requireAuth, (req: Request, res: Response) => {
+router.post('/', requireEdit('shipping'), (req: Request, res: Response) => {
   const { name, min_weight, max_weight, dim_divisor, dim_threshold, active, is_ltl, notes, sort_order } = req.body as Partial<ShippingMethod>;
   if (!name?.trim()) return res.status(400).json({ error: 'Name is required' });
   try {
@@ -39,7 +39,7 @@ router.post('/', requireAuth, (req: Request, res: Response) => {
   }
 });
 
-router.put('/:id', requireAuth, (req: Request, res: Response) => {
+router.put('/:id', requireEdit('shipping'), (req: Request, res: Response) => {
   const id = Number(req.params.id);
   if (!db.prepare('SELECT id FROM shipping_methods WHERE id = ?').get(id)) {
     return res.status(404).json({ error: 'Method not found' });
@@ -71,7 +71,7 @@ router.put('/:id', requireAuth, (req: Request, res: Response) => {
   }
 });
 
-router.delete('/:id', requireAuth, (req: Request, res: Response) => {
+router.delete('/:id', requireEdit('shipping'), (req: Request, res: Response) => {
   const id = Number(req.params.id);
   if (!db.prepare('SELECT id FROM shipping_methods WHERE id = ?').get(id)) {
     return res.status(404).json({ error: 'Method not found' });
@@ -121,7 +121,7 @@ router.get('/rates/export', (_req: Request, res: Response) => {
 });
 
 // Import replaces the entire rate card of every method mentioned in the sheet.
-router.post('/rates/import', requireAuth, upload.single('file'), (req: Request, res: Response) => {
+router.post('/rates/import', requireEdit('shipping'), upload.single('file'), (req: Request, res: Response) => {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
 
   const wb = XLSX.read(req.file.buffer, { type: 'buffer' });
@@ -183,7 +183,7 @@ router.get('/:id/rates', (req: Request, res: Response) => {
 });
 
 // Full replace of one method's rate card (simplest contract for the inline editor).
-router.put('/:id/rates', requireAuth, (req: Request, res: Response) => {
+router.put('/:id/rates', requireEdit('shipping'), (req: Request, res: Response) => {
   const id = Number(req.params.id);
   if (!db.prepare('SELECT id FROM shipping_methods WHERE id = ?').get(id)) {
     return res.status(404).json({ error: 'Method not found' });
