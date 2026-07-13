@@ -3,6 +3,7 @@ import multer from 'multer';
 import * as XLSX from 'xlsx';
 import db from '../db';
 import { Product, Packaging, ConfiguratorResult, ShippingMethod, ShippingMatch, StandaloneResult } from '../types';
+import { loadRatesByMethod, rateForWeight, RatesByMethod } from '../rates';
 
 const upload = multer({ storage: multer.memoryStorage() });
 const router = Router();
@@ -108,18 +109,33 @@ function roundWeight(w: number): number {
 }
 
 // LTL freight: no DIM billing, match methods by actual weight only
-function computeLtlShipping(actualWeight: number, methods: ShippingMethod[]): ShippingMatch[] {
+function computeLtlShipping(
+  actualWeight: number,
+  methods: ShippingMethod[],
+  rates: RatesByMethod = new Map()
+): ShippingMatch[] {
   const billed = roundWeight(actualWeight);
   return methods
     .filter(m => billed >= m.min_weight && (m.max_weight == null || billed <= m.max_weight))
-    .map(m => ({ method_id: m.id, method_name: m.name, billed_weight: billed, dim_applied: false }));
+    .map(m => {
+      const r = rateForWeight(rates.get(m.id), billed);
+      return {
+        method_id: m.id,
+        method_name: m.name,
+        billed_weight: billed,
+        dim_applied: false,
+        rate: r?.rate ?? null,
+        rate_break: r?.break_weight ?? null,
+      };
+    });
 }
 
 function computeShipping(
   dimVolume: number,
   actualWeight: number,
   globalDimDivisor: number,
-  methods: ShippingMethod[]
+  methods: ShippingMethod[],
+  rates: RatesByMethod = new Map()
 ): ShippingMatch[] {
   const matches: ShippingMatch[] = [];
   for (const m of methods) {
@@ -134,11 +150,14 @@ function computeShipping(
     const withinMin = carrierBilled >= m.min_weight;
     const withinMax = m.max_weight == null || carrierBilled <= m.max_weight;
     if (withinMin && withinMax) {
+      const r = rateForWeight(rates.get(m.id), carrierBilled);
       matches.push({
         method_id: m.id,
         method_name: m.name,
         billed_weight: carrierBilled,
         dim_applied: dimApplies && carrierDimWeight > actualWeight,
+        rate: r?.rate ?? null,
+        rate_break: r?.break_weight ?? null,
       });
     }
   }
@@ -149,7 +168,8 @@ function computeStandaloneResult(
   product: Product,
   quantity: number,
   dimDivisor: number,
-  shippingMethods: ShippingMethod[]
+  shippingMethods: ShippingMethod[],
+  rates: RatesByMethod = new Map()
 ): StandaloneResult {
   const productVolume = product.height * product.width * product.length;
   const unitDimWeight = roundWeight(productVolume / dimDivisor);
@@ -163,7 +183,7 @@ function computeStandaloneResult(
     unit_billed_weight: unitBilledWeight,
     total_billed_weight: unitBilledWeight * quantity,
     weight_flag: unitDimWeight > unitActualWeight,
-    shipping: computeShipping(productVolume, unitActualWeight, dimDivisor, shippingMethods),
+    shipping: computeShipping(productVolume, unitActualWeight, dimDivisor, shippingMethods, rates),
   };
 }
 
@@ -173,7 +193,8 @@ function analyzeShipment(
   dimDivisor: number,
   packEfficiency: number,
   fitClearance: number,
-  shippingMethods: ShippingMethod[] = []
+  shippingMethods: ShippingMethod[] = [],
+  rates: RatesByMethod = new Map()
 ): ConfiguratorResult[] {
   const hasFoldedItems = items.some(i => i.product.foldable);
   // Apply fold transformations before all fit/volume calculations
@@ -225,7 +246,7 @@ function analyzeShipment(
     const actualWeight = totalActualWeight + pkgWeight;
     const billedWeight = roundWeight(Math.max(actualWeight, dimWeight));
     const volumeUtilization = (totalProductVolume / boxVolume) * 100;
-    const shipping = computeShipping(dimVolume, actualWeight, dimDivisor, shippingMethods);
+    const shipping = computeShipping(dimVolume, actualWeight, dimDivisor, shippingMethods, rates);
     // Flag only when there is no DIM-free carrier option available.
     // If at least one method bills by actual weight, the user can avoid DIM charges.
     const weight_flag = shipping.length > 0
@@ -340,16 +361,17 @@ router.post('/analyze', (req: Request, res: Response) => {
     .prepare('SELECT * FROM packaging WHERE active = 1 ORDER BY height * width * length ASC')
     .all() as Packaging[];
   const shippingMethods = loadActiveShippingMethods();
+  const rates = loadRatesByMethod();
   const parcelMethods = shippingMethods.filter(m => !m.is_ltl);
   const results = packagedItems.length > 0
-    ? analyzeShipment(packagedItems, allPackaging, dimDivisor, packEfficiency, fitClearance, parcelMethods)
+    ? analyzeShipment(packagedItems, allPackaging, dimDivisor, packEfficiency, fitClearance, parcelMethods, rates)
     : [];
   const standaloneResults = standaloneItems.map(si =>
-    computeStandaloneResult(si.product, si.quantity, dimDivisor, parcelMethods)
+    computeStandaloneResult(si.product, si.quantity, dimDivisor, parcelMethods, rates)
   );
 
   const ltlRequired = totalActualWeight >= ltlThreshold;
-  const ltlShipping = ltlRequired ? computeLtlShipping(totalActualWeight, shippingMethods) : [];
+  const ltlShipping = ltlRequired ? computeLtlShipping(totalActualWeight, shippingMethods, rates) : [];
 
   res.json({
     items: allItems,
@@ -407,16 +429,17 @@ router.post('/analyze-manual', (req: Request, res: Response) => {
     .prepare('SELECT * FROM packaging WHERE active = 1 ORDER BY height * width * length ASC')
     .all() as Packaging[];
   const shippingMethods = loadActiveShippingMethods();
+  const rates = loadRatesByMethod();
   const parcelMethods = shippingMethods.filter(m => !m.is_ltl);
   const results = packagedItems.length > 0
-    ? analyzeShipment(packagedItems, allPackaging, dimDivisor, packEfficiency, fitClearance, parcelMethods)
+    ? analyzeShipment(packagedItems, allPackaging, dimDivisor, packEfficiency, fitClearance, parcelMethods, rates)
     : [];
   const standaloneResults = standaloneItems.map(si =>
-    computeStandaloneResult(si.product, si.quantity, dimDivisor, parcelMethods)
+    computeStandaloneResult(si.product, si.quantity, dimDivisor, parcelMethods, rates)
   );
 
   const ltlRequired = totalActualWeight >= ltlThreshold;
-  const ltlShipping = ltlRequired ? computeLtlShipping(totalActualWeight, shippingMethods) : [];
+  const ltlShipping = ltlRequired ? computeLtlShipping(totalActualWeight, shippingMethods, rates) : [];
 
   res.json({
     items: resolvedItems,
@@ -553,6 +576,7 @@ router.post('/bulk', upload.single('file'), (req: Request, res: Response) => {
     .prepare('SELECT * FROM packaging WHERE active = 1 ORDER BY height * width * length ASC')
     .all() as Packaging[];
   const shippingMethods = loadActiveShippingMethods();
+  const rates = loadRatesByMethod();
   const parcelMethods = shippingMethods.filter(m => !m.is_ltl);
 
   // Analyze each shipment
@@ -573,12 +597,12 @@ router.post('/bulk', upload.single('file'), (req: Request, res: Response) => {
 
     const totalActualWeight = allResolvedItems.reduce((sum, i) => sum + i.product.weight * i.quantity, 0);
     const ltlRequired = totalActualWeight >= ltlThreshold;
-    const ltlShipping = ltlRequired ? computeLtlShipping(totalActualWeight, shippingMethods) : [];
+    const ltlShipping = ltlRequired ? computeLtlShipping(totalActualWeight, shippingMethods, rates) : [];
     const results = packagedItems.length > 0
-      ? analyzeShipment(packagedItems, allPackaging, dimDivisor, packEfficiency, fitClearance, parcelMethods)
+      ? analyzeShipment(packagedItems, allPackaging, dimDivisor, packEfficiency, fitClearance, parcelMethods, rates)
       : [];
     const standaloneResults = standaloneItems.map(si =>
-      computeStandaloneResult(si.product, si.quantity, dimDivisor, parcelMethods)
+      computeStandaloneResult(si.product, si.quantity, dimDivisor, parcelMethods, rates)
     );
     const best = results[0] ?? null;
     const allItemsAreStandalone = packagedItems.length === 0 && standaloneItems.length > 0;

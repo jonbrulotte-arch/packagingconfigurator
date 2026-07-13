@@ -1,4 +1,4 @@
-import { Product, Packaging, AnalyzeResponse, BulkAnalyzeResponse, BulkShipmentResult, Settings, RequestItem, ShippingMethod, BackupEntry, ReportState, ProductResultEntry, CarrierSkuProduct } from './types';
+import { Product, Packaging, AnalyzeResponse, BulkAnalyzeResponse, BulkShipmentResult, Settings, RequestItem, ShippingMethod, ShippingRate, BackupEntry, ReportState, ProductResultEntry, CarrierSkuProduct } from './types';
 
 const BASE = '/api';
 
@@ -185,6 +185,26 @@ export const updateShippingMethod = (id: number, data: Omit<ShippingMethod, 'id'
 
 export const deleteShippingMethod = (id: number) =>
   request<{ success: boolean }>(`/shipping/${id}`, { method: 'DELETE' });
+
+// Shipping rate cards
+export const getMethodRates = (methodId: number) =>
+  request<ShippingRate[]>(`/shipping/${methodId}/rates`);
+
+export const updateMethodRates = (methodId: number, rates: { max_weight: number; rate: number }[]) =>
+  request<ShippingRate[]>(`/shipping/${methodId}/rates`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ rates }),
+  });
+
+export const importShippingRates = async (file: File): Promise<{ imported: number; methods_updated: number; errors: string[] }> => {
+  const fd = new FormData();
+  fd.append('file', file);
+  return request('/shipping/rates/import', { method: 'POST', body: fd });
+};
+
+export const exportShippingRates = () => { window.location.href = '/api/shipping/rates/export'; };
+export const downloadRatesTemplate = () => { window.location.href = '/api/shipping/rates/template'; };
 
 // Auth
 const TOKEN_KEY = 'admin_session_token';

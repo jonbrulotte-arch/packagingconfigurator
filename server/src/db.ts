@@ -108,6 +108,17 @@ try {
   // Column already exists — safe to ignore
 }
 
+// Per-method rate cards: single zone, by-weight breaks ("up to max_weight lbs → rate")
+db.exec(`
+  CREATE TABLE IF NOT EXISTS shipping_rates (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    method_id INTEGER NOT NULL REFERENCES shipping_methods(id) ON DELETE CASCADE,
+    max_weight REAL NOT NULL,
+    rate REAL NOT NULL,
+    UNIQUE(method_id, max_weight)
+  );
+`);
+
 // Report cache table — stores pre-computed analysis results
 db.exec(`
   CREATE TABLE IF NOT EXISTS report_cache (

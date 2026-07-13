@@ -438,8 +438,47 @@ export default function ApiDocs() {
         <Endpoint
           method="DELETE"
           path="/shipping/:id"
-          description="Delete a shipping method by ID."
+          description="Delete a shipping method by ID. Its rate card is deleted with it."
           response={JSON.stringify({ success: true }, null, 2)}
+        />
+
+        <Endpoint
+          method="GET"
+          path="/shipping/:id/rates"
+          description="Return a method's rate card — single-zone weight breaks sorted ascending. Each break reads 'up to max_weight lbs → rate'. Configurator results include the matched rate on every shipping method entry (rate and rate_break fields; null when no card covers the billed weight)."
+          response={JSON.stringify([
+            { id: 1, method_id: 1, max_weight: 1, rate: 8.9 },
+            { id: 2, method_id: 1, max_weight: 5, rate: 11.4 },
+            { id: 3, method_id: 1, max_weight: 10, rate: 15.75 },
+          ], null, 2)}
+        />
+
+        <Endpoint
+          method="PUT"
+          path="/shipping/:id/rates"
+          description="Replace a method's entire rate card. Breaks must have unique weights > 0 and rates >= 0. Returns the saved card."
+          request={{
+            headers: 'Content-Type: application/json',
+            body: JSON.stringify({ rates: [{ max_weight: 1, rate: 8.9 }, { max_weight: 5, rate: 11.4 }] }),
+          }}
+          response={JSON.stringify([
+            { id: 7, method_id: 1, max_weight: 1, rate: 8.9 },
+            { id: 8, method_id: 1, max_weight: 5, rate: 11.4 },
+          ], null, 2)}
+        />
+
+        <Endpoint
+          method="POST"
+          path="/shipping/rates/import"
+          description="Upload an Excel rate card (multipart form, field name 'file'). Columns: Method Name, Up To Weight (lbs), Rate ($). Replaces the entire rate card of every method named in the sheet; unknown methods and invalid rows are reported in errors."
+          response={JSON.stringify({ imported: 12, methods_updated: 3, errors: ['Row 5: unknown method "FedEx Gronud" — skipped'] }, null, 2)}
+        />
+
+        <Endpoint
+          method="GET"
+          path="/shipping/rates/export"
+          description="Download every method's rate card as one Excel sheet (same format the import accepts)."
+          response={'Binary .xlsx attachment'}
         />
       </Section>
 

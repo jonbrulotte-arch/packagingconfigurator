@@ -2,6 +2,7 @@ import { Router } from 'express';
 import * as XLSX from 'xlsx';
 import db from '../db';
 import { Product, Packaging, ShippingMethod, ShippingMatch } from '../types';
+import { loadRatesByMethod, rateForWeight, RatesByMethod } from '../rates';
 
 const router = Router();
 
@@ -59,7 +60,8 @@ function computeShipping(
   dimVolume: number,
   actualWeight: number,
   globalDimDivisor: number,
-  methods: ShippingMethod[]
+  methods: ShippingMethod[],
+  rates: RatesByMethod = new Map()
 ): ExtendedMatch[] {
   const matches: ExtendedMatch[] = [];
   for (const m of methods) {
@@ -72,16 +74,35 @@ function computeShipping(
     const withinMin = carrierBilled >= m.min_weight;
     const withinMax = m.max_weight == null || carrierBilled <= m.max_weight;
     if (withinMin && withinMax) {
+      const r = rateForWeight(rates.get(m.id), carrierBilled);
       matches.push({
         method_id: m.id,
         method_name: m.name,
         billed_weight: carrierBilled,
         dim_applied: dimApplies && carrierDimWeight > actualWeight,
+        rate: r?.rate ?? null,
+        rate_break: r?.break_weight ?? null,
         carrier_dim_weight: carrierDimWeight,
       });
     }
   }
   return matches;
+}
+
+// Cheapest rated option among the matches — the "recommended" method for cost purposes.
+function cheapestShipping(matches: ExtendedMatch[]): CheapestShipping | null {
+  let best: ExtendedMatch | null = null;
+  for (const m of matches) {
+    if (m.rate == null) continue;
+    if (best == null || m.rate < (best.rate as number)) best = m;
+  }
+  if (!best) return null;
+  return {
+    method_id: best.method_id,
+    method_name: best.method_name,
+    billed_weight: best.billed_weight,
+    rate: best.rate as number,
+  };
 }
 
 // ── Report types ──────────────────────────────────────────────────────────────
@@ -132,6 +153,13 @@ export interface TypeBreakdownEntry {
   avg_utilization: number | null;
 }
 
+export interface CheapestShipping {
+  method_id: number;
+  method_name: string;
+  billed_weight: number;
+  rate: number;
+}
+
 export interface ProductResultEntry {
   id: string;
   name: string;
@@ -149,6 +177,9 @@ export interface ProductResultEntry {
   dim_weight: number | null;
   dim_exposed: boolean;
   compatible_count: number;
+  billed_weight: number | null;
+  shipped_dims: { height: number; width: number; length: number } | null;
+  cheapest_shipping: CheapestShipping | null;
 }
 
 export interface PackagingAnalysisReport {
@@ -201,6 +232,7 @@ export async function computePackagingAnalysis(): Promise<void> {
     const ltlThreshold = Number(s.ltl_threshold ?? 150);
     const fitClearance = Number(s.fit_clearance ?? 0.5);
     const parcelMethods = shippingMethods.filter(m => !m.is_ltl);
+    const rates = loadRatesByMethod();
 
     // Per-packaging accumulators
     const pkgAccum = new Map<number, {
@@ -259,7 +291,7 @@ export async function computePackagingAnalysis(): Promise<void> {
           const dimWt = roundWeight(vol / dimDivisor);
           hasPackagingCount++;
 
-          const shipping = computeShipping(vol, product.weight, dimDivisor, parcelMethods);
+          const shipping = computeShipping(vol, product.weight, dimDivisor, parcelMethods, rates);
           let anyDimBilled = false;
           for (const sm of shipping) {
             if (sm.dim_applied) {
@@ -295,6 +327,9 @@ export async function computePackagingAnalysis(): Promise<void> {
             dim_weight: dimWt,
             dim_exposed: anyDimBilled,
             compatible_count: 0,
+            billed_weight: roundWeight(Math.max(product.weight, dimWt)),
+            shipped_dims: { height: product.height, width: product.width, length: product.length },
+            cheapest_shipping: cheapestShipping(shipping),
           });
           continue;
         }
@@ -310,6 +345,7 @@ export async function computePackagingAnalysis(): Promise<void> {
           volume_utilization: number;
           actual_weight: number;
           dim_weight: number;
+          shipped_dims: { height: number; width: number; length: number };
           shipping: ExtendedMatch[];
         }
 
@@ -322,6 +358,7 @@ export async function computePackagingAnalysis(): Promise<void> {
           const boxVol = ed1 * ed2 * ed3;
 
           let dimVolume = boxVol;
+          let shippedDims = { height: pkg.height, width: pkg.width, length: pkg.length };
           if (pkg.max_height != null) {
             const [, , thickness] = sortedDims(
               effectiveProduct.height, effectiveProduct.width, effectiveProduct.length
@@ -332,8 +369,14 @@ export async function computePackagingAnalysis(): Promise<void> {
               const flatD1 = Math.max(pkg.width, pkg.length);
               const flatD2 = Math.min(pkg.width, pkg.length);
               dimVolume = (flatD1 - thickness) * (flatD2 - thickness) * packedThickness;
+              shippedDims = {
+                height: Math.round(packedThickness * 1000) / 1000,
+                width: Math.round((flatD2 - thickness) * 1000) / 1000,
+                length: Math.round((flatD1 - thickness) * 1000) / 1000,
+              };
             } else {
               dimVolume = ed1 * ed2 * packedThickness;
+              shippedDims = { height: Math.round(packedThickness * 1000) / 1000, width: pkg.width, length: pkg.length };
             }
           }
 
@@ -341,7 +384,7 @@ export async function computePackagingAnalysis(): Promise<void> {
           const totalActual = product.weight + pkgWt;
           const dimWt = roundWeight(dimVolume / dimDivisor);
           const volUtil = Math.round((productVol / boxVol) * 1000) / 10;
-          const shipping = computeShipping(dimVolume, totalActual, dimDivisor, parcelMethods);
+          const shipping = computeShipping(dimVolume, totalActual, dimDivisor, parcelMethods, rates);
 
           fitResults.push({
             pkg,
@@ -349,6 +392,7 @@ export async function computePackagingAnalysis(): Promise<void> {
             volume_utilization: volUtil,
             actual_weight: totalActual,
             dim_weight: dimWt,
+            shipped_dims: shippedDims,
             shipping,
           });
         }
@@ -369,6 +413,9 @@ export async function computePackagingAnalysis(): Promise<void> {
             ),
             dim_exposed: false,
             compatible_count: 0,
+            billed_weight: null,
+            shipped_dims: null,
+            cheapest_shipping: null,
           });
           continue;
         }
@@ -430,6 +477,9 @@ export async function computePackagingAnalysis(): Promise<void> {
           dim_weight: best.dim_weight,
           dim_exposed: anyDimBilled,
           compatible_count: fitResults.length,
+          billed_weight: roundWeight(Math.max(best.actual_weight, best.dim_weight)),
+          shipped_dims: best.shipped_dims,
+          cheapest_shipping: cheapestShipping(best.shipping),
         });
       }
 

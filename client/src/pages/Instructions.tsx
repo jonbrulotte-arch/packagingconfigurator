@@ -364,6 +364,27 @@ Every item in the shipment must fit within those reduced dimensions.`}
             weight range naturally aligns with when LTL kicks in.
           </p>
         </SubSection>
+        <SubSection title="Rate cards">
+          <p>
+            Every shipping method can carry a <strong>rate card</strong> — a single-zone table of
+            by-weight price breaks. Click <strong>$ Rates</strong> on a method row to view or edit
+            its card. Each break reads "up to X lbs → $rate": the configurator takes the
+            carrier-specific billed weight and finds the first break that covers it.
+          </p>
+          <Callout color="blue" label="How rates appear in results">
+            <ul className="mt-1 space-y-1 list-disc list-inside text-sm">
+              <li>Each shipping method chip on a Configurator result shows its rate for the billed weight.</li>
+              <li>The <strong>cheapest</strong> rated method on each packaging option is highlighted green as <strong>Recommended</strong>.</li>
+              <li>If the billed weight exceeds the largest break — or the method has no card — the chip shows "no rate".</li>
+            </ul>
+          </Callout>
+          <p className="mt-2">
+            Use the <strong>Rates Template / Import / Export</strong> buttons at the top of the
+            Shipping Methods page to manage rate cards in Excel — one row per break with columns{' '}
+            <code>Method Name</code>, <code>Up To Weight (lbs)</code>, <code>Rate ($)</code>.
+            Importing replaces the entire rate card of every method named in the file.
+          </p>
+        </SubSection>
         <SubSection title="Sort order">
           <p>
             The <strong>Sort Order</strong> field controls the display order of methods on result

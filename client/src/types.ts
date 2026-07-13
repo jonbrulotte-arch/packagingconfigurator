@@ -50,6 +50,15 @@ export interface ShippingMatch {
   method_name: string;
   billed_weight: number;
   dim_applied: boolean;
+  rate: number | null;
+  rate_break: number | null;
+}
+
+export interface ShippingRate {
+  id: number;
+  method_id: number;
+  max_weight: number;
+  rate: number;
 }
 
 export interface StandaloneResult {
@@ -168,6 +177,13 @@ export interface TypeBreakdownEntry {
   avg_utilization: number | null;
 }
 
+export interface CheapestShipping {
+  method_id: number;
+  method_name: string;
+  billed_weight: number;
+  rate: number;
+}
+
 export interface ProductResultEntry {
   id: string;
   name: string;
@@ -185,6 +201,9 @@ export interface ProductResultEntry {
   dim_weight: number | null;
   dim_exposed: boolean;
   compatible_count: number;
+  billed_weight: number | null;
+  shipped_dims: { height: number; width: number; length: number } | null;
+  cheapest_shipping: CheapestShipping | null;
 }
 
 export interface CarrierSkuProduct {
