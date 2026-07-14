@@ -1,4 +1,4 @@
-import { Product, Packaging, AnalyzeResponse, BulkAnalyzeResponse, BulkShipmentResult, Settings, RequestItem, ShippingMethod, ShippingRate, BackupEntry, ReportState, ProductResultEntry, CarrierSkuProduct, AuthUser, UserAccount, ModulePrivileges, SmtpConfig, SalsifySettings, SalsifyJobState, SalsifyPullResult, SalsifyPushResult } from './types';
+import { Product, Packaging, AnalyzeResponse, BulkAnalyzeResponse, BulkShipmentResult, Settings, RequestItem, ShippingMethod, ShippingRate, BackupEntry, ReportState, ProductResultEntry, CarrierSkuProduct, AuthUser, UserAccount, ModulePrivileges, SmtpConfig, SalsifySettings, SalsifyJobState, SalsifyPullResult, SalsifyPushResult, SalesChannel, ProductPricingEntry, RoiResponse } from './types';
 
 const BASE = '/api';
 
@@ -365,6 +365,61 @@ export const startSalsifyPush = (productIds?: string[]) =>
   });
 export const getSalsifyPushStatus = () =>
   request<SalsifyJobState<SalsifyPushResult>>('/salsify/push/status');
+
+// Pricing / ROI
+export const getSalesChannels = () => request<SalesChannel[]>('/pricing/channels');
+export const createSalesChannel = (data: Omit<SalesChannel, 'id'>) =>
+  request<SalesChannel>('/pricing/channels', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+export const updateSalesChannel = (id: number, data: Omit<SalesChannel, 'id'>) =>
+  request<SalesChannel>(`/pricing/channels/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+export const deleteSalesChannel = (id: number) =>
+  request<{ success: boolean }>(`/pricing/channels/${id}`, { method: 'DELETE' });
+
+export const getProductPricing = () => request<ProductPricingEntry[]>('/pricing/product-pricing');
+export const setProductPricing = (productId: string, data: { product_cost: number | null; retail_price: number | null }) =>
+  request<{ product_id: string; product_cost: number | null; retail_price: number | null }>(`/pricing/product-pricing/${encodeURIComponent(productId)}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+// Pricing is an access-controlled module — downloads must carry the session
+// token, so these fetch a blob instead of navigating (which drops the header).
+async function downloadAuthed(url: string, filename: string) {
+  const res = await fetch(url, { headers: authHeaders() });
+  if (!res.ok) throw new Error('Download failed');
+  const blob = await res.blob();
+  const objectUrl = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = objectUrl;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(objectUrl);
+}
+
+export const downloadPricingTemplate = () => downloadAuthed('/api/pricing/product-pricing/template', 'product-pricing-template.xlsx');
+export const exportProductPricing = () => downloadAuthed('/api/pricing/product-pricing/export', 'product-pricing-export.xlsx');
+export const importProductPricing = async (file: File): Promise<{ imported: number; errors: string[] }> => {
+  const fd = new FormData();
+  fd.append('file', file);
+  return request('/pricing/product-pricing/import', { method: 'POST', body: fd });
+};
+
+export const getRoi = (params?: { channel_id?: number; status?: string }) => {
+  const qs = new URLSearchParams();
+  if (params?.channel_id != null) qs.set('channel_id', String(params.channel_id));
+  if (params?.status) qs.set('status', params.status);
+  const suffix = qs.toString() ? `?${qs.toString()}` : '';
+  return request<RoiResponse>(`/pricing/roi${suffix}`);
+};
+export const downloadRoiExport = () => downloadAuthed('/api/pricing/roi/export', 'roi-export.xlsx');
 
 // Backups
 export const listBackups = () => request<BackupEntry[]>('/backup');

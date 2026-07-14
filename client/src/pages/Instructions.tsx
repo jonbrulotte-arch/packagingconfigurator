@@ -9,6 +9,7 @@ const TOC_ITEMS = [
   { id: 'manual-configurator-tab', label: 'Manual Configurator' },
   { id: 'bulk-configurator-tab', label: 'Bulk Configurator' },
   { id: 'reports-tab', label: 'Reports' },
+  { id: 'pricing-tab', label: 'Pricing / ROI' },
   { id: 'how-results-are-calculated', label: 'How Results Work' },
   { id: 'settings-reference', label: 'Settings' },
   { id: 'admin-security', label: 'Admin & Security' },
@@ -646,6 +647,61 @@ Every item in the shipment must fit within those reduced dimensions.`}
             <li><strong>Coverage Gaps</strong> — products with no fit or loose-only fits.</li>
             <li><strong>Product Matrix</strong> — every product with its best packaging, fit quality, actual/DIM weights, and DIM exposure flag.</li>
           </ul>
+        </SubSection>
+      </Section>
+
+      {/* ── PRICING / ROI ── */}
+      <Section id="pricing-tab" title="Pricing / ROI Analysis">
+        <p className="text-sm text-gray-700">
+          An early-warning system that monitors calculated shipping cost, product cost, and retail
+          price against your sales-channel economics. Access is restricted — signed-in users need
+          <strong> View</strong> or <strong>Edit</strong> privilege on the Pricing module (see{' '}
+          <NavRef to="Settings" /> → User Accounts).
+        </p>
+
+        <SubSection title="Sales Channels">
+          <p>
+            Each channel models a place you sell — Amazon, your own website, a wholesale account, etc.
+            Configure per channel:
+          </p>
+          <ul className="mt-2 space-y-1 text-sm list-disc list-inside text-gray-700">
+            <li><strong>Shipping Terms</strong> — <em>Prepaid</em> means you absorb the shipping cost (it's subtracted from margin); <em>Collect</em> means the buyer pays it separately (no shipping deduction).</li>
+            <li><strong>Payment Terms</strong> — informational text (e.g. "Net 30").</li>
+            <li><strong>Per-Transaction Fee</strong> — a flat dollar fee charged on every sale.</li>
+            <li><strong>Cost Allocations</strong> — any number of additional line items, each either a fixed dollar amount or a percentage of the retail price (e.g. a 15% referral fee, a $3.50 fulfillment fee).</li>
+            <li><strong>Minimum Margin %</strong> — the channel's target margin. Below this triggers a yellow warning.</li>
+          </ul>
+        </SubSection>
+
+        <SubSection title="Product Pricing">
+          <p>
+            Set <strong>Product Cost</strong> and <strong>Retail Price</strong> per product — manually,
+            via Excel import/export, or automatically from a{' '}
+            <a href="#settings-reference" className="text-brand-600 hover:underline">Salsify pull</a>.
+          </p>
+        </SubSection>
+
+        <SubSection title="Margin calculation & warnings">
+          <p>For every product × channel combination:</p>
+          <Code>
+            {`shipping_cost = cheapest rated shipping method for that product's best-fit packaging
+fees = transaction_fee + Σ(fixed allocations) + retail_price × Σ(percent allocations)/100
+costs = product_cost + fees + (shipping_cost if Prepaid else 0)
+margin = retail_price − costs
+margin_% = margin / retail_price × 100`}
+          </Code>
+          <Callout color="amber" label="Status thresholds">
+            <ul className="mt-1 space-y-1 list-disc list-inside text-sm">
+              <li><strong className="text-red-700">Red — Not Profitable:</strong> margin ≤ $0.</li>
+              <li><strong className="text-amber-700">Yellow — Below Threshold:</strong> margin is positive but margin % is below the channel's Minimum Margin %.</li>
+              <li><strong className="text-green-700">Green — Healthy:</strong> margin % meets or exceeds the threshold.</li>
+              <li><strong>No Pricing Data / No Shipping Rate:</strong> shown when cost, retail price, or a matching rate card is missing — these products need attention before they can be evaluated.</li>
+            </ul>
+          </Callout>
+          <p className="mt-2 text-sm text-gray-700">
+            The shipping cost comes from the cached Packaging Analysis report — run or refresh it
+            from the <NavRef to="Reports" /> page to pick up new products or rate changes.
+          </p>
         </SubSection>
       </Section>
 

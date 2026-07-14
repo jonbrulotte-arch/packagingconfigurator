@@ -178,6 +178,31 @@ db.exec(`
   );
 `);
 
+// Sales channels + their cost allocations (Pricing / ROI module)
+db.exec(`
+  CREATE TABLE IF NOT EXISTS sales_channels (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL UNIQUE,
+    shipping_terms TEXT NOT NULL DEFAULT 'prepaid' CHECK (shipping_terms IN ('prepaid','collect')),
+    payment_terms TEXT,
+    transaction_fee REAL NOT NULL DEFAULT 0,
+    min_margin_pct REAL NOT NULL DEFAULT 0,
+    notes TEXT,
+    active INTEGER NOT NULL DEFAULT 1,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS channel_allocations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    channel_id INTEGER NOT NULL REFERENCES sales_channels(id) ON DELETE CASCADE,
+    label TEXT NOT NULL,
+    alloc_type TEXT NOT NULL CHECK (alloc_type IN ('fixed','percent')),
+    value REAL NOT NULL,
+    sort_order INTEGER NOT NULL DEFAULT 0
+  );
+`);
+
 // Seed default settings
 const insertSetting = db.prepare(
   'INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)'

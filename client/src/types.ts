@@ -332,6 +332,60 @@ export type SalsifyJobState<T> =
   | { status: 'error'; error: string }
   | { status: 'ready'; computed_at: string; data: T | { progress: number; total: number } | null };
 
+// ── Pricing / ROI ─────────────────────────────────────────────────────────────
+
+export interface ChannelAllocation {
+  id?: number;
+  channel_id?: number;
+  label: string;
+  alloc_type: 'fixed' | 'percent';
+  value: number;
+  sort_order?: number;
+}
+
+export interface SalesChannel {
+  id: number;
+  name: string;
+  shipping_terms: 'prepaid' | 'collect';
+  payment_terms: string | null;
+  transaction_fee: number;
+  min_margin_pct: number;
+  notes: string | null;
+  active: number;
+  allocations: ChannelAllocation[];
+}
+
+export interface ProductPricingEntry {
+  product_id: string;
+  name: string;
+  product_cost: number | null;
+  retail_price: number | null;
+}
+
+export type RoiStatus = 'red' | 'yellow' | 'ok' | 'no_data' | 'no_rate';
+
+export interface RoiRow {
+  product_id: string;
+  name: string;
+  channel_id: number;
+  channel_name: string;
+  retail_price: number | null;
+  product_cost: number | null;
+  shipping_cost: number | null;
+  allocations_total: number | null;
+  fees_total: number | null;
+  margin: number | null;
+  margin_pct: number | null;
+  status: RoiStatus;
+}
+
+export interface RoiResponse {
+  computed_at: string | null;
+  channels: { id: number; name: string; shipping_terms: 'prepaid' | 'collect'; min_margin_pct: number }[];
+  summary: Record<RoiStatus, number>;
+  rows: RoiRow[];
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 
 export interface Settings {
