@@ -108,6 +108,23 @@ try {
   // Column already exists — safe to ignore
 }
 
+// A much older schema once used a table named 'shipping_rates' for a different,
+// now-removed rate concept (see the min_weight/max_weight migration above). On an
+// install that predates this feature, that table may still exist with different
+// columns — CREATE TABLE IF NOT EXISTS would silently leave it in place and every
+// query against our new by-weight-break schema would fail. Rename it out of the
+// way (no data loss) if its columns don't match what we expect.
+const existingShippingRates = db
+  .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'shipping_rates'")
+  .get();
+if (existingShippingRates) {
+  const cols = (db.prepare('PRAGMA table_info(shipping_rates)').all() as { name: string }[]).map(c => c.name);
+  const expected = ['method_id', 'max_weight', 'rate'];
+  if (!expected.every(c => cols.includes(c))) {
+    db.exec('ALTER TABLE shipping_rates RENAME TO shipping_rates_legacy');
+  }
+}
+
 // Per-method rate cards: single zone, by-weight breaks ("up to max_weight lbs → rate")
 db.exec(`
   CREATE TABLE IF NOT EXISTS shipping_rates (
