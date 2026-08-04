@@ -9,6 +9,7 @@ const navItems = [
   { to: '/products', label: 'Products' },
   { to: '/packaging', label: 'Packaging' },
   { to: '/shipping', label: 'Shipping' },
+  { to: '/pricing', label: 'Pricing', module: 'pricing' as const },
   { to: '/settings', label: 'Settings' },
   { to: '/reports', label: 'Reports' },
   { to: '/instructions', label: 'Instructions' },
@@ -16,9 +17,10 @@ const navItems = [
 ];
 
 export default function Layout() {
-  const { isProtected, authenticated, logout } = useAuth();
+  const { isProtected, authenticated, user, logout, canView } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const navigate = useNavigate();
+  const visibleNavItems = navItems.filter(item => !item.module || canView(item.module));
 
   const handleNavClick = (to: string) => {
     setMenuOpen(false);
@@ -39,7 +41,7 @@ export default function Layout() {
 
             {/* Desktop nav */}
             <nav className="hidden md:flex items-center gap-1">
-              {navItems.map(({ to, label }) => (
+              {visibleNavItems.map(({ to, label }) => (
                 <NavLink
                   key={to}
                   to={to}
@@ -57,9 +59,10 @@ export default function Layout() {
               {isProtected && authenticated && (
                 <button
                   onClick={logout}
-                  className="ml-2 px-3 py-1.5 text-xs font-medium text-blue-200 border border-blue-400/40 rounded hover:bg-brand-700 hover:text-white transition-colors"
+                  title={user ? `Signed in as ${user.email} — click to sign out` : 'Click to lock'}
+                  className="ml-2 px-3 py-1.5 text-xs font-medium text-blue-200 border border-blue-400/40 rounded hover:bg-brand-700 hover:text-white transition-colors max-w-[180px] truncate"
                 >
-                  Lock
+                  {user ? `${user.email} · Sign Out` : 'Lock'}
                 </button>
               )}
             </nav>
@@ -87,7 +90,7 @@ export default function Layout() {
         {menuOpen && (
           <div className="md:hidden border-t border-brand-700 bg-brand-800">
             <nav className="max-w-7xl mx-auto px-4 py-2 flex flex-col">
-              {navItems.map(({ to, label }) => (
+              {visibleNavItems.map(({ to, label }) => (
                 <NavLink
                   key={to}
                   to={to}

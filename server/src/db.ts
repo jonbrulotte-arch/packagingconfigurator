@@ -108,6 +108,34 @@ try {
   // Column already exists — safe to ignore
 }
 
+// A much older schema once used a table named 'shipping_rates' for a different,
+// now-removed rate concept (see the min_weight/max_weight migration above). On an
+// install that predates this feature, that table may still exist with different
+// columns — CREATE TABLE IF NOT EXISTS would silently leave it in place and every
+// query against our new by-weight-break schema would fail. Rename it out of the
+// way (no data loss) if its columns don't match what we expect.
+const existingShippingRates = db
+  .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'shipping_rates'")
+  .get();
+if (existingShippingRates) {
+  const cols = (db.prepare('PRAGMA table_info(shipping_rates)').all() as { name: string }[]).map(c => c.name);
+  const expected = ['method_id', 'max_weight', 'rate'];
+  if (!expected.every(c => cols.includes(c))) {
+    db.exec('ALTER TABLE shipping_rates RENAME TO shipping_rates_legacy');
+  }
+}
+
+// Per-method rate cards: single zone, by-weight breaks ("up to max_weight lbs → rate")
+db.exec(`
+  CREATE TABLE IF NOT EXISTS shipping_rates (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    method_id INTEGER NOT NULL REFERENCES shipping_methods(id) ON DELETE CASCADE,
+    max_weight REAL NOT NULL,
+    rate REAL NOT NULL,
+    UNIQUE(method_id, max_weight)
+  );
+`);
+
 // Report cache table — stores pre-computed analysis results
 db.exec(`
   CREATE TABLE IF NOT EXISTS report_cache (
@@ -117,6 +145,78 @@ db.exec(`
     error TEXT,
     computed_at TEXT,
     started_at TEXT
+  );
+`);
+
+// User accounts, per-module privileges, persistent sessions, and one-time auth tokens
+db.exec(`
+  CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email TEXT NOT NULL UNIQUE COLLATE NOCASE,
+    name TEXT,
+    password_hash TEXT,
+    is_admin INTEGER NOT NULL DEFAULT 0,
+    salsify_api_key TEXT,
+    active INTEGER NOT NULL DEFAULT 1,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS user_privileges (
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    module TEXT NOT NULL,
+    level TEXT NOT NULL CHECK (level IN ('none','view','edit')),
+    PRIMARY KEY (user_id, module)
+  );
+
+  CREATE TABLE IF NOT EXISTS sessions (
+    token TEXT PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    expires_at TEXT NOT NULL,
+    created_at TEXT NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS auth_tokens (
+    token_hash TEXT PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    purpose TEXT NOT NULL CHECK (purpose IN ('invite','reset')),
+    expires_at TEXT NOT NULL,
+    used_at TEXT
+  );
+`);
+
+// Per-product pricing data (populated by Salsify pull or manual entry; consumed by Pricing/ROI)
+db.exec(`
+  CREATE TABLE IF NOT EXISTS product_pricing (
+    product_id TEXT PRIMARY KEY REFERENCES products(id) ON DELETE CASCADE,
+    product_cost REAL,
+    retail_price REAL,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+`);
+
+// Sales channels + their cost allocations (Pricing / ROI module)
+db.exec(`
+  CREATE TABLE IF NOT EXISTS sales_channels (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL UNIQUE,
+    shipping_terms TEXT NOT NULL DEFAULT 'prepaid' CHECK (shipping_terms IN ('prepaid','collect')),
+    payment_terms TEXT,
+    transaction_fee REAL NOT NULL DEFAULT 0,
+    min_margin_pct REAL NOT NULL DEFAULT 0,
+    notes TEXT,
+    active INTEGER NOT NULL DEFAULT 1,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS channel_allocations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    channel_id INTEGER NOT NULL REFERENCES sales_channels(id) ON DELETE CASCADE,
+    label TEXT NOT NULL,
+    alloc_type TEXT NOT NULL CHECK (alloc_type IN ('fixed','percent')),
+    value REAL NOT NULL,
+    sort_order INTEGER NOT NULL DEFAULT 0
   );
 `);
 

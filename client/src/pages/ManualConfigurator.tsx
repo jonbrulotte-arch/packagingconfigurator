@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { AnalyzeResponse, ConfiguratorResult, StandaloneResult } from '../types';
 import { analyzeManual, ManualItem } from '../api';
+import ShippingChips from '../components/ShippingChips';
 
 const FIT_COLORS: Record<ConfiguratorResult['fit_quality'], string> = {
   exact: 'bg-green-100 text-green-800 border-green-200',
@@ -319,6 +320,7 @@ function Results({ response }: { response: AnalyzeResponse }) {
                 {response.ltl_shipping.map(sm => (
                   <span key={sm.method_id} className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1.5 bg-red-100 border border-red-300 text-red-800 rounded font-medium">
                     {sm.method_name} · {sm.billed_weight} lbs
+                    {sm.rate != null && <span className="font-bold">· ${sm.rate.toFixed(2)}</span>}
                   </span>
                 ))}
               </div>
@@ -376,16 +378,7 @@ function Results({ response }: { response: AnalyzeResponse }) {
                 {sr.shipping?.length > 0 && (
                   <div className="mt-3 pt-3 border-t border-gray-100">
                     <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Shipping Methods (per unit)</p>
-                    <div className="flex flex-wrap gap-2">
-                      {sr.shipping.map(sm => (
-                        <div key={sm.method_id} className="inline-flex items-center gap-1.5 rounded px-2.5 py-1.5 border text-xs bg-indigo-50 border-indigo-200">
-                          <span className="font-semibold text-gray-800">{sm.method_name}</span>
-                          <span className="text-gray-400">·</span>
-                          <span className={`font-medium ${sm.dim_applied ? 'text-amber-600' : 'text-indigo-700'}`}>{sm.billed_weight} lbs</span>
-                          {sm.dim_applied && <span className="bg-amber-100 text-amber-700 font-semibold px-1 rounded text-[10px]">DIM</span>}
-                        </div>
-                      ))}
-                    </div>
+                    <ShippingChips shipping={sr.shipping} />
                   </div>
                 )}
               </div>
@@ -479,16 +472,7 @@ function Results({ response }: { response: AnalyzeResponse }) {
                   {r.shipping?.length > 0 && (
                     <div className="mt-3 pt-3 border-t border-gray-100">
                       <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Shipping Methods</p>
-                      <div className="flex flex-wrap gap-2">
-                        {r.shipping.map(sm => (
-                          <div key={sm.method_id} className="inline-flex items-center gap-1.5 rounded px-2.5 py-1.5 border text-xs bg-indigo-50 border-indigo-200">
-                            <span className="font-semibold text-gray-800">{sm.method_name}</span>
-                            <span className="text-gray-400">·</span>
-                            <span className={`font-medium ${sm.dim_applied ? 'text-amber-600' : 'text-indigo-700'}`}>{sm.billed_weight} lbs</span>
-                            {sm.dim_applied && <span className="bg-amber-100 text-amber-700 font-semibold px-1 rounded text-[10px]">DIM</span>}
-                          </div>
-                        ))}
-                      </div>
+                      <ShippingChips shipping={r.shipping} />
                     </div>
                   )}
 

@@ -50,6 +50,15 @@ export interface ShippingMatch {
   method_name: string;
   billed_weight: number;
   dim_applied: boolean;
+  rate: number | null;
+  rate_break: number | null;
+}
+
+export interface ShippingRate {
+  id: number;
+  method_id: number;
+  max_weight: number;
+  rate: number;
 }
 
 export interface StandaloneResult {
@@ -168,6 +177,13 @@ export interface TypeBreakdownEntry {
   avg_utilization: number | null;
 }
 
+export interface CheapestShipping {
+  method_id: number;
+  method_name: string;
+  billed_weight: number;
+  rate: number;
+}
+
 export interface ProductResultEntry {
   id: string;
   name: string;
@@ -185,6 +201,9 @@ export interface ProductResultEntry {
   dim_weight: number | null;
   dim_exposed: boolean;
   compatible_count: number;
+  billed_weight: number | null;
+  shipped_dims: { height: number; width: number; length: number } | null;
+  cheapest_shipping: CheapestShipping | null;
 }
 
 export interface CarrierSkuProduct {
@@ -226,6 +245,146 @@ export type ReportState =
   | { status: 'running'; started_at?: string }
   | { status: 'error'; error: string }
   | { status: 'ready'; computed_at: string; data: PackagingAnalysisReport };
+
+// ── Users & auth ──────────────────────────────────────────────────────────────
+
+export type Module = 'products' | 'packaging' | 'shipping' | 'configurator' | 'reports' | 'pricing' | 'settings';
+export type PrivilegeLevel = 'none' | 'view' | 'edit';
+export type ModulePrivileges = Record<Module, PrivilegeLevel>;
+
+export interface AuthUser {
+  id: number;
+  email: string;
+  name: string | null;
+  is_admin: number;
+  privileges: ModulePrivileges;
+}
+
+export interface UserAccount {
+  id: number;
+  email: string;
+  name: string | null;
+  is_admin: number;
+  active: number;
+  has_password: boolean;
+  has_salsify_key: boolean;
+  created_at: string;
+  privileges: ModulePrivileges;
+}
+
+export interface SmtpConfig {
+  smtp_host: string;
+  smtp_port: string;
+  smtp_secure: string;
+  smtp_user: string;
+  smtp_from: string;
+  app_base_url: string;
+  has_password: boolean;
+}
+
+// ── Salsify ───────────────────────────────────────────────────────────────────
+
+export interface SalsifyFieldMapping {
+  id: string;
+  name: string;
+  height: string;
+  width: string;
+  length: string;
+  weight: string;
+  upc: string;
+  foldable: string;
+  ships_in_own_packaging: string;
+  product_cost: string;
+  retail_price: string;
+}
+
+export interface SalsifySettings {
+  salsify_enabled: boolean;
+  salsify_org_id: string;
+  salsify_channel_url: string;
+  salsify_attr_length: string;
+  salsify_attr_width: string;
+  salsify_attr_height: string;
+  salsify_attr_weight: string;
+  field_mapping: SalsifyFieldMapping;
+}
+
+export interface SalsifyPullResult {
+  total: number;
+  created: number;
+  updated: number;
+  pricing_updated: number;
+  skipped: number;
+  errors: string[];
+}
+
+export interface SalsifyPushResult {
+  total: number;
+  pushed: number;
+  failed: number;
+  skipped: number;
+  errors: string[];
+}
+
+export type SalsifyJobState<T> =
+  | { status: 'pending' }
+  | { status: 'running'; started_at?: string }
+  | { status: 'error'; error: string }
+  | { status: 'ready'; computed_at: string; data: T | { progress: number; total: number } | null };
+
+// ── Pricing / ROI ─────────────────────────────────────────────────────────────
+
+export interface ChannelAllocation {
+  id?: number;
+  channel_id?: number;
+  label: string;
+  alloc_type: 'fixed' | 'percent';
+  value: number;
+  sort_order?: number;
+}
+
+export interface SalesChannel {
+  id: number;
+  name: string;
+  shipping_terms: 'prepaid' | 'collect';
+  payment_terms: string | null;
+  transaction_fee: number;
+  min_margin_pct: number;
+  notes: string | null;
+  active: number;
+  allocations: ChannelAllocation[];
+}
+
+export interface ProductPricingEntry {
+  product_id: string;
+  name: string;
+  product_cost: number | null;
+  retail_price: number | null;
+}
+
+export type RoiStatus = 'red' | 'yellow' | 'ok' | 'no_data' | 'no_rate';
+
+export interface RoiRow {
+  product_id: string;
+  name: string;
+  channel_id: number;
+  channel_name: string;
+  retail_price: number | null;
+  product_cost: number | null;
+  shipping_cost: number | null;
+  allocations_total: number | null;
+  fees_total: number | null;
+  margin: number | null;
+  margin_pct: number | null;
+  status: RoiStatus;
+}
+
+export interface RoiResponse {
+  computed_at: string | null;
+  channels: { id: number; name: string; shipping_terms: 'prepaid' | 'collect'; min_margin_pct: number }[];
+  summary: Record<RoiStatus, number>;
+  rows: RoiRow[];
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 

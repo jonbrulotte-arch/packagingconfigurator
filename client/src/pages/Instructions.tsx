@@ -9,6 +9,7 @@ const TOC_ITEMS = [
   { id: 'manual-configurator-tab', label: 'Manual Configurator' },
   { id: 'bulk-configurator-tab', label: 'Bulk Configurator' },
   { id: 'reports-tab', label: 'Reports' },
+  { id: 'pricing-tab', label: 'Pricing / ROI' },
   { id: 'how-results-are-calculated', label: 'How Results Work' },
   { id: 'settings-reference', label: 'Settings' },
   { id: 'admin-security', label: 'Admin & Security' },
@@ -364,6 +365,27 @@ Every item in the shipment must fit within those reduced dimensions.`}
             weight range naturally aligns with when LTL kicks in.
           </p>
         </SubSection>
+        <SubSection title="Rate cards">
+          <p>
+            Every shipping method can carry a <strong>rate card</strong> — a single-zone table of
+            by-weight price breaks. Click <strong>$ Rates</strong> on a method row to view or edit
+            its card. Each break reads "up to X lbs → $rate": the configurator takes the
+            carrier-specific billed weight and finds the first break that covers it.
+          </p>
+          <Callout color="blue" label="How rates appear in results">
+            <ul className="mt-1 space-y-1 list-disc list-inside text-sm">
+              <li>Each shipping method chip on a Configurator result shows its rate for the billed weight.</li>
+              <li>The <strong>cheapest</strong> rated method on each packaging option is highlighted green as <strong>Recommended</strong>.</li>
+              <li>If the billed weight exceeds the largest break — or the method has no card — the chip shows "no rate".</li>
+            </ul>
+          </Callout>
+          <p className="mt-2">
+            Use the <strong>Rates Template / Import / Export</strong> buttons at the top of the
+            Shipping Methods page to manage rate cards in Excel — one row per break with columns{' '}
+            <code>Method Name</code>, <code>Up To Weight (lbs)</code>, <code>Rate ($)</code>.
+            Importing replaces the entire rate card of every method named in the file.
+          </p>
+        </SubSection>
         <SubSection title="Sort order">
           <p>
             The <strong>Sort Order</strong> field controls the display order of methods on result
@@ -628,6 +650,61 @@ Every item in the shipment must fit within those reduced dimensions.`}
         </SubSection>
       </Section>
 
+      {/* ── PRICING / ROI ── */}
+      <Section id="pricing-tab" title="Pricing / ROI Analysis">
+        <p className="text-sm text-gray-700">
+          An early-warning system that monitors calculated shipping cost, product cost, and retail
+          price against your sales-channel economics. Access is restricted — signed-in users need
+          <strong> View</strong> or <strong>Edit</strong> privilege on the Pricing module (see{' '}
+          <NavRef to="Settings" /> → User Accounts).
+        </p>
+
+        <SubSection title="Sales Channels">
+          <p>
+            Each channel models a place you sell — Amazon, your own website, a wholesale account, etc.
+            Configure per channel:
+          </p>
+          <ul className="mt-2 space-y-1 text-sm list-disc list-inside text-gray-700">
+            <li><strong>Shipping Terms</strong> — <em>Prepaid</em> means you absorb the shipping cost (it's subtracted from margin); <em>Collect</em> means the buyer pays it separately (no shipping deduction).</li>
+            <li><strong>Payment Terms</strong> — informational text (e.g. "Net 30").</li>
+            <li><strong>Per-Transaction Fee</strong> — a flat dollar fee charged on every sale.</li>
+            <li><strong>Cost Allocations</strong> — any number of additional line items, each either a fixed dollar amount or a percentage of the retail price (e.g. a 15% referral fee, a $3.50 fulfillment fee).</li>
+            <li><strong>Minimum Margin %</strong> — the channel's target margin. Below this triggers a yellow warning.</li>
+          </ul>
+        </SubSection>
+
+        <SubSection title="Product Pricing">
+          <p>
+            Set <strong>Product Cost</strong> and <strong>Retail Price</strong> per product — manually,
+            via Excel import/export, or automatically from a{' '}
+            <a href="#settings-reference" className="text-brand-600 hover:underline">Salsify pull</a>.
+          </p>
+        </SubSection>
+
+        <SubSection title="Margin calculation & warnings">
+          <p>For every product × channel combination:</p>
+          <Code>
+            {`shipping_cost = cheapest rated shipping method for that product's best-fit packaging
+fees = transaction_fee + Σ(fixed allocations) + retail_price × Σ(percent allocations)/100
+costs = product_cost + fees + (shipping_cost if Prepaid else 0)
+margin = retail_price − costs
+margin_% = margin / retail_price × 100`}
+          </Code>
+          <Callout color="amber" label="Status thresholds">
+            <ul className="mt-1 space-y-1 list-disc list-inside text-sm">
+              <li><strong className="text-red-700">Red — Not Profitable:</strong> margin ≤ $0.</li>
+              <li><strong className="text-amber-700">Yellow — Below Threshold:</strong> margin is positive but margin % is below the channel's Minimum Margin %.</li>
+              <li><strong className="text-green-700">Green — Healthy:</strong> margin % meets or exceeds the threshold.</li>
+              <li><strong>No Pricing Data / No Shipping Rate:</strong> shown when cost, retail price, or a matching rate card is missing — these products need attention before they can be evaluated.</li>
+            </ul>
+          </Callout>
+          <p className="mt-2 text-sm text-gray-700">
+            The shipping cost comes from the cached Packaging Analysis report — run or refresh it
+            from the <NavRef to="Reports" /> page to pick up new products or rate changes.
+          </p>
+        </SubSection>
+      </Section>
+
       {/* ── ALGORITHM ── */}
       <Section id="how-results-are-calculated" title="How Results Are Calculated">
 
@@ -817,23 +894,81 @@ product sorted: [9,  6, 4]
             ))}
           </tbody>
         </table>
+        <SubSection title="Salsify Integration">
+          <p>
+            The optional <strong>Salsify Integration</strong> section (admin only) syncs the product
+            catalog with your Salsify PIM. Toggle <strong>Enable Salsify sync</strong> to activate it.
+          </p>
+          <ul className="mt-2 space-y-1 text-sm text-gray-700 list-disc list-inside">
+            <li>
+              <strong>Pull Products</strong> — fetches the configured <strong>Channel Endpoint URL</strong>{' '}
+              (a JSON export from a Salsify channel) and upserts the Products catalog, including UPC,
+              foldable and ships-in-own-packaging flags, plus <strong>Product Cost</strong> and{' '}
+              <strong>Retail Price</strong> used by the Pricing / ROI module. Products never get deleted
+              by a pull; rows with missing data are skipped and reported.
+            </li>
+            <li>
+              <strong>Push Calculated Shipping Data</strong> — writes each product's best-fit shipped
+              dimensions and billed weight (from the latest Packaging Analysis report) to four Salsify
+              attributes, by default <em>Calculated Shipping Length/Width/Height (Inches)</em> and{' '}
+              <em>Calculated Shipping Weight (Pounds)</em>. The attribute IDs are customizable.
+            </li>
+            <li>
+              <strong>Field mapping</strong> — if your channel JSON uses different attribute names,
+              remap every incoming field under "channel JSON field mapping".
+            </li>
+            <li>
+              <strong>API keys are personal</strong> — Salsify issues keys per user, so pull/push run
+              with the signed-in user's key from <strong>Settings → My Profile</strong>. The Org ID is a
+              global admin setting.
+            </li>
+          </ul>
+        </SubSection>
       </Section>
 
       {/* ── ADMIN & SECURITY ── */}
       <Section id="admin-security" title="Admin &amp; Security">
-        <SubSection title="Admin password">
+        <SubSection title="User accounts">
           <p>
-            The Products, Packaging, Shipping, and Settings pages can be protected with a password.
-            Set one from the <NavRef to="Settings" /> page under <strong>Admin Password</strong>.
-            Once set, a <strong>Lock</strong> button appears in the navigation — click it to lock
-            the session. The Configurator, Bulk Configurator, and Instructions pages are always
-            accessible without a password.
+            The app supports individual user accounts that sign in with <strong>email + password</strong>.
+            Administrators manage accounts from the <NavRef to="Settings" /> page under{' '}
+            <strong>User Accounts</strong>: add users, send email invitations, set or reset a user's
+            password, deactivate, or delete. Each non-admin user gets per-module access privileges
+            (<strong>None / View / Edit</strong>) for Products, Packaging, Shipping, Configurator,
+            Reports, Pricing, and Settings. Admin users have full access to everything.
+          </p>
+          <Callout color="blue" label="How access works">
+            <ul className="mt-1 space-y-1 list-disc list-inside text-sm">
+              <li>Anonymous visitors keep <strong>read-only</strong> access to the catalog pages — accounts control who can <strong>edit</strong>.</li>
+              <li>Invitations and self-service password recovery are sent by email and require SMTP to be configured (Settings → Email).</li>
+              <li>Each user can store a personal <strong>Salsify API key</strong> in My Profile.</li>
+              <li>Sessions last 24 hours and survive server restarts.</li>
+            </ul>
+          </Callout>
+        </SubSection>
+        <SubSection title="Legacy admin password">
+          <p>
+            The original shared admin password still works as a break-glass, full-access login —
+            choose <strong>"Use admin password instead"</strong> on the sign-in dialog. Set or change
+            it from the <NavRef to="Settings" /> page under <strong>Legacy Admin Password</strong>.
+            Once any password protection is active, a <strong>Lock / Sign Out</strong> button appears in the navigation.
+          </p>
+        </SubSection>
+        <SubSection title="Email (SMTP)">
+          <p>
+            Configure an SMTP server under <strong>Settings → Email (SMTP)</strong> to enable
+            account invitations and password-recovery emails: host, port, TLS, credentials, the From
+            address, and the <strong>App Base URL</strong> (used to build the links inside those emails —
+            e.g. <code>http://192.168.1.10:3002</code>). Use <strong>Send Test</strong> to verify the
+            configuration before relying on it.
           </p>
         </SubSection>
         <SubSection title="Password recovery">
           <p>
-            If you forget the admin password, a one-time recovery token is printed to the server
-            console every time the server starts:
+            Users can reset their own password with the <strong>Forgot password?</strong> link on the
+            sign-in dialog (requires SMTP). An admin can also set any user's password directly from
+            the User Accounts section. If you forget the <strong>legacy admin</strong> password, a
+            one-time recovery token is printed to the server console every time the server starts:
           </p>
           <Code>
             {`[Auth] Emergency recovery token: a3f9...
