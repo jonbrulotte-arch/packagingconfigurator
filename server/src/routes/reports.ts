@@ -33,8 +33,8 @@ function productFitsInBox(product: Product, box: Packaging, clearance = 0): bool
     const flatD1 = Math.max(box.width, box.length);
     const flatD2 = Math.min(box.width, box.length);
     return box.max_height! >= pd3 + clearance &&
-      (flatD1 - pd3) >= pd1 + clearance &&
-      (flatD2 - pd3) >= pd2 + clearance;
+      flatD1 >= pd1 + clearance &&
+      flatD2 >= pd2 + clearance;
   }
   const [bd1, bd2, bd3] = effectiveBoxDims(box);
   return bd1 >= pd1 + clearance && bd2 >= pd2 + clearance && bd3 >= pd3 + clearance;
@@ -383,7 +383,8 @@ export async function computePackagingAnalysis(): Promise<void> {
           const pkgWt = pkg.packaging_weight ?? 0;
           const totalActual = product.weight + pkgWt;
           const dimWt = roundWeight(dimVolume / dimDivisor);
-          const volUtil = Math.round((productVol / boxVol) * 1000) / 10;
+          const packedVol = (pkg.max_height != null) ? dimVolume : boxVol;
+          const volUtil = Math.round((productVol / packedVol) * 1000) / 10;
           const shipping = computeShipping(dimVolume, totalActual, dimDivisor, parcelMethods, rates);
 
           fitResults.push({

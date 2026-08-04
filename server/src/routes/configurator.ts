@@ -47,13 +47,11 @@ function isFlexibleMailer(box: Packaging): boolean {
 function productFitsInBox(product: Product, box: Packaging, clearance = 0): boolean {
   const [pd1, pd2, pd3] = sortedDims(product.height, product.width, product.length);
   if (isFlexibleMailer(box)) {
-    // Envelope physics: inserting a product of thickness pd3 into a bubble/poly mailer
-    // causes the flat dimensions to shrink by pd3 as the material wraps around both faces.
     const flatD1 = Math.max(box.width, box.length);
     const flatD2 = Math.min(box.width, box.length);
     return box.max_height! >= pd3 + clearance &&
-      (flatD1 - pd3) >= pd1 + clearance &&
-      (flatD2 - pd3) >= pd2 + clearance;
+      flatD1 >= pd1 + clearance &&
+      flatD2 >= pd2 + clearance;
   }
   const [bd1, bd2, bd3] = effectiveBoxDims(box);
   return bd1 >= pd1 + clearance && bd2 >= pd2 + clearance && bd3 >= pd3 + clearance;
@@ -72,14 +70,12 @@ function allItemsFitInBox(items: ResolvedItem[], box: Packaging, packEfficiency:
       return sum + thickness * i.quantity;
     }, 0);
     if (totalThickness + clearance > box.max_height) return false;
-    // For flexible mailers: the full stacked thickness shrinks both flat dimensions.
-    // Check that every product still fits within the corrected available flat area.
     if (isFlexibleMailer(box)) {
       const flatD1 = Math.max(box.width, box.length);
       const flatD2 = Math.min(box.width, box.length);
       return items.every(item => {
         const [pd1, pd2] = sortedDims(item.product.height, item.product.width, item.product.length);
-        return pd1 + clearance <= flatD1 - totalThickness && pd2 + clearance <= flatD2 - totalThickness;
+        return pd1 + clearance <= flatD1 && pd2 + clearance <= flatD2;
       });
     }
     return true;
@@ -246,7 +242,8 @@ function analyzeShipment(
     const pkgWeight = pkg.packaging_weight ?? 0;
     const actualWeight = totalActualWeight + pkgWeight;
     const billedWeight = roundWeight(Math.max(actualWeight, dimWeight));
-    const volumeUtilization = (totalProductVolume / boxVolume) * 100;
+    const packedVolume = (pkg.max_height != null) ? dimVolume : boxVolume;
+    const volumeUtilization = (totalProductVolume / packedVolume) * 100;
     const shipping = computeShipping(dimVolume, actualWeight, dimDivisor, shippingMethods, rates);
     // Flag only when there is no DIM-free carrier option available.
     // If at least one method bills by actual weight, the user can avoid DIM charges.
