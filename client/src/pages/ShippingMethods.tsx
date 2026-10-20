@@ -471,7 +471,7 @@ export default function ShippingMethodsPage() {
   if (loading) return <div className="text-gray-400 py-8">Loading…</div>;
 
   return (
-    <div className="max-w-3xl space-y-6">
+    <div className="space-y-6">
       <div className="mb-6 flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Shipping Methods</h1>

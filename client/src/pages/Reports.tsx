@@ -596,7 +596,7 @@ export default function Reports() {
     : [];
 
   return (
-    <div className="max-w-5xl space-y-6">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-6">
         <div>
@@ -675,7 +675,7 @@ export default function Reports() {
       )}
 
       {!loading && state.status === 'error' && (
-        <div className="bg-white rounded-lg shadow p-8">
+        <div className="rounded-lg border border-gray-200 bg-white shadow-sm p-8">
           <p className="text-red-600 font-medium mb-1">Analysis failed</p>
           <p className="text-sm text-gray-500">{state.error}</p>
           <button onClick={handleRun} className="mt-4 px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700">
@@ -720,7 +720,7 @@ export default function Reports() {
           </div>
 
           {/* Packaging Utilization Table */}
-          <div className="bg-white rounded-lg shadow overflow-hidden">
+          <div className="rounded-lg border border-gray-200 bg-white shadow-sm overflow-hidden">
             <div className="px-5 py-4 border-b border-gray-100">
               <h2 className="text-base font-semibold text-gray-900">Packaging Utilization</h2>
               <p className="text-xs text-gray-500 mt-0.5">
@@ -800,7 +800,7 @@ export default function Reports() {
           {/* Type Breakdown + DIM by Carrier — side by side */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Packaging Type Breakdown */}
-            <div className="bg-white rounded-lg shadow overflow-hidden">
+            <div className="rounded-lg border border-gray-200 bg-white shadow-sm overflow-hidden">
               <div className="px-5 py-4 border-b border-gray-100">
                 <h2 className="text-base font-semibold text-gray-900">By Packaging Type</h2>
                 <p className="text-xs text-gray-500 mt-0.5">Click a type to view its SKU report.</p>
@@ -838,7 +838,7 @@ export default function Reports() {
             </div>
 
             {/* DIM Exposure by Carrier */}
-            <div className="bg-white rounded-lg shadow overflow-hidden">
+            <div className="rounded-lg border border-gray-200 bg-white shadow-sm overflow-hidden">
               <div className="px-5 py-4 border-b border-gray-100">
                 <h2 className="text-base font-semibold text-gray-900">DIM Exposure by Carrier</h2>
                 <p className="text-xs text-gray-500 mt-0.5">
@@ -896,7 +896,7 @@ export default function Reports() {
               <h2 className="text-base font-semibold text-gray-900">Coverage Gaps</h2>
 
               {report.no_packaging_count > 0 && (
-                <div className="bg-white rounded-lg shadow overflow-hidden">
+                <div className="rounded-lg border border-gray-200 bg-white shadow-sm overflow-hidden">
                   <button
                     onClick={() => setShowNoFit(v => !v)}
                     className="w-full px-5 py-4 flex items-center justify-between border-b border-gray-100 hover:bg-gray-50"
@@ -950,7 +950,7 @@ export default function Reports() {
               )}
 
               {report.loose_only_count > 0 && (
-                <div className="bg-white rounded-lg shadow overflow-hidden">
+                <div className="rounded-lg border border-gray-200 bg-white shadow-sm overflow-hidden">
                   <button
                     onClick={() => setShowLooseOnly(v => !v)}
                     className="w-full px-5 py-4 flex items-center justify-between border-b border-gray-100 hover:bg-gray-50"
@@ -1003,7 +1003,7 @@ export default function Reports() {
                 </div>
               )}
               {report.dim_exposure_count > 0 && (
-                <div className="bg-white rounded-lg shadow overflow-hidden">
+                <div className="rounded-lg border border-gray-200 bg-white shadow-sm overflow-hidden">
                   <button
                     onClick={() => setShowDimExposed(v => !v)}
                     className="w-full px-5 py-4 flex items-center justify-between border-b border-gray-100 hover:bg-gray-50"
