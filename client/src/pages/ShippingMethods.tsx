@@ -1,6 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { ShippingMethod } from '../types';
-import { getShippingMethods, createShippingMethod, updateShippingMethod, deleteShippingMethod } from '../api';
+import {
+  getShippingMethods, createShippingMethod, updateShippingMethod, deleteShippingMethod,
+  getMethodRates, updateMethodRates, importShippingRates, exportShippingRates, downloadRatesTemplate,
+} from '../api';
 import { useAuth } from '../contexts/AuthContext';
 
 const EMPTY: Omit<ShippingMethod, 'id'> = {
@@ -179,6 +182,118 @@ function MethodForm({
   );
 }
 
+interface RateRow {
+  max_weight: string;
+  rate: string;
+}
+
+function RateCardPanel({ methodId, canEdit }: { methodId: number; canEdit: boolean }) {
+  const [rows, setRows] = useState<RateRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState('');
+  const [err, setErr] = useState('');
+
+  useEffect(() => {
+    getMethodRates(methodId)
+      .then(rates => setRows(rates.map(r => ({ max_weight: String(r.max_weight), rate: String(r.rate) }))))
+      .catch(() => setErr('Failed to load rate card'))
+      .finally(() => setLoading(false));
+  }, [methodId]);
+
+  const update = (i: number, field: keyof RateRow, value: string) =>
+    setRows(rs => rs.map((r, idx) => (idx === i ? { ...r, [field]: value } : r)));
+
+  const addRow = () => setRows(rs => [...rs, { max_weight: '', rate: '' }]);
+  const removeRow = (i: number) => setRows(rs => rs.filter((_, idx) => idx !== i));
+
+  const save = async () => {
+    setMsg(''); setErr('');
+    const cleaned: { max_weight: number; rate: number }[] = [];
+    const seen = new Set<number>();
+    for (const r of rows) {
+      if (r.max_weight === '' && r.rate === '') continue; // skip blank rows
+      const maxWeight = Number(r.max_weight);
+      const rate = Number(r.rate);
+      if (isNaN(maxWeight) || maxWeight <= 0) { setErr('Each break needs a weight greater than 0'); return; }
+      if (isNaN(rate) || rate < 0) { setErr('Each break needs a rate of 0 or more'); return; }
+      if (seen.has(maxWeight)) { setErr(`Duplicate weight break: ${maxWeight} lbs`); return; }
+      seen.add(maxWeight);
+      cleaned.push({ max_weight: maxWeight, rate });
+    }
+    cleaned.sort((a, b) => a.max_weight - b.max_weight);
+    setSaving(true);
+    try {
+      const saved = await updateMethodRates(methodId, cleaned);
+      setRows(saved.map(r => ({ max_weight: String(r.max_weight), rate: String(r.rate) })));
+      setMsg('Rate card saved.');
+      setTimeout(() => setMsg(''), 2500);
+    } catch (e: unknown) {
+      setErr(e instanceof Error ? e.message : 'Save failed');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) return <div className="mt-3 pt-3 border-t border-gray-100 text-xs text-gray-400">Loading rate card…</div>;
+
+  return (
+    <div className="mt-3 pt-3 border-t border-gray-100">
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-xs font-semibold text-gray-500 uppercase">Rate Card — single zone, by billed weight</p>
+        {msg && <span className="text-xs text-green-700">{msg}</span>}
+      </div>
+      {err && <p className="text-xs text-red-600 mb-2">{err}</p>}
+
+      {rows.length === 0 && !canEdit ? (
+        <p className="text-xs text-gray-400">No rates configured for this method.</p>
+      ) : (
+        <div className="space-y-1.5">
+          <div className="grid grid-cols-[130px_110px_32px] gap-2 text-[11px] font-medium text-gray-400 uppercase tracking-wide px-1">
+            <span>Up to (lbs)</span>
+            <span>Rate ($)</span>
+            <span />
+          </div>
+          {rows.map((r, i) => (
+            <div key={i} className="grid grid-cols-[130px_110px_32px] gap-2 items-center">
+              <input
+                type="number" min="0" step="any" value={r.max_weight}
+                onChange={e => update(i, 'max_weight', e.target.value)}
+                disabled={!canEdit}
+                className="border border-gray-300 rounded px-2 py-1 text-sm disabled:bg-gray-50 disabled:text-gray-500"
+              />
+              <input
+                type="number" min="0" step="0.01" value={r.rate}
+                onChange={e => update(i, 'rate', e.target.value)}
+                disabled={!canEdit}
+                className="border border-gray-300 rounded px-2 py-1 text-sm disabled:bg-gray-50 disabled:text-gray-500"
+              />
+              {canEdit && (
+                <button onClick={() => removeRow(i)} title="Remove break"
+                  className="flex items-center justify-center h-7 w-7 rounded text-gray-400 hover:text-red-500 hover:bg-red-50">
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {canEdit && (
+        <div className="flex items-center gap-3 mt-2">
+          <button onClick={addRow} className="text-xs text-brand-600 hover:text-brand-800">+ Add break</button>
+          <button onClick={save} disabled={saving}
+            className="px-3 py-1 text-xs font-medium bg-brand-600 text-white rounded hover:bg-brand-700 disabled:opacity-50">
+            {saving ? 'Saving…' : 'Save Rates'}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function MethodRow({
   method,
   onEdit,
@@ -195,6 +310,7 @@ function MethodRow({
   const weightRange = method.max_weight != null
     ? `${method.min_weight} – ${method.max_weight} lbs`
     : `${method.min_weight}+ lbs`;
+  const [showRates, setShowRates] = useState(false);
 
   return (
     <div className={`bg-white rounded-lg shadow border-l-4 ${method.active ? 'border-l-green-400' : 'border-l-gray-200'} px-5 py-3`}>
@@ -231,6 +347,16 @@ function MethodRow({
             {method.notes && (
               <span className="text-xs text-gray-400 truncate max-w-xs">{method.notes}</span>
             )}
+            <button
+              onClick={() => setShowRates(s => !s)}
+              className={`text-xs px-2 py-0.5 rounded border font-medium transition-colors ${
+                showRates
+                  ? 'bg-brand-600 text-white border-brand-600'
+                  : 'bg-gray-50 text-gray-600 border-gray-300 hover:bg-gray-100'
+              }`}
+            >
+              {showRates ? 'Hide Rates' : '$ Rates'}
+            </button>
           </div>
         </div>
 
@@ -264,6 +390,8 @@ function MethodRow({
           </div>
         )}
       </div>
+
+      {showRates && <RateCardPanel methodId={method.id} canEdit={canEdit} />}
     </div>
   );
 }
@@ -277,6 +405,25 @@ export default function ShippingMethodsPage() {
   const [editing, setEditing] = useState<ShippingMethod | null>(null);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
+  const [ratesMsg, setRatesMsg] = useState('');
+  const [ratesErrors, setRatesErrors] = useState<string[]>([]);
+  const ratesFileRef = useRef<HTMLInputElement>(null);
+
+  const handleRatesImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setRatesMsg('');
+    setRatesErrors([]);
+    try {
+      const result = await importShippingRates(file);
+      setRatesMsg(`Imported ${result.imported} rate break${result.imported !== 1 ? 's' : ''} across ${result.methods_updated} method${result.methods_updated !== 1 ? 's' : ''}.`);
+      if (result.errors.length > 0) setRatesErrors(result.errors);
+    } catch (err: unknown) {
+      setRatesErrors([err instanceof Error ? err.message : 'Import failed']);
+    } finally {
+      if (ratesFileRef.current) ratesFileRef.current.value = '';
+    }
+  };
 
   useEffect(() => {
     getShippingMethods()
@@ -347,6 +494,40 @@ export default function ShippingMethodsPage() {
         )}
       </div>
 
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <button
+          onClick={downloadRatesTemplate}
+          className="px-3 py-1.5 text-xs border border-gray-300 rounded hover:bg-gray-50 text-gray-600"
+        >
+          Rates Template
+        </button>
+        <button
+          onClick={exportShippingRates}
+          className="px-3 py-1.5 text-xs border border-gray-300 rounded hover:bg-gray-50 text-gray-600"
+        >
+          Export Rates
+        </button>
+        {authenticated && (
+          <label className="cursor-pointer px-3 py-1.5 text-xs border border-gray-300 rounded hover:bg-gray-50 text-gray-600">
+            Import Rates
+            <input ref={ratesFileRef} type="file" accept=".xlsx,.xls,.csv" onChange={handleRatesImport} className="hidden" />
+          </label>
+        )}
+        <span className="text-xs text-gray-400">Rate cards: one row per weight break — Method Name, Up To Weight (lbs), Rate ($).</span>
+      </div>
+
+      {ratesMsg && (
+        <div className="mb-4 px-4 py-3 bg-green-50 border border-green-200 rounded text-sm text-green-800">{ratesMsg}</div>
+      )}
+      {ratesErrors.length > 0 && (
+        <div className="mb-4 px-4 py-3 bg-amber-50 border border-amber-200 rounded">
+          <p className="text-xs font-medium text-amber-800 mb-1">Some rate rows were skipped:</p>
+          <ul className="text-xs text-amber-700 space-y-0.5 list-disc list-inside">
+            {ratesErrors.map((e, i) => <li key={i}>{e}</li>)}
+          </ul>
+        </div>
+      )}
+
       {error && <div className="mb-4 px-4 py-3 bg-red-50 border border-red-200 rounded text-sm text-red-800">{error}</div>}
 
       {authenticated && (showForm || editing) && (
@@ -394,6 +575,7 @@ export default function ShippingMethodsPage() {
           <p><strong>DIM Divisor:</strong> Override the global DIM divisor for this carrier. Leave blank to inherit the global setting from the Settings page.</p>
           <p><strong>DIM Volume Threshold:</strong> DIM weight only applies when the package volume exceeds this value. Set to <strong>1728</strong> for USPS (DIM kicks in only when volume &gt; 1 ft³). Leave blank for carriers that always apply DIM (UPS, FedEx).</p>
           <p><strong>LTL Freight:</strong> Mark a method as LTL to exclude it from DIM calculations entirely. LTL methods are matched by actual shipment weight only and only appear when the total shipment weight exceeds the LTL threshold set in Settings.</p>
+          <p><strong>Rate Card:</strong> Click "$ Rates" on a method to manage its single-zone, by-weight rate card. Each break reads "up to X lbs → $rate"; the configurator looks up the billed weight against these breaks and highlights the cheapest matching method as Recommended. Use Import/Export above to manage rate cards in Excel.</p>
         </div>
       )}
     </div>

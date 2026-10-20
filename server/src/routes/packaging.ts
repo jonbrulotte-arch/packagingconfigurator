@@ -3,7 +3,7 @@ import multer from 'multer';
 import * as XLSX from 'xlsx';
 import db from '../db';
 import { Packaging } from '../types';
-import { requireAuth } from './auth';
+import { requireEdit } from './auth';
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
@@ -78,7 +78,7 @@ router.get('/export', (_req: Request, res: Response) => {
 
 // ── Import ────────────────────────────────────────────────────────────────────
 
-router.post('/import', requireAuth, upload.single('file'), (req: Request, res: Response) => {
+router.post('/import', requireEdit('packaging'), upload.single('file'), (req: Request, res: Response) => {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
 
   const wb = XLSX.read(req.file.buffer, { type: 'buffer' });
@@ -150,7 +150,7 @@ router.get('/:id', (req: Request, res: Response) => {
   res.json(pkg);
 });
 
-router.post('/', requireAuth, (req: Request, res: Response) => {
+router.post('/', requireEdit('packaging'), (req: Request, res: Response) => {
   const { name, type, height, width, length, max_weight, max_height, packaging_weight, notes, active } = req.body as Packaging;
   if (!name || !type || height == null || width == null || length == null) {
     return res.status(400).json({ error: 'Missing required fields' });
@@ -172,7 +172,7 @@ router.post('/', requireAuth, (req: Request, res: Response) => {
   res.status(201).json(db.prepare('SELECT * FROM packaging WHERE id = ?').get(result.lastInsertRowid));
 });
 
-router.put('/:id', requireAuth, (req: Request, res: Response) => {
+router.put('/:id', requireEdit('packaging'), (req: Request, res: Response) => {
   const id = Number(req.params.id);
   const existing = db.prepare('SELECT id FROM packaging WHERE id = ?').get(id);
   if (!existing) return res.status(404).json({ error: 'Packaging not found' });
@@ -198,7 +198,7 @@ router.put('/:id', requireAuth, (req: Request, res: Response) => {
   res.json(db.prepare('SELECT * FROM packaging WHERE id = ?').get(id));
 });
 
-router.delete('/:id', requireAuth, (req: Request, res: Response) => {
+router.delete('/:id', requireEdit('packaging'), (req: Request, res: Response) => {
   const id = Number(req.params.id);
   const existing = db.prepare('SELECT id FROM packaging WHERE id = ?').get(id);
   if (!existing) return res.status(404).json({ error: 'Packaging not found' });
@@ -206,7 +206,7 @@ router.delete('/:id', requireAuth, (req: Request, res: Response) => {
   res.json({ success: true });
 });
 
-router.post('/delete-all', requireAuth, (req: Request, res: Response) => {
+router.post('/delete-all', requireEdit('packaging'), (req: Request, res: Response) => {
   const result = db.prepare('DELETE FROM packaging').run();
   res.json({ success: true, deleted: result.changes });
 });

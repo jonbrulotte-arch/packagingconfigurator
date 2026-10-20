@@ -1,29 +1,55 @@
 import { useState, useRef, useEffect } from 'react';
-import { login } from '../api';
+import { login, forgotPassword } from '../api';
 import { useAuth } from '../contexts/AuthContext';
+
+type Mode = 'user' | 'legacy' | 'forgot';
 
 export default function LoginModal() {
   const { refresh } = useAuth();
+  const [mode, setMode] = useState<Mode>('user');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [info, setInfo] = useState('');
   const [loading, setLoading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => { inputRef.current?.focus(); }, []);
+  useEffect(() => { inputRef.current?.focus(); }, [mode]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setInfo('');
     setLoading(true);
-    const result = await login(password);
+
+    if (mode === 'forgot') {
+      try {
+        const result = await forgotPassword(email);
+        setInfo(result.message);
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : 'Request failed');
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
+    const result = mode === 'user' ? await login(password, email) : await login(password);
     setLoading(false);
     if (result.success) {
       await refresh();
     } else {
-      setError(result.error ?? 'Incorrect password');
+      setError(result.error ?? 'Sign in failed');
       setPassword('');
       inputRef.current?.focus();
     }
+  };
+
+  const switchMode = (m: Mode) => {
+    setMode(m);
+    setError('');
+    setInfo('');
+    setPassword('');
   };
 
   return (
@@ -36,31 +62,70 @@ export default function LoginModal() {
             </svg>
           </div>
           <div>
-            <h2 className="text-lg font-bold text-gray-900">Admin Access</h2>
-            <p className="text-sm text-gray-500">Enter the admin password to continue.</p>
+            <h2 className="text-lg font-bold text-gray-900">
+              {mode === 'forgot' ? 'Reset Password' : mode === 'legacy' ? 'Admin Access' : 'Sign In'}
+            </h2>
+            <p className="text-sm text-gray-500">
+              {mode === 'forgot'
+                ? "Enter your account email and we'll send a reset link."
+                : mode === 'legacy'
+                ? 'Enter the admin password to continue.'
+                : 'Sign in with your account email and password.'}
+            </p>
           </div>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
+          {(mode === 'user' || mode === 'forgot') && (
             <input
               ref={inputRef}
+              type="email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              placeholder="Email"
+              required
+              className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+            />
+          )}
+          {mode !== 'forgot' && (
+            <input
+              ref={mode === 'legacy' ? inputRef : undefined}
               type="password"
               value={password}
               onChange={e => setPassword(e.target.value)}
               placeholder="Password"
+              required
               className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
             />
-            {error && <p className="mt-1.5 text-sm text-red-600">{error}</p>}
-          </div>
+          )}
+          {error && <p className="text-sm text-red-600">{error}</p>}
+          {info && <p className="text-sm text-green-700">{info}</p>}
           <button
             type="submit"
-            disabled={loading || !password}
+            disabled={loading || (mode !== 'forgot' && !password) || (mode !== 'legacy' && !email)}
             className="w-full px-4 py-2 bg-brand-600 text-white text-sm font-medium rounded hover:bg-brand-700 disabled:opacity-50"
           >
-            {loading ? 'Verifying…' : 'Sign In'}
+            {loading ? 'Working…' : mode === 'forgot' ? 'Send Reset Link' : 'Sign In'}
           </button>
         </form>
+
+        <div className="mt-4 flex flex-col gap-1.5 text-center">
+          {mode === 'user' && (
+            <>
+              <button onClick={() => switchMode('forgot')} className="text-xs text-brand-600 hover:text-brand-800">
+                Forgot password?
+              </button>
+              <button onClick={() => switchMode('legacy')} className="text-xs text-gray-400 hover:text-gray-600">
+                Use admin password instead
+              </button>
+            </>
+          )}
+          {mode !== 'user' && (
+            <button onClick={() => switchMode('user')} className="text-xs text-brand-600 hover:text-brand-800">
+              ← Back to sign in
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -9,6 +9,7 @@ const TOC_ITEMS = [
   { id: 'products', label: 'Products' },
   { id: 'packaging', label: 'Packaging' },
   { id: 'shipping-methods', label: 'Shipping Methods' },
+  { id: 'pricing', label: 'Pricing / ROI' },
   { id: 'backups', label: 'Backups' },
   { id: 'fit-quality-reference', label: 'Fit Quality' },
   { id: 'error-responses', label: 'Error Responses' },
@@ -107,10 +108,17 @@ export default function ApiDocs() {
       {/* ── AUTH ── */}
       <Section id="auth" title="Auth">
         <p className="text-sm text-gray-600">
-          When an admin password is configured, the Products, Packaging, Shipping, and Settings
-          endpoints are protected. Obtain a session token via <code>POST /auth/login</code> and
-          pass it as <code>X-Session-Token: &lt;token&gt;</code> on subsequent requests.
-          Tokens expire after 24 hours.
+          When an admin password is configured, write endpoints are protected. Authenticate one of
+          three ways: a <strong>user account</strong> (email + password login), the{' '}
+          <strong>legacy admin password</strong>, or an <strong>API key</strong> sent as{' '}
+          <code>X-API-Key: &lt;key&gt;</code> (best for integrations — generate one in Settings).
+          Logins return a session token passed as <code>X-Session-Token: &lt;token&gt;</code>;
+          tokens expire after 24 hours and survive server restarts. User accounts carry per-module
+          privileges (none/view/edit); legacy-password sessions and API keys have full access.
+          User management endpoints live under <code>/users</code> (admin session required):
+          create/update/delete users, send invitations, set passwords, plus public{' '}
+          <code>/users/forgot-password</code>, <code>/users/reset-password</code>, and{' '}
+          <code>/users/accept-invite</code> flows and admin SMTP configuration under <code>/users/smtp</code>.
         </p>
 
         <Endpoint
@@ -123,12 +131,20 @@ export default function ApiDocs() {
         <Endpoint
           method="POST"
           path="/auth/login"
-          description="Log in with the admin password. Returns a session token on success."
+          description="Log in. With an email field this is a user-account login; without, it's the legacy admin password. Returns a session token on success."
           request={{
             headers: 'Content-Type: application/json',
-            body: JSON.stringify({ password: 'yourpassword' }),
+            body: JSON.stringify({ email: 'you@example.com', password: 'yourpassword' }),
           }}
           response={JSON.stringify({ token: 'abc123...', success: true }, null, 2)}
+        />
+
+        <Endpoint
+          method="GET"
+          path="/auth/verify"
+          description="Validate the current session. For user-account sessions the response includes the user and their per-module privileges; legacy/API-key sessions return user: null (full access)."
+          request={{ headers: 'X-Session-Token: abc123...' }}
+          response={JSON.stringify({ authenticated: true, user: { id: 1, email: 'you@example.com', name: 'You', is_admin: 0, privileges: { products: 'edit', packaging: 'view', shipping: 'view', configurator: 'view', reports: 'view', pricing: 'none', settings: 'none' } } }, null, 2)}
         />
 
         <Endpoint
@@ -438,8 +454,160 @@ export default function ApiDocs() {
         <Endpoint
           method="DELETE"
           path="/shipping/:id"
-          description="Delete a shipping method by ID."
+          description="Delete a shipping method by ID. Its rate card is deleted with it."
           response={JSON.stringify({ success: true }, null, 2)}
+        />
+
+        <Endpoint
+          method="GET"
+          path="/shipping/:id/rates"
+          description="Return a method's rate card — single-zone weight breaks sorted ascending. Each break reads 'up to max_weight lbs → rate'. Configurator results include the matched rate on every shipping method entry (rate and rate_break fields; null when no card covers the billed weight)."
+          response={JSON.stringify([
+            { id: 1, method_id: 1, max_weight: 1, rate: 8.9 },
+            { id: 2, method_id: 1, max_weight: 5, rate: 11.4 },
+            { id: 3, method_id: 1, max_weight: 10, rate: 15.75 },
+          ], null, 2)}
+        />
+
+        <Endpoint
+          method="PUT"
+          path="/shipping/:id/rates"
+          description="Replace a method's entire rate card. Breaks must have unique weights > 0 and rates >= 0. Returns the saved card."
+          request={{
+            headers: 'Content-Type: application/json',
+            body: JSON.stringify({ rates: [{ max_weight: 1, rate: 8.9 }, { max_weight: 5, rate: 11.4 }] }),
+          }}
+          response={JSON.stringify([
+            { id: 7, method_id: 1, max_weight: 1, rate: 8.9 },
+            { id: 8, method_id: 1, max_weight: 5, rate: 11.4 },
+          ], null, 2)}
+        />
+
+        <Endpoint
+          method="POST"
+          path="/shipping/rates/import"
+          description="Upload an Excel rate card (multipart form, field name 'file'). Columns: Method Name, Up To Weight (lbs), Rate ($). Replaces the entire rate card of every method named in the sheet; unknown methods and invalid rows are reported in errors."
+          response={JSON.stringify({ imported: 12, methods_updated: 3, errors: ['Row 5: unknown method "FedEx Gronud" — skipped'] }, null, 2)}
+        />
+
+        <Endpoint
+          method="GET"
+          path="/shipping/rates/export"
+          description="Download every method's rate card as one Excel sheet (same format the import accepts)."
+          response={'Binary .xlsx attachment'}
+        />
+      </Section>
+
+      {/* ── PRICING / ROI ── */}
+      <Section id="pricing" title="Pricing / ROI">
+        <p className="text-sm text-gray-600">
+          Unlike the other modules, Pricing endpoints are restricted by default — anonymous requests
+          get 401. Reads require <code>view</code> or <code>edit</code> privilege on the{' '}
+          <code>pricing</code> module (or a legacy/API-key/open session); writes require <code>edit</code>.
+          ROI is computed on demand from the cached Packaging Analysis report — run{' '}
+          <code>POST /reports/packaging-analysis/run</code> first if you get a 400.
+        </p>
+
+        <Endpoint
+          method="GET"
+          path="/pricing/channels"
+          description="List all sales channels with their cost allocations."
+          response={JSON.stringify([{
+            id: 1, name: 'Amazon', shipping_terms: 'prepaid', payment_terms: 'Net 14',
+            transaction_fee: 0.3, min_margin_pct: 20, notes: null, active: 1,
+            allocations: [
+              { id: 1, channel_id: 1, label: 'Referral fee', alloc_type: 'percent', value: 15, sort_order: 0 },
+              { id: 2, channel_id: 1, label: 'FBA fee', alloc_type: 'fixed', value: 3.5, sort_order: 1 },
+            ],
+          }], null, 2)}
+        />
+
+        <Endpoint
+          method="POST"
+          path="/pricing/channels"
+          description="Create a sales channel. shipping_terms is 'prepaid' (you pay shipping) or 'collect' (buyer pays). allocations replaces the full list."
+          request={{
+            headers: 'Content-Type: application/json',
+            body: JSON.stringify({
+              name: 'Amazon', shipping_terms: 'prepaid', transaction_fee: 0.3, min_margin_pct: 20,
+              allocations: [{ label: 'Referral fee', alloc_type: 'percent', value: 15 }],
+            }),
+          }}
+          response={JSON.stringify({ id: 1, name: 'Amazon', shipping_terms: 'prepaid', transaction_fee: 0.3, min_margin_pct: 20, active: 1, allocations: [] }, null, 2)}
+        />
+
+        <Endpoint
+          method="PUT"
+          path="/pricing/channels/:id"
+          description="Update a sales channel. allocations is fully replaced."
+          response={JSON.stringify({ success: true }, null, 2)}
+        />
+
+        <Endpoint
+          method="DELETE"
+          path="/pricing/channels/:id"
+          description="Delete a sales channel and its allocations."
+          response={JSON.stringify({ success: true }, null, 2)}
+        />
+
+        <Endpoint
+          method="GET"
+          path="/pricing/product-pricing"
+          description="List every product with its cost/retail price (null if unset)."
+          response={JSON.stringify([{ product_id: 'SKU-001', name: 'Widget A', product_cost: 4.5, retail_price: 12.99 }], null, 2)}
+        />
+
+        <Endpoint
+          method="PUT"
+          path="/pricing/product-pricing/:productId"
+          description="Set a product's cost and/or retail price. Pass null to clear a field."
+          request={{ headers: 'Content-Type: application/json', body: JSON.stringify({ product_cost: 4.5, retail_price: 12.99 }) }}
+          response={JSON.stringify({ product_id: 'SKU-001', product_cost: 4.5, retail_price: 12.99 }, null, 2)}
+        />
+
+        <Endpoint
+          method="POST"
+          path="/pricing/product-pricing/import"
+          description="Upload an Excel file (multipart form, field 'file'). Columns: Part Number, Product Cost ($), Retail Price ($). Unknown SKUs are reported in errors."
+          response={JSON.stringify({ imported: 42, errors: [] }, null, 2)}
+        />
+
+        <Endpoint
+          method="GET"
+          path="/pricing/product-pricing/template"
+          description="Download the product-pricing import template."
+          response={'Binary .xlsx attachment'}
+        />
+
+        <Endpoint
+          method="GET"
+          path="/pricing/product-pricing/export"
+          description="Download every product's current cost/retail price."
+          response={'Binary .xlsx attachment'}
+        />
+
+        <Endpoint
+          method="GET"
+          path="/pricing/roi?channel_id=&status="
+          description="Compute margin for every product × active channel. Optional channel_id and status ('red'|'yellow'|'ok'|'no_data'|'no_rate') filters. shipping_cost comes from the cheapest rated method on the product's best-fit packaging in the cached Packaging Analysis report."
+          response={JSON.stringify({
+            computed_at: '2026-07-14T18:02:41.468Z',
+            channels: [{ id: 1, name: 'Amazon', shipping_terms: 'prepaid', min_margin_pct: 20 }],
+            summary: { red: 1, yellow: 2, ok: 8, no_data: 0, no_rate: 1 },
+            rows: [{
+              product_id: 'SKU-001', name: 'Widget A', channel_id: 1, channel_name: 'Amazon',
+              retail_price: 12.99, product_cost: 3.25, shipping_cost: 4.5, allocations_total: 5.4,
+              fees_total: 5.7, margin: -0.51, margin_pct: -3.9, status: 'red',
+            }],
+          }, null, 2)}
+          note="status: red = margin <= $0. yellow = profitable but margin_pct below the channel's min_margin_pct. ok = at or above threshold. no_data = missing cost or retail price. no_rate = a prepaid channel but no shipping rate is available for that product."
+        />
+
+        <Endpoint
+          method="GET"
+          path="/pricing/roi/export"
+          description="Download the full ROI matrix (every product × every active channel) as one Excel sheet."
+          response={'Binary .xlsx attachment'}
         />
       </Section>
 

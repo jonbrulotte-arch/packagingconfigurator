@@ -69,6 +69,15 @@ export interface ShippingMatch {
   method_name: string;
   billed_weight: number;
   dim_applied: boolean;
+  rate: number | null;       // from the method's rate card at billed_weight; null = no card or over table
+  rate_break: number | null; // the "up to X lbs" break that matched
+}
+
+export interface ShippingRate {
+  id: number;
+  method_id: number;
+  max_weight: number;
+  rate: number;
 }
 
 export interface StandaloneResult {

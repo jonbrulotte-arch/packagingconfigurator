@@ -1,4 +1,4 @@
-import { Product, Packaging, AnalyzeResponse, BulkAnalyzeResponse, BulkShipmentResult, Settings, RequestItem, ShippingMethod, BackupEntry, ReportState, ProductResultEntry, CarrierSkuProduct } from './types';
+import { Product, Packaging, AnalyzeResponse, BulkAnalyzeResponse, BulkShipmentResult, Settings, RequestItem, ShippingMethod, ShippingRate, BackupEntry, ReportState, ProductResultEntry, CarrierSkuProduct, AuthUser, UserAccount, ModulePrivileges, SmtpConfig, SalsifySettings, SalsifyJobState, SalsifyPullResult, SalsifyPushResult, SalesChannel, ProductPricingEntry, RoiResponse } from './types';
 
 const BASE = '/api';
 
@@ -186,6 +186,26 @@ export const updateShippingMethod = (id: number, data: Omit<ShippingMethod, 'id'
 export const deleteShippingMethod = (id: number) =>
   request<{ success: boolean }>(`/shipping/${id}`, { method: 'DELETE' });
 
+// Shipping rate cards
+export const getMethodRates = (methodId: number) =>
+  request<ShippingRate[]>(`/shipping/${methodId}/rates`);
+
+export const updateMethodRates = (methodId: number, rates: { max_weight: number; rate: number }[]) =>
+  request<ShippingRate[]>(`/shipping/${methodId}/rates`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ rates }),
+  });
+
+export const importShippingRates = async (file: File): Promise<{ imported: number; methods_updated: number; errors: string[] }> => {
+  const fd = new FormData();
+  fd.append('file', file);
+  return request('/shipping/rates/import', { method: 'POST', body: fd });
+};
+
+export const exportShippingRates = () => { window.location.href = '/api/shipping/rates/export'; };
+export const downloadRatesTemplate = () => { window.location.href = '/api/shipping/rates/template'; };
+
 // Auth
 const TOKEN_KEY = 'admin_session_token';
 
@@ -207,13 +227,13 @@ export const revokeApiKey = () => request<{ success: boolean }>('/auth/api-key',
 
 export const verifySession = () =>
   fetch('/api/auth/verify', { headers: authHeaders() })
-    .then(r => r.json() as Promise<{ authenticated: boolean }>);
+    .then(r => r.json() as Promise<{ authenticated: boolean; user: AuthUser | null }>);
 
-export const login = async (password: string): Promise<{ success: boolean; error?: string }> => {
+export const login = async (password: string, email?: string): Promise<{ success: boolean; error?: string }> => {
   const res = await fetch('/api/auth/login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ password }),
+    body: JSON.stringify(email ? { email, password } : { password }),
   });
   const body = await res.json();
   if (!res.ok) return { success: false, error: body.error };
@@ -249,6 +269,157 @@ export const removePassword = async (currentPassword: string): Promise<{ success
   localStorage.removeItem(TOKEN_KEY);
   return { success: true };
 };
+
+// Users
+export const listUsers = () => request<UserAccount[]>('/users');
+
+export const createUser = (data: { email: string; name?: string; is_admin?: boolean; privileges?: Partial<ModulePrivileges>; send_invite?: boolean }) =>
+  request<UserAccount & { invite_sent: boolean; invite_error: string | null }>('/users', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+
+export const updateUser = (id: number, data: { name?: string; is_admin?: boolean; active?: boolean; privileges?: Partial<ModulePrivileges> }) =>
+  request<UserAccount>(`/users/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+
+export const deleteUser = (id: number) =>
+  request<{ success: boolean }>(`/users/${id}`, { method: 'DELETE' });
+
+export const setUserPassword = (id: number, newPassword: string) =>
+  request<{ success: boolean }>(`/users/${id}/set-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ newPassword }),
+  });
+
+export const sendUserInvite = (id: number) =>
+  request<{ success: boolean }>(`/users/${id}/invite`, { method: 'POST' });
+
+export const getMe = () => request<UserAccount>('/users/me');
+
+export const updateMe = (data: { name?: string; currentPassword?: string; newPassword?: string; salsify_api_key?: string | null }) =>
+  request<UserAccount>('/users/me', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+
+export const forgotPassword = (email: string) =>
+  request<{ success: boolean; message: string }>('/users/forgot-password', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email }),
+  });
+
+export const resetPassword = (token: string, newPassword: string) =>
+  request<{ success: boolean }>('/users/reset-password', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token, newPassword }),
+  });
+
+export const acceptInvite = (token: string, newPassword: string) =>
+  request<{ success: boolean; email: string }>('/users/accept-invite', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token, newPassword }),
+  });
+
+// SMTP
+export const getSmtpConfig = () => request<SmtpConfig>('/users/smtp');
+export const updateSmtpConfig = (data: Partial<SmtpConfig> & { smtp_pass?: string }) =>
+  request<{ success: boolean }>('/users/smtp', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+export const testSmtp = (to: string) =>
+  request<{ success: boolean }>('/users/smtp/test', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ to }),
+  });
+
+// Salsify
+export const getSalsifySettings = () => request<SalsifySettings>('/salsify/settings');
+export const updateSalsifySettings = (data: Partial<SalsifySettings>) =>
+  request<{ success: boolean }>('/salsify/settings', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+export const startSalsifyPull = () =>
+  request<{ status: string }>('/salsify/pull', { method: 'POST' });
+export const getSalsifyPullStatus = () =>
+  request<SalsifyJobState<SalsifyPullResult>>('/salsify/pull/status');
+export const startSalsifyPush = (productIds?: string[]) =>
+  request<{ status: string; total: number; report_computed_at: string }>('/salsify/push', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(productIds ? { product_ids: productIds } : {}),
+  });
+export const getSalsifyPushStatus = () =>
+  request<SalsifyJobState<SalsifyPushResult>>('/salsify/push/status');
+
+// Pricing / ROI
+export const getSalesChannels = () => request<SalesChannel[]>('/pricing/channels');
+export const createSalesChannel = (data: Omit<SalesChannel, 'id'>) =>
+  request<SalesChannel>('/pricing/channels', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+export const updateSalesChannel = (id: number, data: Omit<SalesChannel, 'id'>) =>
+  request<SalesChannel>(`/pricing/channels/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+export const deleteSalesChannel = (id: number) =>
+  request<{ success: boolean }>(`/pricing/channels/${id}`, { method: 'DELETE' });
+
+export const getProductPricing = () => request<ProductPricingEntry[]>('/pricing/product-pricing');
+export const setProductPricing = (productId: string, data: { product_cost: number | null; retail_price: number | null }) =>
+  request<{ product_id: string; product_cost: number | null; retail_price: number | null }>(`/pricing/product-pricing/${encodeURIComponent(productId)}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+// Pricing is an access-controlled module — downloads must carry the session
+// token, so these fetch a blob instead of navigating (which drops the header).
+async function downloadAuthed(url: string, filename: string) {
+  const res = await fetch(url, { headers: authHeaders() });
+  if (!res.ok) throw new Error('Download failed');
+  const blob = await res.blob();
+  const objectUrl = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = objectUrl;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(objectUrl);
+}
+
+export const downloadPricingTemplate = () => downloadAuthed('/api/pricing/product-pricing/template', 'product-pricing-template.xlsx');
+export const exportProductPricing = () => downloadAuthed('/api/pricing/product-pricing/export', 'product-pricing-export.xlsx');
+export const importProductPricing = async (file: File): Promise<{ imported: number; errors: string[] }> => {
+  const fd = new FormData();
+  fd.append('file', file);
+  return request('/pricing/product-pricing/import', { method: 'POST', body: fd });
+};
+
+export const getRoi = (params?: { channel_id?: number; status?: string }) => {
+  const qs = new URLSearchParams();
+  if (params?.channel_id != null) qs.set('channel_id', String(params.channel_id));
+  if (params?.status) qs.set('status', params.status);
+  const suffix = qs.toString() ? `?${qs.toString()}` : '';
+  return request<RoiResponse>(`/pricing/roi${suffix}`);
+};
+export const downloadRoiExport = () => downloadAuthed('/api/pricing/roi/export', 'roi-export.xlsx');
 
 // Backups
 export const listBackups = () => request<BackupEntry[]>('/backup');
