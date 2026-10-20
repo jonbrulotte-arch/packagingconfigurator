@@ -679,7 +679,7 @@ export default function ApiDocs() {
                 ['large', '< 35%', 'Box much larger than products', '⚠ Yes'],
               ].map(([val, range, meaning, flag]) => (
                 <tr key={val} className="even:bg-gray-50">
-                  <td className="px-4 py-3 font-mono text-brand-700 font-semibold">{val}</td>
+                  <td className="px-4 py-3 font-mono text-blue-700 font-semibold">{val}</td>
                   <td className="px-4 py-3 font-mono text-xs">{range}</td>
                   <td className="px-4 py-3 text-gray-600">{meaning}</td>
                   <td className="px-4 py-3 text-xs font-medium">{flag === 'No' ? <span className="text-gray-400">No</span> : <span className="text-amber-600">{flag}</span>}</td>

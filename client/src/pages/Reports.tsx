@@ -36,10 +36,10 @@ function StatCard({
     green: 'border-t-4 border-green-500',
     red: 'border-t-4 border-red-500',
     amber: 'border-t-4 border-amber-400',
-    blue: 'border-t-4 border-brand-500',
+    blue: 'border-t-4 border-blue-500',
   };
   return (
-    <div className={`bg-white rounded-lg shadow p-5 ${color ? colors[color] : ''}`}>
+    <div className={`rounded-lg border border-gray-200 bg-white shadow-sm p-5 ${color ? colors[color] : ''}`}>
       <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">{label}</p>
       <p className="text-3xl font-bold text-gray-900">{value}</p>
       {sub && <p className="text-xs text-gray-400 mt-1">{sub}</p>}
@@ -87,7 +87,7 @@ function SortTh({
     >
       <span className="flex items-center gap-1">
         {label}
-        <span className={`text-[10px] ${active ? 'text-brand-600' : 'text-gray-300'}`}>
+        <span className={`text-[10px] ${active ? 'text-blue-600' : 'text-gray-300'}`}>
           {active ? (sortDir === 'asc' ? '▲' : '▼') : '⇅'}
         </span>
       </span>
@@ -180,7 +180,7 @@ function PackagingSkuModal({
               value={filter}
               onChange={e => setFilter(e.target.value)}
               placeholder="Filter by ID or name…"
-              className="w-full pl-9 pr-8 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-brand-500"
+              className="w-full pl-9 pr-8 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             {filter && (
               <button onClick={() => setFilter('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
@@ -232,7 +232,7 @@ function PackagingSkuModal({
                     <td className="px-3 py-2 font-mono text-xs">
                       <Link
                         to={`/configurator?product_id=${encodeURIComponent(p.id)}`}
-                        className="text-brand-700 hover:text-brand-900 hover:underline"
+                        className="text-blue-700 hover:text-blue-900 hover:underline"
                         onClick={onClose}
                         title="Open in Configurator"
                       >
@@ -332,7 +332,7 @@ function TypeSkuModal({ entry, onClose }: { entry: TypeBreakdownEntry; onClose: 
             </svg>
             <input type="text" value={filter} onChange={e => setFilter(e.target.value)}
               placeholder="Filter by ID, name, or packaging…"
-              className="w-full pl-9 pr-8 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-brand-500" />
+              className="w-full pl-9 pr-8 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500" />
             {filter && (
               <button onClick={() => setFilter('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -374,7 +374,7 @@ function TypeSkuModal({ entry, onClose }: { entry: TypeBreakdownEntry; onClose: 
                   <tr key={p.id} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
                     <td className="px-3 py-2 font-mono text-xs">
                       <Link to={`/configurator?product_id=${encodeURIComponent(p.id)}`} onClick={onClose}
-                        className="text-brand-700 hover:text-brand-900 hover:underline" title="Open in Configurator">
+                        className="text-blue-700 hover:text-blue-900 hover:underline" title="Open in Configurator">
                         {p.id}
                       </Link>
                     </td>
@@ -461,7 +461,7 @@ function CarrierDimModal({ carrier, onClose }: { carrier: DimCarrierStat; onClos
             </svg>
             <input type="text" value={filter} onChange={e => setFilter(e.target.value)}
               placeholder="Filter by ID, name, or packaging…"
-              className="w-full pl-9 pr-8 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-brand-500" />
+              className="w-full pl-9 pr-8 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500" />
             {filter && (
               <button onClick={() => setFilter('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -502,7 +502,7 @@ function CarrierDimModal({ carrier, onClose }: { carrier: DimCarrierStat; onClos
                   <tr key={p.id} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
                     <td className="px-3 py-2 font-mono text-xs">
                       <Link to={`/configurator?product_id=${encodeURIComponent(p.id)}`} onClick={onClose}
-                        className="text-brand-700 hover:text-brand-900 hover:underline" title="Open in Configurator">
+                        className="text-blue-700 hover:text-blue-900 hover:underline" title="Open in Configurator">
                         {p.id}
                       </Link>
                     </td>
@@ -596,7 +596,7 @@ export default function Reports() {
     : [];
 
   return (
-    <div className="max-w-5xl">
+    <div className="max-w-5xl space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-6">
         <div>
@@ -626,7 +626,7 @@ export default function Reports() {
           <button
             onClick={handleRun}
             disabled={state.status === 'running'}
-            className="px-4 py-2 text-sm bg-brand-600 text-white rounded hover:bg-brand-700 disabled:opacity-50 flex items-center gap-2"
+            className="px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
           >
             {state.status === 'running' ? (
               <>
@@ -649,21 +649,21 @@ export default function Reports() {
 
       {/* States */}
       {loading && (
-        <div className="bg-white rounded-lg shadow p-12 text-center text-gray-400">Loading…</div>
+        <div className="rounded-lg border border-gray-200 bg-white shadow-sm p-12 text-center text-gray-400">Loading…</div>
       )}
 
       {!loading && state.status === 'pending' && (
-        <div className="bg-white rounded-lg shadow p-12 text-center">
+        <div className="rounded-lg border border-gray-200 bg-white shadow-sm p-12 text-center">
           <p className="text-gray-500 text-sm mb-4">No analysis has been run yet.</p>
-          <button onClick={handleRun} className="px-5 py-2 bg-brand-600 text-white text-sm rounded hover:bg-brand-700">
+          <button onClick={handleRun} className="px-5 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700">
             Run Analysis Now
           </button>
         </div>
       )}
 
       {!loading && state.status === 'running' && (
-        <div className="bg-white rounded-lg shadow p-12 text-center">
-          <svg className="w-8 h-8 animate-spin text-brand-600 mx-auto mb-3" fill="none" viewBox="0 0 24 24">
+        <div className="rounded-lg border border-gray-200 bg-white shadow-sm p-12 text-center">
+          <svg className="w-8 h-8 animate-spin text-blue-600 mx-auto mb-3" fill="none" viewBox="0 0 24 24">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
           </svg>
@@ -678,7 +678,7 @@ export default function Reports() {
         <div className="bg-white rounded-lg shadow p-8">
           <p className="text-red-600 font-medium mb-1">Analysis failed</p>
           <p className="text-sm text-gray-500">{state.error}</p>
-          <button onClick={handleRun} className="mt-4 px-4 py-2 text-sm bg-brand-600 text-white rounded hover:bg-brand-700">
+          <button onClick={handleRun} className="mt-4 px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700">
             Try Again
           </button>
         </div>
@@ -726,7 +726,7 @@ export default function Reports() {
               <p className="text-xs text-gray-500 mt-0.5">
                 Best Fit = number of products for which this is the top-ranked option.
                 Hover the quality bar for exact counts.
-                <span className="ml-1 text-brand-600">Click a packaging name to view its SKU report.</span>
+                <span className="ml-1 text-blue-600">Click a packaging name to view its SKU report.</span>
               </p>
             </div>
             <div className="overflow-x-auto">
@@ -750,7 +750,7 @@ export default function Reports() {
                         <td className="px-3 py-2.5 font-medium whitespace-nowrap">
                           <button
                             onClick={() => setSkuStat(stat)}
-                            className="text-brand-700 hover:text-brand-900 hover:underline text-left font-medium"
+                            className="text-blue-700 hover:text-blue-900 hover:underline text-left font-medium"
                             title="View SKU report for this packaging"
                           >
                             {stat.packaging.name}
@@ -820,7 +820,7 @@ export default function Reports() {
                       <td className="px-4 py-2.5 font-medium">
                         <button
                           onClick={() => setSkuType(t)}
-                          className="text-brand-700 hover:text-brand-900 hover:underline text-left font-medium"
+                          className="text-blue-700 hover:text-blue-900 hover:underline text-left font-medium"
                           title="View SKU report for this packaging type"
                         >
                           {TYPE_LABELS[t.type] ?? t.type}
@@ -843,7 +843,7 @@ export default function Reports() {
                 <h2 className="text-base font-semibold text-gray-900">DIM Exposure by Carrier</h2>
                 <p className="text-xs text-gray-500 mt-0.5">
                   Products where a carrier's DIM weight exceeds actual weight on the best packaging option. A product may appear in multiple carriers if it qualifies for more than one method.
-                  <span className="ml-1 text-brand-600">Click a carrier to view its DIM exposure report.</span>
+                  <span className="ml-1 text-blue-600">Click a carrier to view its DIM exposure report.</span>
                 </p>
               </div>
               {report.dim_by_carrier.length === 0 ? (
@@ -863,7 +863,7 @@ export default function Reports() {
                         <td className="px-4 py-2.5 font-medium">
                           <button
                             onClick={() => setSkuCarrier(c)}
-                            className="text-brand-700 hover:text-brand-900 hover:underline text-left font-medium disabled:text-gray-400 disabled:no-underline disabled:cursor-default"
+                            className="text-blue-700 hover:text-blue-900 hover:underline text-left font-medium disabled:text-gray-400 disabled:no-underline disabled:cursor-default"
                             disabled={c.dim_billed_count === 0}
                             title={c.dim_billed_count > 0 ? 'View DIM exposure report' : 'No DIM-billed products'}
                           >
@@ -929,7 +929,7 @@ export default function Reports() {
                               <td className="px-3 py-2 font-mono">
                                 <Link
                                   to={`/configurator?product_id=${encodeURIComponent(p.id)}`}
-                                  className="text-brand-700 hover:text-brand-900 hover:underline"
+                                  className="text-blue-700 hover:text-blue-900 hover:underline"
                                   title={`Open ${p.id} in Configurator`}
                                 >
                                   {p.id}
@@ -983,7 +983,7 @@ export default function Reports() {
                               <td className="px-3 py-2 font-mono">
                                 <Link
                                   to={`/configurator?product_id=${encodeURIComponent(p.id)}`}
-                                  className="text-brand-700 hover:text-brand-900 hover:underline"
+                                  className="text-blue-700 hover:text-blue-900 hover:underline"
                                   title={`Open ${p.id} in Configurator`}
                                 >
                                   {p.id}
@@ -1035,7 +1035,7 @@ export default function Reports() {
                               <td className="px-3 py-2 font-mono">
                                 <Link
                                   to={`/configurator?product_id=${encodeURIComponent(p.id)}`}
-                                  className="text-brand-700 hover:text-brand-900 hover:underline"
+                                  className="text-blue-700 hover:text-blue-900 hover:underline"
                                   title={`Open ${p.id} in Configurator`}
                                 >
                                   {p.id}

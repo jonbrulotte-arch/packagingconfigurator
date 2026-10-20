@@ -25,7 +25,7 @@ export default function ShippingChips({ shipping }: { shipping: ShippingMatch[] 
             className={`inline-flex items-center gap-1.5 rounded px-2.5 py-1.5 border text-xs ${
               recommended
                 ? 'bg-green-50 border-green-400 ring-1 ring-green-400'
-                : 'bg-indigo-50 border-indigo-200'
+                : 'bg-blue-50 border-blue-200'
             }`}
           >
             {recommended && (
@@ -35,7 +35,7 @@ export default function ShippingChips({ shipping }: { shipping: ShippingMatch[] 
             )}
             <span className="font-semibold text-gray-800">{sm.method_name}</span>
             <span className="text-gray-400">·</span>
-            <span className={`font-medium ${sm.dim_applied ? 'text-amber-600' : 'text-indigo-700'}`}>
+            <span className={`font-medium ${sm.dim_applied ? 'text-amber-600' : 'text-blue-700'}`}>
               {sm.billed_weight} lbs
             </span>
             {sm.dim_applied && (

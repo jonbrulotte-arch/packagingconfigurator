@@ -188,7 +188,7 @@ export default function PackagingForm({ initial, onSubmit, onCancel, isEdit }: P
             id="active"
             checked={form.active === 1}
             onChange={e => setForm(f => ({ ...f, active: e.target.checked ? 1 : 0 }))}
-            className="h-4 w-4 text-brand-600 rounded"
+            className="h-4 w-4 text-blue-600 rounded"
           />
           <label htmlFor="active" className="text-sm text-gray-700">Active (available for recommendations)</label>
         </div>
@@ -201,7 +201,7 @@ export default function PackagingForm({ initial, onSubmit, onCancel, isEdit }: P
         <button
           type="submit"
           disabled={loading}
-          className="px-4 py-2 text-sm bg-brand-600 text-white rounded hover:bg-brand-700 disabled:opacity-50"
+          className="px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
         >
           {loading ? 'Saving…' : isEdit ? 'Update' : 'Add Packaging'}
         </button>

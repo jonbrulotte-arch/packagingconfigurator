@@ -139,7 +139,7 @@ Volume unchanged  →  2 × 1 × 12 × 9 = 1 × 12 × 18 = 216 in³`}
               ].map(([field, primary, fallback]) => (
                 <tr key={field} className="even:bg-gray-50">
                   <td className="px-3 py-2 font-medium text-gray-800">{field}</td>
-                  <td className="px-3 py-2 font-mono text-xs text-brand-700 font-semibold">{primary}</td>
+                  <td className="px-3 py-2 font-mono text-xs text-blue-700 font-semibold">{primary}</td>
                   <td className="px-3 py-2 text-gray-500 font-mono text-xs">{fallback}</td>
                 </tr>
               ))}
@@ -193,7 +193,7 @@ Volume unchanged  →  2 × 1 × 12 × 9 = 1 × 12 × 18 = 216 in³`}
                 ['/products?product_id=SKU-001', 'Filters the list to SKU-001 (no modal)'],
               ].map(([url, desc]) => (
                 <tr key={url} className="even:bg-gray-50">
-                  <td className="px-3 py-2 font-mono text-xs text-brand-700 break-all">{url}</td>
+                  <td className="px-3 py-2 font-mono text-xs text-blue-700 break-all">{url}</td>
                   <td className="px-3 py-2 text-gray-600">{desc}</td>
                 </tr>
               ))}
@@ -457,7 +457,7 @@ Every item in the shipment must fit within those reduced dimensions.`}
                 ['/configurator?product_id=SKU-001&product_id=SKU-002', 'Pre-fills two products (repeated param)'],
               ].map(([url, desc]) => (
                 <tr key={url} className="even:bg-gray-50">
-                  <td className="px-3 py-2 font-mono text-xs text-brand-700 break-all">{url}</td>
+                  <td className="px-3 py-2 font-mono text-xs text-blue-700 break-all">{url}</td>
                   <td className="px-3 py-2 text-gray-600">{desc}</td>
                 </tr>
               ))}
@@ -677,7 +677,7 @@ Every item in the shipment must fit within those reduced dimensions.`}
           <p>
             Set <strong>Product Cost</strong> and <strong>Retail Price</strong> per product — manually,
             via Excel import/export, or automatically from a{' '}
-            <a href="#settings-reference" className="text-brand-600 hover:underline">Salsify pull</a>.
+            <a href="#settings-reference" className="text-blue-600 hover:underline">Salsify pull</a>.
           </p>
         </SubSection>
 
@@ -1065,5 +1065,5 @@ function Code({ children }: { children: React.ReactNode }) {
 }
 
 function NavRef({ to }: { to: string }) {
-  return <strong className="text-brand-700">{to}</strong>;
+  return <strong className="text-blue-700">{to}</strong>;
 }

@@ -133,7 +133,7 @@ function BackupSection() {
         <button
           onClick={handleCreate}
           disabled={creating}
-          className="px-4 py-2 bg-brand-600 text-white text-sm font-medium rounded hover:bg-brand-700 disabled:opacity-50"
+          className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 disabled:opacity-50"
         >
           {creating ? 'Creating…' : 'Create Backup Now'}
         </button>
@@ -187,7 +187,7 @@ function BackupSection() {
               <button
                 onClick={handleSaveSchedule}
                 disabled={scheduleSaving}
-                className="px-4 py-1.5 bg-brand-600 text-white text-sm font-medium rounded hover:bg-brand-700 disabled:opacity-50"
+                className="px-4 py-1.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 disabled:opacity-50"
               >
                 {scheduleSaving ? 'Saving…' : 'Save Schedule'}
               </button>
@@ -299,13 +299,13 @@ function PasswordSection() {
       {mode === 'idle' && (
         <div className="flex gap-2">
           {!isProtected && (
-            <button onClick={() => setMode('set')} className="px-4 py-2 bg-brand-600 text-white text-sm font-medium rounded hover:bg-brand-700">
+            <button onClick={() => setMode('set')} className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700">
               Set Password
             </button>
           )}
           {isProtected && (
             <>
-              <button onClick={() => setMode('change')} className="px-4 py-2 bg-brand-600 text-white text-sm font-medium rounded hover:bg-brand-700">
+              <button onClick={() => setMode('change')} className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700">
                 Change Password
               </button>
               <button onClick={() => setMode('remove')} className="px-4 py-2 text-sm text-red-600 border border-red-300 rounded hover:bg-red-50">
@@ -337,7 +337,7 @@ function PasswordSection() {
           </div>
           <div className="flex gap-2 pt-1">
             <button type="submit" disabled={saving}
-              className="px-4 py-2 bg-brand-600 text-white text-sm font-medium rounded hover:bg-brand-700 disabled:opacity-50">
+              className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 disabled:opacity-50">
               {saving ? 'Saving…' : mode === 'change' ? 'Change Password' : 'Set Password'}
             </button>
             <button type="button" onClick={reset} className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded hover:bg-gray-50">
@@ -464,7 +464,7 @@ function ApiKeySection() {
             <button
               onClick={handleGenerate}
               disabled={working}
-              className="px-4 py-2 bg-brand-600 text-white text-sm font-medium rounded hover:bg-brand-700 disabled:opacity-50"
+              className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 disabled:opacity-50"
             >
               {working ? 'Generating…' : active ? 'Regenerate Key' : 'Generate Key'}
             </button>
@@ -601,7 +601,7 @@ function UserEditor({ user, onSaved, onCancel }: {
       )}
       <div className="flex gap-2 pt-1">
         <button type="submit" disabled={saving}
-          className="px-4 py-2 bg-brand-600 text-white text-sm font-medium rounded hover:bg-brand-700 disabled:opacity-50">
+          className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 disabled:opacity-50">
           {saving ? 'Saving…' : user ? 'Save Changes' : 'Create User'}
         </button>
         <button type="button" onClick={onCancel}
@@ -679,7 +679,7 @@ function UsersSection() {
         <h2 className="text-base font-semibold text-gray-900">User Accounts</h2>
         {!adding && !editing && (
           <button onClick={() => setAdding(true)}
-            className="px-4 py-2 bg-brand-600 text-white text-sm font-medium rounded hover:bg-brand-700">
+            className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700">
             + Add User
           </button>
         )}
@@ -710,7 +710,7 @@ function UsersSection() {
               placeholder="New password (min 8 chars)" minLength={8}
               className="flex-1 border border-amber-300 rounded px-3 py-2 text-sm" />
             <button onClick={handleSetPassword} disabled={pwValue.length < 8}
-              className="px-4 py-2 bg-brand-600 text-white text-sm font-medium rounded hover:bg-brand-700 disabled:opacity-50">
+              className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 disabled:opacity-50">
               Set
             </button>
             <button onClick={() => { setPwTarget(null); setPwValue(''); }}
@@ -752,7 +752,7 @@ function UsersSection() {
                   )}
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0 text-xs">
-                  <button onClick={() => { setEditing(u); setAdding(false); }} className="text-brand-600 hover:text-brand-800">Edit</button>
+                  <button onClick={() => { setEditing(u); setAdding(false); }} className="text-blue-600 hover:text-blue-800">Edit</button>
                   <button onClick={() => handleInvite(u)} className="text-gray-500 hover:text-gray-700" title="Send or re-send invitation email">Invite</button>
                   <button onClick={() => { setPwTarget(u); setPwValue(''); }} className="text-gray-500 hover:text-gray-700">Password</button>
                   <button onClick={() => handleDelete(u)} className="text-red-500 hover:text-red-700">Delete</button>
@@ -877,7 +877,7 @@ function SmtpSection() {
         </label>
         <div className="flex flex-wrap items-center gap-3 pt-1">
           <button type="submit" disabled={saving}
-            className="px-4 py-2 bg-brand-600 text-white text-sm font-medium rounded hover:bg-brand-700 disabled:opacity-50">
+            className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 disabled:opacity-50">
             {saving ? 'Saving…' : 'Save SMTP Settings'}
           </button>
           <div className="flex items-center gap-2">
@@ -1064,7 +1064,7 @@ function SalsifySection() {
 
         <div>
           <button type="button" onClick={() => setShowMapping(s => !s)}
-            className="text-xs text-brand-600 hover:text-brand-800 font-medium">
+            className="text-xs text-blue-600 hover:text-blue-800 font-medium">
             {showMapping ? '▾ Hide' : '▸ Show'} channel JSON field mapping
           </button>
           {showMapping && (
@@ -1084,7 +1084,7 @@ function SalsifySection() {
         </div>
 
         <button type="submit" disabled={saving}
-          className="px-4 py-2 bg-brand-600 text-white text-sm font-medium rounded hover:bg-brand-700 disabled:opacity-50">
+          className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 disabled:opacity-50">
           {saving ? 'Saving…' : 'Save Salsify Settings'}
         </button>
       </form>
@@ -1092,11 +1092,11 @@ function SalsifySection() {
       <div className="mt-5 pt-4 border-t border-gray-100 space-y-3">
         <div className="flex flex-wrap items-center gap-3">
           <button onClick={handlePull} disabled={!config.salsify_enabled}
-            className="px-4 py-2 text-sm font-medium border border-brand-300 text-brand-700 rounded hover:bg-brand-50 disabled:opacity-50">
+            className="px-4 py-2 text-sm font-medium border border-blue-300 text-blue-700 rounded hover:bg-blue-50 disabled:opacity-50">
             ⇣ Pull Products Now
           </button>
           <button onClick={handlePush} disabled={!config.salsify_enabled}
-            className="px-4 py-2 text-sm font-medium border border-brand-300 text-brand-700 rounded hover:bg-brand-50 disabled:opacity-50">
+            className="px-4 py-2 text-sm font-medium border border-blue-300 text-blue-700 rounded hover:bg-blue-50 disabled:opacity-50">
             ⇡ Push Calculated Shipping Data
           </button>
           {!config.salsify_enabled && <span className="text-xs text-gray-400">Enable Salsify sync to run pull/push.</span>}
@@ -1218,7 +1218,7 @@ function ProfileSection() {
           <p className="mt-1 text-xs text-gray-400">Used for Salsify pull/push operations. Never shown again once saved.</p>
         </div>
         <button type="submit" disabled={saving}
-          className="px-4 py-2 bg-brand-600 text-white text-sm font-medium rounded hover:bg-brand-700 disabled:opacity-50">
+          className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 disabled:opacity-50">
           {saving ? 'Saving…' : 'Save Profile'}
         </button>
       </form>
@@ -1266,7 +1266,7 @@ export default function SettingsPage() {
   if (loading) return <div className="text-gray-400 py-8">Loading…</div>;
 
   return (
-    <div className="max-w-xl space-y-6">
+    <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-gray-900 mb-2">Settings</h1>
         <p className="text-sm text-gray-500">Configure how package recommendations are calculated.</p>
@@ -1375,7 +1375,7 @@ export default function SettingsPage() {
         <button
           type="submit"
           disabled={saving}
-          className="px-6 py-2 bg-brand-600 text-white text-sm font-medium rounded hover:bg-brand-700 disabled:opacity-50"
+          className="px-6 py-2 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 disabled:opacity-50"
         >
           {saving ? 'Saving…' : 'Save Settings'}
         </button>

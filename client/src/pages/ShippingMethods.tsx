@@ -73,7 +73,7 @@ function MethodForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow p-5 mb-4 border-l-4 border-l-brand-400">
+    <form onSubmit={handleSubmit} className="rounded-lg border border-gray-200 bg-white shadow-sm p-5 mb-4 border-l-4 border-l-blue-400">
       <h3 className="text-sm font-semibold text-gray-800 mb-4">
         {initial ? 'Edit Shipping Method' : 'Add Shipping Method'}
       </h3>
@@ -170,7 +170,7 @@ function MethodForm({
 
       <div className="flex gap-2">
         <button type="submit" disabled={saving || !form.name.trim()}
-          className="px-5 py-2 bg-brand-600 text-white text-sm font-medium rounded hover:bg-brand-700 disabled:opacity-50">
+          className="px-5 py-2 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 disabled:opacity-50">
           {saving ? 'Saving…' : initial ? 'Update' : 'Add Method'}
         </button>
         <button type="button" onClick={onCancel}
@@ -283,9 +283,9 @@ function RateCardPanel({ methodId, canEdit }: { methodId: number; canEdit: boole
 
       {canEdit && (
         <div className="flex items-center gap-3 mt-2">
-          <button onClick={addRow} className="text-xs text-brand-600 hover:text-brand-800">+ Add break</button>
+          <button onClick={addRow} className="text-xs text-blue-600 hover:text-blue-800">+ Add break</button>
           <button onClick={save} disabled={saving}
-            className="px-3 py-1 text-xs font-medium bg-brand-600 text-white rounded hover:bg-brand-700 disabled:opacity-50">
+            className="px-3 py-1 text-xs font-medium bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50">
             {saving ? 'Saving…' : 'Save Rates'}
           </button>
         </div>
@@ -313,7 +313,7 @@ function MethodRow({
   const [showRates, setShowRates] = useState(false);
 
   return (
-    <div className={`bg-white rounded-lg shadow border-l-4 ${method.active ? 'border-l-green-400' : 'border-l-gray-200'} px-5 py-3`}>
+    <div className={`rounded-lg border border-gray-200 bg-white shadow-sm border-l-4 ${method.active ? 'border-l-green-400' : 'border-l-gray-200'} px-5 py-3`}>
       <div className="flex items-center gap-3 flex-wrap">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
@@ -351,7 +351,7 @@ function MethodRow({
               onClick={() => setShowRates(s => !s)}
               className={`text-xs px-2 py-0.5 rounded border font-medium transition-colors ${
                 showRates
-                  ? 'bg-brand-600 text-white border-brand-600'
+                  ? 'bg-blue-600 text-white border-blue-600'
                   : 'bg-gray-50 text-gray-600 border-gray-300 hover:bg-gray-100'
               }`}
             >
@@ -471,7 +471,7 @@ export default function ShippingMethodsPage() {
   if (loading) return <div className="text-gray-400 py-8">Loading…</div>;
 
   return (
-    <div className="max-w-3xl">
+    <div className="max-w-3xl space-y-6">
       <div className="mb-6 flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Shipping Methods</h1>
@@ -484,7 +484,7 @@ export default function ShippingMethodsPage() {
         {authenticated && !showForm && !editing && (
           <button
             onClick={() => setShowForm(true)}
-            className="flex-shrink-0 inline-flex items-center gap-2 px-4 py-2 bg-brand-600 text-white text-sm font-medium rounded hover:bg-brand-700"
+            className="flex-shrink-0 inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -541,7 +541,7 @@ export default function ShippingMethodsPage() {
       )}
 
       {methods.length === 0 && !showForm ? (
-        <div className="bg-white rounded-lg shadow p-8 text-center">
+        <div className="rounded-lg border border-gray-200 bg-white shadow-sm p-8 text-center">
           <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-3">
             <svg className="w-6 h-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
