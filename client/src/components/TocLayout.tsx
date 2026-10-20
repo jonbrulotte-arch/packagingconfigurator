@@ -40,7 +40,7 @@ export default function TocLayout({ items, children }: { items: TocItem[]; child
                   onClick={() => scrollTo(id)}
                   className={`block w-full text-left px-3 py-1.5 rounded text-sm transition-colors ${
                     activeId === id
-                      ? 'bg-brand-50 text-brand-700 font-medium border-l-2 border-brand-600'
+                      ? 'bg-blue-50 text-blue-700 font-medium border-l-2 border-blue-600'
                       : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'
                   }`}
                 >

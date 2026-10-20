@@ -10,6 +10,8 @@ interface Props {
 
 const NUM_FIELDS = ['height', 'width', 'length', 'weight'] as const;
 
+const inputClass = 'h-9 w-full rounded-md border border-gray-300 bg-white px-3 py-1 text-sm text-gray-900 shadow-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:cursor-not-allowed disabled:opacity-50';
+
 export default function ProductForm({ initial, onSubmit, onCancel, isEdit }: Props) {
   const [form, setForm] = useState({
     id: initial?.id ?? '',
@@ -61,33 +63,35 @@ export default function ProductForm({ initial, onSubmit, onCancel, isEdit }: Pro
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      {error && <p className="text-red-600 text-sm bg-red-50 px-3 py-2 rounded">{error}</p>}
+      {error && (
+        <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">{error}</div>
+      )}
 
       <div className="grid grid-cols-2 gap-4">
         <div className="col-span-2">
-          <label className="block text-sm font-medium text-gray-700 mb-1">Product ID</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">Product ID</label>
           <input
             value={form.id}
             onChange={set('id')}
             disabled={isEdit}
             required
             placeholder="SKU-001"
-            className="w-full border border-gray-300 rounded px-3 py-2 text-sm disabled:bg-gray-100"
+            className={inputClass}
           />
         </div>
         <div className="col-span-2">
-          <label className="block text-sm font-medium text-gray-700 mb-1">Product Name</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">Product Name</label>
           <input
             value={form.name}
             onChange={set('name')}
             required
             placeholder="Widget A"
-            className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+            className={inputClass}
           />
         </div>
         {(['height', 'width', 'length'] as const).map(field => (
           <div key={field}>
-            <label className="block text-sm font-medium text-gray-700 mb-1 capitalize">
+            <label className="block text-sm font-medium text-gray-700 mb-1.5 capitalize">
               {field} (in)
             </label>
             <input
@@ -97,12 +101,12 @@ export default function ProductForm({ initial, onSubmit, onCancel, isEdit }: Pro
               value={form[field]}
               onChange={set(field)}
               required
-              className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+              className={inputClass}
             />
           </div>
         ))}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Weight (lbs)</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">Weight (lbs)</label>
           <input
             type="number"
             step="0.001"
@@ -110,20 +114,20 @@ export default function ProductForm({ initial, onSubmit, onCancel, isEdit }: Pro
             value={form.weight}
             onChange={set('weight')}
             required
-            className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+            className={inputClass}
           />
         </div>
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          UPC <span className="text-gray-400 font-normal">(optional — for barcode scanner lookup)</span>
+        <label className="block text-sm font-medium text-gray-700 mb-1.5">
+          UPC <span className="text-gray-400 font-normal">(optional)</span>
         </label>
         <input
           value={form.upc ?? ''}
           onChange={set('upc')}
           placeholder="012345678901"
-          className="w-full border border-gray-300 rounded px-3 py-2 text-sm font-mono"
+          className={`${inputClass} font-mono`}
         />
       </div>
 
@@ -132,7 +136,7 @@ export default function ProductForm({ initial, onSubmit, onCancel, isEdit }: Pro
           type="checkbox"
           checked={form.foldable}
           onChange={setCheck('foldable')}
-          className="mt-0.5 h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+          className="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
         />
         <div>
           <span className="text-sm font-medium text-gray-700">Foldable</span>
@@ -148,7 +152,7 @@ export default function ProductForm({ initial, onSubmit, onCancel, isEdit }: Pro
           type="checkbox"
           checked={form.ships_in_own_packaging}
           onChange={setCheck('ships_in_own_packaging')}
-          className="mt-0.5 h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+          className="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
         />
         <div>
           <span className="text-sm font-medium text-gray-700">Ships in Own Packaging</span>
@@ -160,13 +164,17 @@ export default function ProductForm({ initial, onSubmit, onCancel, isEdit }: Pro
       </label>
 
       <div className="flex justify-end gap-3 pt-2">
-        <button type="button" onClick={onCancel} className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800">
+        <button
+          type="button"
+          onClick={onCancel}
+          className="inline-flex items-center justify-center h-9 px-4 rounded-md text-sm font-medium border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 transition-colors"
+        >
           Cancel
         </button>
         <button
           type="submit"
           disabled={loading}
-          className="px-4 py-2 text-sm bg-brand-600 text-white rounded hover:bg-brand-700 disabled:opacity-50"
+          className="inline-flex items-center justify-center h-9 px-4 rounded-md text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-50"
         >
           {loading ? 'Saving…' : isEdit ? 'Update' : 'Add Product'}
         </button>

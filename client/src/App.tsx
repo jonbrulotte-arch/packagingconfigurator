@@ -33,7 +33,7 @@ function ModulePage({ module, children }: { module: Module; children: React.Reac
   if (!canView(module)) {
     return (
       <div className="max-w-md mx-auto mt-16 text-center">
-        <div className="bg-white rounded-lg shadow p-8">
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-8">
           <h1 className="text-lg font-bold text-gray-900 mb-2">Access Restricted</h1>
           <p className="text-sm text-gray-500">
             You don't have access to this module. Ask an administrator to grant you

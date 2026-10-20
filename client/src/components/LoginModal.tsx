@@ -53,78 +53,91 @@ export default function LoginModal() {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl p-8 w-full max-w-sm mx-4">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 rounded-full bg-brand-100 flex items-center justify-center flex-shrink-0">
-            <svg className="w-5 h-5 text-brand-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-            </svg>
-          </div>
-          <div>
-            <h2 className="text-lg font-bold text-gray-900">
-              {mode === 'forgot' ? 'Reset Password' : mode === 'legacy' ? 'Admin Access' : 'Sign In'}
-            </h2>
-            <p className="text-sm text-gray-500">
-              {mode === 'forgot'
-                ? "Enter your account email and we'll send a reset link."
-                : mode === 'legacy'
-                ? 'Enter the admin password to continue.'
-                : 'Sign in with your account email and password.'}
-            </p>
-          </div>
+    <div className="min-h-screen bg-gray-900 flex items-center justify-center fixed inset-0 z-50">
+      <div className="w-full max-w-sm mx-4">
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-white tracking-tight">
+            Packaging <span className="text-blue-400">Config</span>
+          </h1>
+          <p className="text-gray-400 mt-1 text-sm">Packaging Configurator</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {(mode === 'user' || mode === 'forgot') && (
-            <input
-              ref={inputRef}
-              type="email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              placeholder="Email"
-              required
-              className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
-            />
-          )}
-          {mode !== 'forgot' && (
-            <input
-              ref={mode === 'legacy' ? inputRef : undefined}
-              type="password"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              placeholder="Password"
-              required
-              className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
-            />
-          )}
-          {error && <p className="text-sm text-red-600">{error}</p>}
-          {info && <p className="text-sm text-green-700">{info}</p>}
-          <button
-            type="submit"
-            disabled={loading || (mode !== 'forgot' && !password) || (mode !== 'legacy' && !email)}
-            className="w-full px-4 py-2 bg-brand-600 text-white text-sm font-medium rounded hover:bg-brand-700 disabled:opacity-50"
-          >
-            {loading ? 'Working…' : mode === 'forgot' ? 'Send Reset Link' : 'Sign In'}
-          </button>
-        </form>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
+          <h2 className="text-lg font-semibold text-gray-900 mb-6">
+            {mode === 'forgot' ? 'Reset Password' : mode === 'legacy' ? 'Admin Access' : 'Sign in to your account'}
+          </h2>
 
-        <div className="mt-4 flex flex-col gap-1.5 text-center">
-          {mode === 'user' && (
-            <>
-              <button onClick={() => switchMode('forgot')} className="text-xs text-brand-600 hover:text-brand-800">
-                Forgot password?
-              </button>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {(mode === 'user' || mode === 'forgot') && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Email</label>
+                <input
+                  ref={inputRef}
+                  type="email"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  placeholder="you@company.com"
+                  required
+                  autoComplete="email"
+                  className="flex h-9 w-full rounded-md border border-gray-300 bg-white px-3 py-1 text-sm text-gray-900 shadow-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+            )}
+            {mode !== 'forgot' && (
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-sm font-medium text-gray-700">Password</label>
+                  {mode === 'user' && (
+                    <button type="button" onClick={() => switchMode('forgot')} className="text-xs text-blue-600 hover:underline">
+                      Forgot password?
+                    </button>
+                  )}
+                </div>
+                <input
+                  ref={mode === 'legacy' ? inputRef : undefined}
+                  type="password"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  required
+                  autoComplete="current-password"
+                  className="flex h-9 w-full rounded-md border border-gray-300 bg-white px-3 py-1 text-sm text-gray-900 shadow-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+            )}
+
+            {error && (
+              <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+                {error}
+              </div>
+            )}
+            {info && (
+              <div className="rounded-lg bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-800">
+                {info}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading || (mode !== 'forgot' && !password) || (mode !== 'legacy' && !email)}
+              className="w-full inline-flex items-center justify-center h-9 px-4 rounded-md text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:pointer-events-none disabled:opacity-50"
+            >
+              {loading ? 'Signing in...' : mode === 'forgot' ? 'Send Reset Link' : 'Sign in'}
+            </button>
+          </form>
+
+          <div className="mt-4 flex flex-col gap-1.5 text-center">
+            {mode === 'user' && (
               <button onClick={() => switchMode('legacy')} className="text-xs text-gray-400 hover:text-gray-600">
                 Use admin password instead
               </button>
-            </>
-          )}
-          {mode !== 'user' && (
-            <button onClick={() => switchMode('user')} className="text-xs text-brand-600 hover:text-brand-800">
-              ← Back to sign in
-            </button>
-          )}
+            )}
+            {mode !== 'user' && (
+              <button onClick={() => switchMode('user')} className="text-xs text-blue-600 hover:underline">
+                &larr; Back to sign in
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>

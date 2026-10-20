@@ -14,13 +14,13 @@ function StatCard({ label, value, sub, color }: {
     green: 'border-t-4 border-green-500',
     red: 'border-t-4 border-red-500',
     amber: 'border-t-4 border-amber-400',
-    blue: 'border-t-4 border-brand-500',
+    blue: 'border-t-4 border-blue-500',
     gray: 'border-t-4 border-gray-300',
   };
   return (
-    <div className={`bg-white rounded-lg shadow p-5 ${color ? colors[color] : ''}`}>
-      <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">{label}</p>
-      <p className="text-3xl font-bold text-gray-900">{value}</p>
+    <div className={`rounded-lg border border-gray-200 bg-white shadow-sm p-6 ${color ? colors[color] : ''}`}>
+      <p className="text-sm text-gray-500 mb-1">{label}</p>
+      <p className="text-2xl font-bold text-gray-900">{value}</p>
       {sub && <p className="text-xs text-gray-400 mt-1">{sub}</p>}
     </div>
   );
@@ -57,42 +57,42 @@ function ChannelForm({ initial, onSave, onCancel, saving, error }: {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow p-5 mb-4 border-l-4 border-l-brand-400">
+    <form onSubmit={handleSubmit} className="rounded-lg border border-gray-200 bg-white shadow-sm p-6 mb-4 border-l-4 border-l-blue-400">
       <h3 className="text-sm font-semibold text-gray-800 mb-4">{initial ? 'Edit Sales Channel' : 'Add Sales Channel'}</h3>
       {error && <p className="mb-3 text-sm text-red-600">{error}</p>}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Channel Name <span className="text-red-500">*</span></label>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">Channel Name <span className="text-red-500">*</span></label>
           <input value={form.name} onChange={e => set('name', e.target.value)} required
             placeholder="e.g. Amazon, D2C Website, Wholesale"
-            className="w-full border border-gray-300 rounded px-3 py-2 text-sm" />
+            className="flex h-9 w-full rounded-md border border-gray-300 bg-white px-3 py-1 text-sm text-gray-900 shadow-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Shipping Terms</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">Shipping Terms</label>
           <select value={form.shipping_terms} onChange={e => set('shipping_terms', e.target.value as 'prepaid' | 'collect')}
-            className="w-full border border-gray-300 rounded px-3 py-2 text-sm">
+            className="flex h-9 w-full rounded-md border border-gray-300 bg-white px-3 py-1 text-sm text-gray-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
             <option value="prepaid">Prepaid (seller pays shipping)</option>
             <option value="collect">Collect (buyer pays shipping)</option>
           </select>
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Payment Terms</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">Payment Terms</label>
           <input value={form.payment_terms ?? ''} onChange={e => set('payment_terms', e.target.value)}
             placeholder="e.g. Net 30, due on receipt"
-            className="w-full border border-gray-300 rounded px-3 py-2 text-sm" />
+            className="flex h-9 w-full rounded-md border border-gray-300 bg-white px-3 py-1 text-sm text-gray-900 shadow-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Per-Transaction Fee ($)</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">Per-Transaction Fee ($)</label>
           <input type="number" min="0" step="0.01" value={form.transaction_fee}
             onChange={e => set('transaction_fee', Number(e.target.value))}
-            className="w-full border border-gray-300 rounded px-3 py-2 text-sm" />
+            className="flex h-9 w-full rounded-md border border-gray-300 bg-white px-3 py-1 text-sm text-gray-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Minimum Margin %</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">Minimum Margin %</label>
           <input type="number" min="0" step="0.5" value={form.min_margin_pct}
             onChange={e => set('min_margin_pct', Number(e.target.value))}
-            className="w-full border border-gray-300 rounded px-3 py-2 text-sm" />
+            className="flex h-9 w-full rounded-md border border-gray-300 bg-white px-3 py-1 text-sm text-gray-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
           <p className="mt-1 text-xs text-gray-400">Below this — but still profitable — shows yellow. At or below 0% margin always shows red.</p>
         </div>
         <div className="flex items-center gap-2 pt-6">
@@ -101,15 +101,15 @@ function ChannelForm({ initial, onSave, onCancel, saving, error }: {
           <label htmlFor="channel-active" className="text-sm text-gray-700">Active</label>
         </div>
         <div className="sm:col-span-2">
-          <label className="block text-xs font-medium text-gray-600 mb-1">Notes</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">Notes</label>
           <input value={form.notes ?? ''} onChange={e => set('notes', e.target.value)}
-            className="w-full border border-gray-300 rounded px-3 py-2 text-sm" />
+            className="flex h-9 w-full rounded-md border border-gray-300 bg-white px-3 py-1 text-sm text-gray-900 shadow-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
         </div>
       </div>
 
       <div className="mb-4">
         <div className="flex items-center justify-between mb-1.5">
-          <p className="text-xs font-medium text-gray-600">Cost Allocations</p>
+          <p className="text-sm font-medium text-gray-700">Cost Allocations</p>
           {percentTotal >= 100 && (
             <span className="text-xs text-amber-600 font-medium">Percent allocations total {percentTotal}% — check this is intended.</span>
           )}
@@ -119,14 +119,14 @@ function ChannelForm({ initial, onSave, onCancel, saving, error }: {
             <div key={i} className="grid grid-cols-[1fr_110px_110px_32px] gap-2 items-center">
               <input value={a.label} onChange={e => updateAlloc(i, { label: e.target.value })}
                 placeholder="e.g. Referral fee, Fulfillment fee"
-                className="border border-gray-300 rounded px-2 py-1.5 text-sm" />
+                className="flex h-9 rounded-md border border-gray-300 bg-white px-3 py-1 text-sm text-gray-900 shadow-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
               <select value={a.alloc_type} onChange={e => updateAlloc(i, { alloc_type: e.target.value as 'fixed' | 'percent' })}
-                className="border border-gray-300 rounded px-2 py-1.5 text-sm">
+                className="flex h-9 rounded-md border border-gray-300 bg-white px-3 py-1 text-sm text-gray-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 <option value="fixed">$ Fixed</option>
                 <option value="percent">% of Retail</option>
               </select>
               <input type="number" step="0.01" value={a.value} onChange={e => updateAlloc(i, { value: Number(e.target.value) })}
-                className="border border-gray-300 rounded px-2 py-1.5 text-sm" />
+                className="flex h-9 rounded-md border border-gray-300 bg-white px-3 py-1 text-sm text-gray-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
               <button type="button" onClick={() => removeAlloc(i)}
                 className="flex items-center justify-center h-8 w-8 rounded text-gray-400 hover:text-red-500 hover:bg-red-50">
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -136,15 +136,15 @@ function ChannelForm({ initial, onSave, onCancel, saving, error }: {
             </div>
           ))}
         </div>
-        <button type="button" onClick={addAlloc} className="mt-2 text-xs text-brand-600 hover:text-brand-800">+ Add allocation</button>
+        <button type="button" onClick={addAlloc} className="mt-2 text-xs text-blue-600 hover:text-blue-800">+ Add allocation</button>
       </div>
 
       <div className="flex gap-2">
         <button type="submit" disabled={saving || !form.name.trim()}
-          className="px-5 py-2 bg-brand-600 text-white text-sm font-medium rounded hover:bg-brand-700 disabled:opacity-50">
+          className="inline-flex items-center justify-center h-9 px-4 rounded-md text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:pointer-events-none disabled:opacity-50">
           {saving ? 'Saving…' : initial ? 'Update' : 'Add Channel'}
         </button>
-        <button type="button" onClick={onCancel} className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded hover:bg-gray-50">
+        <button type="button" onClick={onCancel} className="inline-flex items-center justify-center h-9 px-4 rounded-md text-sm font-medium border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 transition-colors">
           Cancel
         </button>
       </div>
@@ -158,14 +158,14 @@ function ChannelCard({ channel, onEdit, onDelete, canEdit }: {
   const fixedTotal = channel.allocations.filter(a => a.alloc_type === 'fixed').reduce((s, a) => s + a.value, 0);
   const percentTotal = channel.allocations.filter(a => a.alloc_type === 'percent').reduce((s, a) => s + a.value, 0);
   return (
-    <div className={`bg-white rounded-lg shadow border-l-4 ${channel.active ? 'border-l-green-400' : 'border-l-gray-200'} px-5 py-3`}>
+    <div className={`rounded-lg border border-gray-200 bg-white shadow-sm border-l-4 ${channel.active ? 'border-l-green-400' : 'border-l-gray-200'} px-5 py-3`}>
       <div className="flex items-center gap-3 flex-wrap">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <span className={`font-semibold ${channel.active ? 'text-gray-900' : 'text-gray-400'}`}>{channel.name}</span>
             {!channel.active && <span className="text-xs px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded">Inactive</span>}
             <span className={`text-xs px-2 py-0.5 rounded border font-medium ${
-              channel.shipping_terms === 'prepaid' ? 'bg-indigo-50 border-indigo-200 text-indigo-700' : 'bg-teal-50 border-teal-200 text-teal-700'
+              channel.shipping_terms === 'prepaid' ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-teal-50 border-teal-200 text-teal-700'
             }`}>
               {channel.shipping_terms === 'prepaid' ? 'Prepaid shipping' : 'Collect shipping'}
             </span>
@@ -242,7 +242,7 @@ function ChannelsSection({ canEdit }: { canEdit: boolean }) {
         <h2 className="text-base font-semibold text-gray-900">Sales Channels</h2>
         {canEdit && !showForm && !editing && (
           <button onClick={() => setShowForm(true)}
-            className="px-3 py-1.5 text-sm bg-brand-600 text-white rounded hover:bg-brand-700">
+            className="inline-flex items-center justify-center h-9 px-4 rounded-md text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors">
             + Add Channel
           </button>
         )}
@@ -253,7 +253,7 @@ function ChannelsSection({ canEdit }: { canEdit: boolean }) {
       )}
 
       {channels.length === 0 ? (
-        <div className="bg-white rounded-lg shadow p-6 text-center text-sm text-gray-400">
+        <div className="rounded-lg border border-gray-200 bg-white shadow-sm p-6 text-center text-sm text-gray-400">
           No sales channels yet. {canEdit && 'Add one to start computing margins.'}
         </div>
       ) : (
@@ -325,11 +325,11 @@ function PricingTable({ canEdit }: { canEdit: boolean }) {
         <h2 className="text-base font-semibold text-gray-900">Product Pricing</h2>
         <div className="flex flex-wrap items-center gap-2">
           <input value={filter} onChange={e => setFilter(e.target.value)} placeholder="Filter products…"
-            className="border border-gray-300 rounded px-3 py-1.5 text-sm w-48" />
-          <button onClick={downloadPricingTemplate} className="px-3 py-1.5 text-xs border border-gray-300 rounded hover:bg-gray-50 text-gray-600">Template</button>
-          <button onClick={exportProductPricing} className="px-3 py-1.5 text-xs border border-gray-300 rounded hover:bg-gray-50 text-gray-600">Export</button>
+            className="flex h-9 rounded-md border border-gray-300 bg-white px-3 py-1 text-sm text-gray-900 shadow-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-48" />
+          <button onClick={downloadPricingTemplate} className="inline-flex items-center justify-center h-8 px-3 rounded-md text-xs font-medium border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 transition-colors">Template</button>
+          <button onClick={exportProductPricing} className="inline-flex items-center justify-center h-8 px-3 rounded-md text-xs font-medium border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 transition-colors">Export</button>
           {canEdit && (
-            <label className="cursor-pointer px-3 py-1.5 text-xs border border-gray-300 rounded hover:bg-gray-50 text-gray-600">
+            <label className="cursor-pointer inline-flex items-center justify-center h-8 px-3 rounded-md text-xs font-medium border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 transition-colors">
               Import
               <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" onChange={handleImport} className="hidden" />
             </label>
@@ -337,58 +337,58 @@ function PricingTable({ canEdit }: { canEdit: boolean }) {
         </div>
       </div>
 
-      {importMsg && <div className="mb-3 px-3 py-2 bg-green-50 border border-green-200 rounded text-sm text-green-800">{importMsg}</div>}
+      {importMsg && <div className="mb-3 rounded-lg bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-800">{importMsg}</div>}
       {importErrors.length > 0 && (
-        <div className="mb-3 px-3 py-2 bg-amber-50 border border-amber-200 rounded">
+        <div className="mb-3 rounded-lg bg-amber-50 border border-amber-200 px-4 py-3">
           <p className="text-xs font-medium text-amber-800 mb-1">Some rows were skipped:</p>
           <ul className="text-xs text-amber-700 space-y-0.5 list-disc list-inside">{importErrors.map((e, i) => <li key={i}>{e}</li>)}</ul>
         </div>
       )}
 
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      <div className="border border-gray-200 rounded-lg overflow-hidden bg-white">
         <div className="overflow-x-auto max-h-96 overflow-y-auto">
-          <table className="min-w-full divide-y divide-gray-200 text-sm">
+          <table className="min-w-full text-sm">
             <thead className="bg-gray-50 sticky top-0">
               <tr>
-                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Product</th>
-                <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Cost</th>
-                <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Retail</th>
-                {canEdit && <th className="px-3 py-2 w-20"></th>}
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
+                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Cost</th>
+                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Retail</th>
+                {canEdit && <th className="px-4 py-3 w-20"></th>}
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody>
               {loading ? (
                 <tr><td colSpan={4} className="px-4 py-8 text-center text-gray-400">Loading…</td></tr>
               ) : filtered.length === 0 ? (
                 <tr><td colSpan={4} className="px-4 py-8 text-center text-gray-400">No products found.</td></tr>
               ) : filtered.map(row => (
-                <tr key={row.product_id}>
-                  <td className="px-3 py-2">
+                <tr key={row.product_id} className="border-t border-gray-200 hover:bg-gray-50">
+                  <td className="px-4 py-3 text-sm text-gray-900">
                     <span className="font-mono text-xs text-gray-500">{row.product_id}</span>
-                    <span className="ml-2 text-gray-800">{row.name}</span>
+                    <span className="ml-2">{row.name}</span>
                   </td>
                   {editingId === row.product_id ? (
                     <>
-                      <td className="px-3 py-2 text-right">
+                      <td className="px-4 py-3 text-right">
                         <input type="number" step="0.01" value={editCost} onChange={e => setEditCost(e.target.value)}
-                          className="w-24 border border-gray-300 rounded px-2 py-1 text-sm text-right" />
+                          className="w-24 h-8 rounded-md border border-gray-300 bg-white px-2 py-1 text-sm text-right shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
                       </td>
-                      <td className="px-3 py-2 text-right">
+                      <td className="px-4 py-3 text-right">
                         <input type="number" step="0.01" value={editRetail} onChange={e => setEditRetail(e.target.value)}
-                          className="w-24 border border-gray-300 rounded px-2 py-1 text-sm text-right" />
+                          className="w-24 h-8 rounded-md border border-gray-300 bg-white px-2 py-1 text-sm text-right shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
                       </td>
-                      <td className="px-3 py-2 text-right whitespace-nowrap">
-                        <button onClick={saveEdit} className="text-brand-600 hover:text-brand-800 text-xs mr-2">Save</button>
+                      <td className="px-4 py-3 text-right whitespace-nowrap">
+                        <button onClick={saveEdit} className="text-blue-600 hover:text-blue-800 text-xs mr-2">Save</button>
                         <button onClick={() => setEditingId(null)} className="text-gray-400 hover:text-gray-600 text-xs">Cancel</button>
                       </td>
                     </>
                   ) : (
                     <>
-                      <td className="px-3 py-2 text-right font-mono">{row.product_cost != null ? `$${row.product_cost.toFixed(2)}` : '—'}</td>
-                      <td className="px-3 py-2 text-right font-mono">{row.retail_price != null ? `$${row.retail_price.toFixed(2)}` : '—'}</td>
+                      <td className="px-4 py-3 text-sm text-gray-900 text-right font-mono">{row.product_cost != null ? `$${row.product_cost.toFixed(2)}` : '—'}</td>
+                      <td className="px-4 py-3 text-sm text-gray-900 text-right font-mono">{row.retail_price != null ? `$${row.retail_price.toFixed(2)}` : '—'}</td>
                       {canEdit && (
-                        <td className="px-3 py-2 text-right">
-                          <button onClick={() => startEdit(row)} className="text-brand-600 hover:text-brand-800 text-xs">Edit</button>
+                        <td className="px-4 py-3 text-right">
+                          <button onClick={() => startEdit(row)} className="text-blue-600 hover:text-blue-800 text-xs">Edit</button>
                         </td>
                       )}
                     </>
@@ -453,12 +453,12 @@ function RoiSection() {
         <h2 className="text-base font-semibold text-gray-900">Margin Analysis by Product × Channel</h2>
         <div className="flex flex-wrap items-center gap-2">
           <select value={channelFilter} onChange={e => setChannelFilter(e.target.value)}
-            className="border border-gray-300 rounded px-3 py-1.5 text-sm">
+            className="flex h-9 rounded-md border border-gray-300 bg-white px-3 py-1 text-sm text-gray-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
             <option value="">All Channels</option>
             {data.channels.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
           <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
-            className="border border-gray-300 rounded px-3 py-1.5 text-sm">
+            className="flex h-9 rounded-md border border-gray-300 bg-white px-3 py-1 text-sm text-gray-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
             <option value="">All Statuses</option>
             <option value="red">Not Profitable</option>
             <option value="yellow">Below Threshold</option>
@@ -466,7 +466,7 @@ function RoiSection() {
             <option value="no_data">No Pricing Data</option>
             <option value="no_rate">No Shipping Rate</option>
           </select>
-          <button onClick={downloadRoiExport} className="px-3 py-1.5 text-sm border border-gray-300 rounded hover:bg-gray-50 text-gray-600">
+          <button onClick={downloadRoiExport} className="inline-flex items-center justify-center h-8 px-3 rounded-md text-xs font-medium border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 transition-colors">
             Export
           </button>
         </div>
@@ -475,46 +475,46 @@ function RoiSection() {
       {data.computed_at && (
         <p className="text-xs text-gray-400 mb-2">
           Based on the Packaging Analysis report computed {new Date(data.computed_at).toLocaleString()}.{' '}
-          <a href="/reports" className="text-brand-600 hover:underline">Refresh report</a> if the catalog has changed.
+          <a href="/reports" className="text-blue-600 hover:underline">Refresh report</a> if the catalog has changed.
         </p>
       )}
 
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      <div className="border border-gray-200 rounded-lg overflow-hidden bg-white">
         <div className="overflow-x-auto max-h-[32rem] overflow-y-auto">
-          <table className="min-w-full divide-y divide-gray-200 text-sm whitespace-nowrap">
+          <table className="min-w-full text-sm whitespace-nowrap">
             <thead className="bg-gray-50 sticky top-0">
               <tr>
-                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Product</th>
-                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Channel</th>
-                <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Retail</th>
-                <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Cost</th>
-                <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Shipping</th>
-                <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Fees</th>
-                <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Margin</th>
-                <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Margin %</th>
-                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Channel</th>
+                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Retail</th>
+                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Cost</th>
+                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Shipping</th>
+                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Fees</th>
+                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Margin</th>
+                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Margin %</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody>
               {data.rows.length === 0 ? (
                 <tr><td colSpan={9} className="px-4 py-8 text-center text-gray-400">No rows match the current filters.</td></tr>
               ) : data.rows.map((row: RoiRow, i: number) => {
                 const style = STATUS_STYLES[row.status];
                 return (
-                  <tr key={`${row.product_id}-${row.channel_id}-${i}`} className={style.row}>
-                    <td className="px-3 py-2">
+                  <tr key={`${row.product_id}-${row.channel_id}-${i}`} className={`border-t border-gray-200 hover:bg-gray-50 ${style.row}`}>
+                    <td className="px-4 py-3 text-sm text-gray-900">
                       <span className="font-mono text-xs text-gray-500">{row.product_id}</span>
-                      <span className="ml-2 text-gray-800">{row.name}</span>
+                      <span className="ml-2">{row.name}</span>
                     </td>
-                    <td className="px-3 py-2 text-gray-600">{row.channel_name}</td>
-                    <td className="px-3 py-2 text-right font-mono">{row.retail_price != null ? `$${row.retail_price.toFixed(2)}` : '—'}</td>
-                    <td className="px-3 py-2 text-right font-mono">{row.product_cost != null ? `$${row.product_cost.toFixed(2)}` : '—'}</td>
-                    <td className="px-3 py-2 text-right font-mono">{row.shipping_cost != null ? `$${row.shipping_cost.toFixed(2)}` : '—'}</td>
-                    <td className="px-3 py-2 text-right font-mono">{row.fees_total != null ? `$${row.fees_total.toFixed(2)}` : '—'}</td>
-                    <td className="px-3 py-2 text-right font-mono font-semibold">{row.margin != null ? `$${row.margin.toFixed(2)}` : '—'}</td>
-                    <td className="px-3 py-2 text-right font-mono">{row.margin_pct != null ? `${row.margin_pct}%` : '—'}</td>
-                    <td className="px-3 py-2">
-                      <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium border ${style.badge}`}>{style.label}</span>
+                    <td className="px-4 py-3 text-sm text-gray-900">{row.channel_name}</td>
+                    <td className="px-4 py-3 text-sm text-gray-900 text-right font-mono">{row.retail_price != null ? `$${row.retail_price.toFixed(2)}` : '—'}</td>
+                    <td className="px-4 py-3 text-sm text-gray-900 text-right font-mono">{row.product_cost != null ? `$${row.product_cost.toFixed(2)}` : '—'}</td>
+                    <td className="px-4 py-3 text-sm text-gray-900 text-right font-mono">{row.shipping_cost != null ? `$${row.shipping_cost.toFixed(2)}` : '—'}</td>
+                    <td className="px-4 py-3 text-sm text-gray-900 text-right font-mono">{row.fees_total != null ? `$${row.fees_total.toFixed(2)}` : '—'}</td>
+                    <td className="px-4 py-3 text-sm text-gray-900 text-right font-mono font-semibold">{row.margin != null ? `$${row.margin.toFixed(2)}` : '—'}</td>
+                    <td className="px-4 py-3 text-sm text-gray-900 text-right font-mono">{row.margin_pct != null ? `${row.margin_pct}%` : '—'}</td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold border ${style.badge}`}>{style.label}</span>
                     </td>
                   </tr>
                 );

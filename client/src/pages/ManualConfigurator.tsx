@@ -111,7 +111,7 @@ export default function ManualConfigurator() {
   };
 
   return (
-    <div className="max-w-4xl">
+    <div className="space-y-6">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Manual Configurator</h1>
         <p className="text-sm text-gray-500 mt-1">
@@ -144,7 +144,7 @@ export default function ManualConfigurator() {
                   value={it.name}
                   onChange={e => updateItem(it.id, 'name', e.target.value)}
                   placeholder="My Product"
-                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
               <div>
@@ -155,7 +155,7 @@ export default function ManualConfigurator() {
                   step="1"
                   value={it.quantity}
                   onChange={e => updateItem(it.id, 'quantity', e.target.value)}
-                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm text-center focus:outline-none focus:ring-2 focus:ring-brand-500"
+                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
             </div>
@@ -171,7 +171,7 @@ export default function ManualConfigurator() {
                     value={it[dim]}
                     onChange={e => updateItem(it.id, dim, e.target.value)}
                     placeholder="0.0"
-                    className="w-full border border-gray-300 rounded px-3 py-2 text-sm text-center focus:outline-none focus:ring-2 focus:ring-brand-500"
+                    className="w-full border border-gray-300 rounded px-3 py-2 text-sm text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
               ))}
@@ -184,7 +184,7 @@ export default function ManualConfigurator() {
                   value={it.weight}
                   onChange={e => updateItem(it.id, 'weight', e.target.value)}
                   placeholder="0.0"
-                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm text-center focus:outline-none focus:ring-2 focus:ring-brand-500"
+                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
             </div>
@@ -195,7 +195,7 @@ export default function ManualConfigurator() {
                   type="checkbox"
                   checked={it.foldable}
                   onChange={e => updateItem(it.id, 'foldable', e.target.checked)}
-                  className="w-4 h-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+                  className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                 />
                 Foldable
               </label>
@@ -204,7 +204,7 @@ export default function ManualConfigurator() {
                   type="checkbox"
                   checked={it.ships_in_own_packaging}
                   onChange={e => updateItem(it.id, 'ships_in_own_packaging', e.target.checked)}
-                  className="w-4 h-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+                  className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                 />
                 Ships in Own Packaging
               </label>
@@ -217,7 +217,7 @@ export default function ManualConfigurator() {
         <div className="flex flex-wrap items-center gap-3">
           <button
             onClick={addItem}
-            className="text-sm text-brand-600 hover:text-brand-800 flex items-center gap-1"
+            className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -228,7 +228,7 @@ export default function ManualConfigurator() {
           <button
             onClick={handleAnalyze}
             disabled={loading}
-            className="px-6 py-2 bg-brand-600 text-white text-sm font-medium rounded hover:bg-brand-700 disabled:opacity-50"
+            className="px-6 py-2 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 disabled:opacity-50"
           >
             {loading ? 'Analyzing…' : 'Find Packaging'}
           </button>
@@ -274,7 +274,7 @@ function Results({ response }: { response: AnalyzeResponse }) {
                   <td className="py-2 pr-4 whitespace-normal">
                     {p.name}
                     {!!p.foldable && (
-                      <span className="ml-2 text-xs font-medium text-indigo-700 bg-indigo-50 border border-indigo-200 px-1.5 py-0.5 rounded">↕ folded</span>
+                      <span className="ml-2 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 px-1.5 py-0.5 rounded">↕ folded</span>
                     )}
                     {!!p.ships_in_own_packaging && (
                       <span className="ml-2 text-xs font-medium text-teal-700 bg-teal-50 border border-teal-200 px-1.5 py-0.5 rounded">✦ ships own</span>
@@ -428,7 +428,7 @@ function Results({ response }: { response: AnalyzeResponse }) {
                           {FIT_LABELS[r.fit_quality]}
                         </span>
                         {r.has_folded_items && (
-                          <span className="text-xs font-medium text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded">↕ items folded</span>
+                          <span className="text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded">↕ items folded</span>
                         )}
                       </div>
                       <p className="text-sm text-gray-500 mt-1 font-mono">
@@ -438,8 +438,8 @@ function Results({ response }: { response: AnalyzeResponse }) {
                       {r.shipped_dims && (r.shipped_dims.height !== r.packaging.height ||
                         r.shipped_dims.width !== r.packaging.width ||
                         r.shipped_dims.length !== r.packaging.length) && (
-                        <p className="text-sm text-indigo-600 font-mono mt-0.5">
-                          <span className="text-xs text-indigo-400 font-sans mr-1">Shipped:</span>
+                        <p className="text-sm text-blue-600 font-mono mt-0.5">
+                          <span className="text-xs text-blue-400 font-sans mr-1">Shipped:</span>
                           {r.shipped_dims.height}" H × {r.shipped_dims.width}" W × {r.shipped_dims.length}" L
                         </p>
                       )}

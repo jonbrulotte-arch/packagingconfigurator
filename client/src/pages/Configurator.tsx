@@ -200,7 +200,7 @@ export default function Configurator() {
   };
 
   return (
-    <div className="max-w-4xl">
+    <div className="space-y-6">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Package Configurator</h1>
         <p className="text-sm text-gray-500 mt-1">
@@ -219,7 +219,7 @@ export default function Configurator() {
             ))}
           </div>
           <div className="flex items-center gap-4">
-            <button onClick={() => setFormCollapsed(false)} className="text-sm text-brand-600 hover:text-brand-800 font-medium">
+            <button onClick={() => setFormCollapsed(false)} className="text-sm text-blue-600 hover:text-blue-800 font-medium">
               Edit
             </button>
             <button onClick={handleClear} className="text-sm text-gray-500 hover:text-gray-700">
@@ -245,7 +245,7 @@ export default function Configurator() {
                   onChange={e => updateRow(row.id, 'product_id', e.target.value)}
                   onKeyDown={handleKeyDown}
                   placeholder={`SKU-00${idx + 1}`}
-                  className="border border-gray-300 rounded px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-brand-500"
+                  className="border border-gray-300 rounded px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
                   autoFocus={idx === rows.length - 1 && idx > 0}
                 />
                 <input
@@ -254,7 +254,7 @@ export default function Configurator() {
                   step="1"
                   value={row.quantity}
                   onChange={e => updateRow(row.id, 'quantity', e.target.value)}
-                  className="border border-gray-300 rounded px-3 py-2 text-sm text-center focus:outline-none focus:ring-2 focus:ring-brand-500"
+                  className="border border-gray-300 rounded px-3 py-2 text-sm text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
                 <button
                   onClick={() => removeRow(row.id)}
@@ -274,7 +274,7 @@ export default function Configurator() {
         <div className="flex flex-wrap items-center justify-between gap-2 mt-3">
           <button
             onClick={addRow}
-            className="text-sm text-brand-600 hover:text-brand-800 flex items-center gap-1"
+            className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -324,7 +324,7 @@ export default function Configurator() {
           <button
             onClick={handleAnalyze}
             disabled={loading}
-            className="px-6 py-2 bg-brand-600 text-white text-sm font-medium rounded hover:bg-brand-700 disabled:opacity-50"
+            className="px-6 py-2 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 disabled:opacity-50"
           >
             {loading ? 'Analyzing…' : 'Find Best Packaging'}
           </button>
@@ -369,7 +369,7 @@ export default function Configurator() {
                       <td className="py-2 pr-4 font-mono">
                         <Link
                           to={`/products?product_id=${encodeURIComponent(p.id)}&edit=true`}
-                          className="text-brand-700 hover:text-brand-900 hover:underline"
+                          className="text-blue-700 hover:text-blue-900 hover:underline"
                           title={`Edit ${p.id}`}
                         >
                           {p.id}
@@ -378,7 +378,7 @@ export default function Configurator() {
                       <td className="py-2 pr-4 whitespace-normal">
                         {p.name}
                         {!!p.foldable && (
-                          <span className="ml-2 text-xs font-medium text-indigo-700 bg-indigo-50 border border-indigo-200 px-1.5 py-0.5 rounded">↕ folded</span>
+                          <span className="ml-2 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 px-1.5 py-0.5 rounded">↕ folded</span>
                         )}
                         {!!p.ships_in_own_packaging && (
                           <span className="ml-2 text-xs font-medium text-teal-700 bg-teal-50 border border-teal-200 px-1.5 py-0.5 rounded">✦ ships own</span>
@@ -569,7 +569,7 @@ export default function Configurator() {
                           {FIT_LABELS[r.fit_quality]}
                         </span>
                         {r.has_folded_items && (
-                          <span className="text-xs font-medium text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded">
+                          <span className="text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded">
                             ↕ items folded
                           </span>
                         )}
@@ -581,8 +581,8 @@ export default function Configurator() {
                       {r.shipped_dims && (r.shipped_dims.height !== r.packaging.height ||
                         r.shipped_dims.width !== r.packaging.width ||
                         r.shipped_dims.length !== r.packaging.length) && (
-                        <p className="text-sm text-indigo-600 font-mono mt-0.5">
-                          <span className="text-xs text-indigo-400 font-sans mr-1">Shipped:</span>
+                        <p className="text-sm text-blue-600 font-mono mt-0.5">
+                          <span className="text-xs text-blue-400 font-sans mr-1">Shipped:</span>
                           {r.shipped_dims.height}" H × {r.shipped_dims.width}" W × {r.shipped_dims.length}" L
                         </p>
                       )}

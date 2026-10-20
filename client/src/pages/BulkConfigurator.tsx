@@ -86,7 +86,7 @@ export default function BulkConfigurator() {
   };
 
   return (
-    <div className="max-w-5xl">
+    <div className="space-y-6">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Bulk Configurator</h1>
         <p className="text-sm text-gray-500 mt-1">
@@ -97,7 +97,7 @@ export default function BulkConfigurator() {
       {/* Upload card */}
       <div className="bg-white rounded-lg shadow p-6 mb-6">
         <div className="flex flex-wrap items-center gap-4">
-          <label className={`cursor-pointer inline-flex items-center gap-2 px-5 py-2.5 bg-brand-600 text-white text-sm font-medium rounded hover:bg-brand-700 ${loading ? 'opacity-50 pointer-events-none' : ''}`}>
+          <label className={`cursor-pointer inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 ${loading ? 'opacity-50 pointer-events-none' : ''}`}>
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l4-4m0 0l4 4m-4-4v12" />
             </svg>
@@ -194,7 +194,7 @@ export default function BulkConfigurator() {
                       <span className={`text-xs px-2 py-0.5 rounded font-medium ${FIT_COLORS[shipment.best.fit_quality]}`}>
                         {FIT_LABELS[shipment.best.fit_quality]}
                       </span>
-                      {shipment.best.has_folded_items && <span className="text-xs text-indigo-700 font-semibold">↕</span>}
+                      {shipment.best.has_folded_items && <span className="text-xs text-blue-700 font-semibold">↕</span>}
                       {(shipment.best.fit_quality === 'loose' || shipment.best.fit_quality === 'large') && <span className="text-xs text-amber-600 font-semibold">⚠ Loose</span>}
                       {shipment.best.weight_flag && <span className="text-xs text-amber-600 font-semibold">⚠ DIM</span>}
                       {shipment.best.max_weight_flag && <span className="text-xs text-red-600 font-semibold">✕ OVW</span>}
@@ -240,7 +240,7 @@ export default function BulkConfigurator() {
                           <tbody className="divide-y divide-gray-50">
                             {shipment.items.map(({ product: p, quantity: qty }) => (
                               <tr key={p.id}>
-                                <td className="py-1 pr-4 font-mono text-brand-700">{p.id}</td>
+                                <td className="py-1 pr-4 font-mono text-blue-700">{p.id}</td>
                                 <td className="py-1 pr-4">{p.name}</td>
                                 <td className="py-1 pr-4 font-mono text-xs">{p.height}×{p.width}×{p.length}</td>
                                 <td className="py-1 pr-4 text-center font-semibold">{qty}</td>
@@ -280,10 +280,10 @@ export default function BulkConfigurator() {
                                 <div className="mt-2 flex flex-wrap gap-1.5">
                                   {sr.shipping.map(sm => (
                                     <span key={sm.method_id}
-                                      className="inline-flex items-center gap-1 text-xs rounded px-2 py-0.5 border bg-indigo-50 border-indigo-200"
+                                      className="inline-flex items-center gap-1 text-xs rounded px-2 py-0.5 border bg-blue-50 border-blue-200"
                                     >
                                       <span className="font-semibold text-gray-700">{sm.method_name}</span>
-                                      <span className={`font-medium ${sm.dim_applied ? 'text-amber-600' : 'text-indigo-700'}`}>
+                                      <span className={`font-medium ${sm.dim_applied ? 'text-amber-600' : 'text-blue-700'}`}>
                                         · {sm.billed_weight} lbs
                                       </span>
                                       {sm.dim_applied && <span className="bg-amber-100 text-amber-700 font-semibold px-0.5 rounded text-[9px]">DIM</span>}
@@ -339,7 +339,7 @@ export default function BulkConfigurator() {
                                 <span className="text-xs text-gray-400">{TYPE_LABELS[r.packaging.type] ?? r.packaging.type}</span>
                                 <span className={`text-xs px-2 py-0.5 rounded font-medium ${FIT_COLORS[r.fit_quality]}`}>{FIT_LABELS[r.fit_quality]}</span>
                                 {r.has_folded_items && (
-                                  <span className="text-xs font-medium text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded">↕ items folded</span>
+                                  <span className="text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded">↕ items folded</span>
                                 )}
                                 <span className="text-xs text-gray-400 font-mono ml-auto">
                                   {r.packaging.height}"×{r.packaging.width}"×{r.packaging.length}" · {r.volume_utilization}% fill
@@ -360,10 +360,10 @@ export default function BulkConfigurator() {
                                 <div className="mt-2 flex flex-wrap gap-1.5">
                                   {r.shipping.map(sm => (
                                     <span key={sm.method_id}
-                                      className="inline-flex items-center gap-1 text-xs rounded px-2 py-0.5 border bg-indigo-50 border-indigo-200"
+                                      className="inline-flex items-center gap-1 text-xs rounded px-2 py-0.5 border bg-blue-50 border-blue-200"
                                     >
                                       <span className="font-semibold text-gray-700">{sm.method_name}</span>
-                                      <span className={`font-medium ${sm.dim_applied ? 'text-amber-600' : 'text-indigo-700'}`}>
+                                      <span className={`font-medium ${sm.dim_applied ? 'text-amber-600' : 'text-blue-700'}`}>
                                         · {sm.billed_weight} lbs
                                       </span>
                                       {sm.dim_applied && <span className="bg-amber-100 text-amber-700 font-semibold px-0.5 rounded text-[9px]">DIM</span>}
