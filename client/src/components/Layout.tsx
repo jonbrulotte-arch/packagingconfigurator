@@ -1,126 +1,189 @@
 import { useState } from 'react';
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { cn, getInitials } from '../lib/utils';
+import {
+  Package,
+  PenTool,
+  Layers,
+  ShoppingBag,
+  Box,
+  Truck,
+  DollarSign,
+  Settings,
+  BarChart3,
+  BookOpen,
+  Code2,
+  ChevronLeft,
+  ChevronRight,
+  LogOut,
+  Menu,
+  X,
+} from 'lucide-react';
 
-const navItems = [
-  { to: '/configurator', label: 'Configurator' },
-  { to: '/manual', label: 'Manual' },
-  { to: '/bulk', label: 'Bulk' },
-  { to: '/products', label: 'Products' },
-  { to: '/packaging', label: 'Packaging' },
-  { to: '/shipping', label: 'Shipping' },
-  { to: '/pricing', label: 'Pricing', module: 'pricing' as const },
-  { to: '/settings', label: 'Settings' },
-  { to: '/reports', label: 'Reports' },
-  { to: '/instructions', label: 'Instructions' },
-  { to: '/api-docs', label: 'API Docs' },
+type NavItem = {
+  to: string;
+  label: string;
+  icon: React.ElementType;
+  module?: 'pricing';
+  admin?: boolean;
+};
+
+const navItems: NavItem[] = [
+  { to: '/configurator', label: 'Configurator', icon: Package },
+  { to: '/manual', label: 'Manual', icon: PenTool },
+  { to: '/bulk', label: 'Bulk', icon: Layers },
+  { to: '/products', label: 'Products', icon: ShoppingBag },
+  { to: '/packaging', label: 'Packaging', icon: Box },
+  { to: '/shipping', label: 'Shipping', icon: Truck },
+  { to: '/pricing', label: 'Pricing', icon: DollarSign, module: 'pricing' },
+  { to: '/reports', label: 'Reports', icon: BarChart3 },
 ];
+
+const adminItems: NavItem[] = [
+  { to: '/settings', label: 'Settings', icon: Settings, admin: true },
+  { to: '/instructions', label: 'Help & Docs', icon: BookOpen },
+  { to: '/api-docs', label: 'API Docs', icon: Code2 },
+];
+
+const isActive = (pathname: string, href: string) =>
+  pathname === href || pathname.startsWith(`${href}/`);
 
 export default function Layout() {
   const { isProtected, authenticated, user, logout, canView } = useAuth();
-  const [menuOpen, setMenuOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const navigate = useNavigate();
-  const visibleNavItems = navItems.filter(item => !item.module || canView(item.module));
+  const { pathname } = useLocation();
 
-  const handleNavClick = (to: string) => {
-    setMenuOpen(false);
-    navigate(to);
-  };
+  const visibleNav = navItems.filter(item => !item.module || canView(item.module));
+  const visibleAdmin = adminItems;
+
+  const renderItem = ({ to, label, icon: Icon }: NavItem) => (
+    <NavLink
+      key={to}
+      to={to}
+      title={collapsed ? label : undefined}
+      onClick={() => setMobileOpen(false)}
+      className={cn(
+        'flex items-center gap-3 rounded-lg px-2 py-2 text-sm font-medium transition-colors',
+        isActive(pathname, to)
+          ? 'bg-blue-600 text-white'
+          : 'text-gray-300 hover:bg-gray-800 hover:text-white',
+      )}
+    >
+      <Icon className="h-5 w-5 shrink-0" />
+      {!collapsed && <span>{label}</span>}
+    </NavLink>
+  );
+
+  const userName = user?.name || user?.email || 'Admin';
+  const showAuth = isProtected && authenticated;
+
+  const sidebar = (
+    <aside
+      className={cn(
+        'flex flex-col h-screen bg-gray-900 text-white transition-all duration-200 shrink-0',
+        collapsed ? 'w-16' : 'w-56',
+      )}
+    >
+      {/* Logo */}
+      <div className="flex items-center h-14 px-4 border-b border-gray-700">
+        {collapsed ? (
+          <span className="text-lg font-bold text-white mx-auto">P</span>
+        ) : (
+          <span className="text-lg font-bold text-white tracking-tight">
+            Packaging <span className="text-blue-400">Config</span>
+          </span>
+        )}
+      </div>
+
+      {/* Nav */}
+      <nav className="flex-1 overflow-y-auto py-4 space-y-1 px-2">
+        {visibleNav.map(renderItem)}
+        {visibleAdmin.length > 0 && (
+          <>
+            <div className={cn('pt-4 pb-1', collapsed ? 'px-0' : 'px-2')}>
+              {!collapsed && (
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  Admin
+                </p>
+              )}
+            </div>
+            {visibleAdmin.map(renderItem)}
+          </>
+        )}
+      </nav>
+
+      {/* User block */}
+      {showAuth && (
+        <div className="border-t border-gray-700 p-3">
+          <div className={cn('flex items-center gap-3', collapsed && 'justify-center')}>
+            <div className="flex-shrink-0 h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center text-xs font-bold text-white">
+              {getInitials(userName)}
+            </div>
+            {!collapsed && (
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-white truncate">{userName}</p>
+                {user?.is_admin && <p className="text-xs text-gray-400 truncate">Admin</p>}
+              </div>
+            )}
+          </div>
+          {!collapsed && (
+            <div className="mt-3 flex items-center gap-2">
+              <button
+                onClick={logout}
+                className="p-1.5 rounded-md text-gray-400 hover:text-white hover:bg-gray-800"
+                title="Sign out"
+              >
+                <LogOut className="h-4 w-4" />
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Collapse toggle */}
+      <button
+        onClick={() => setCollapsed(!collapsed)}
+        className="hidden md:flex items-center justify-center h-8 border-t border-gray-700 text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
+      >
+        {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+      </button>
+    </aside>
+  );
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <header className="bg-brand-800 text-white shadow-md">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-14">
-            <span className="font-bold text-lg tracking-tight flex items-center gap-2">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" className="w-6 h-6 flex-shrink-0">
-                <text y=".9em" fontSize="90">📦</text>
-              </svg>
-              Packaging Configurator
-            </span>
+    <div className="flex h-screen overflow-hidden bg-gray-50">
+      {/* Desktop sidebar */}
+      <div className="hidden md:flex">{sidebar}</div>
 
-            {/* Desktop nav */}
-            <nav className="hidden md:flex items-center gap-1">
-              {visibleNavItems.map(({ to, label }) => (
-                <NavLink
-                  key={to}
-                  to={to}
-                  className={({ isActive }) =>
-                    `px-4 py-2 rounded text-sm font-medium transition-colors ${
-                      isActive
-                        ? 'bg-white text-brand-800'
-                        : 'text-blue-100 hover:bg-brand-700 hover:text-white'
-                    }`
-                  }
-                >
-                  {label}
-                </NavLink>
-              ))}
-              {isProtected && authenticated && (
-                <button
-                  onClick={logout}
-                  title={user ? `Signed in as ${user.email} — click to sign out` : 'Click to lock'}
-                  className="ml-2 px-3 py-1.5 text-xs font-medium text-blue-200 border border-blue-400/40 rounded hover:bg-brand-700 hover:text-white transition-colors max-w-[180px] truncate"
-                >
-                  {user ? `${user.email} · Sign Out` : 'Lock'}
-                </button>
-              )}
-            </nav>
+      {/* Mobile header + drawer */}
+      <div className="md:hidden fixed top-0 inset-x-0 z-40 h-14 bg-gray-900 flex items-center justify-between px-4 border-b border-gray-700">
+        <span className="text-lg font-bold text-white tracking-tight">
+          Packaging <span className="text-blue-400">Config</span>
+        </span>
+        <button
+          onClick={() => setMobileOpen(o => !o)}
+          className="p-2 rounded text-gray-300 hover:bg-gray-800 transition-colors"
+        >
+          {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+        </button>
+      </div>
 
-            {/* Mobile hamburger */}
-            <button
-              className="md:hidden p-2 rounded text-blue-100 hover:bg-brand-700 transition-colors"
-              onClick={() => setMenuOpen(o => !o)}
-              aria-label="Toggle menu"
-            >
-              {menuOpen ? (
-                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              ) : (
-                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-              )}
-            </button>
-          </div>
+      {/* Mobile overlay */}
+      {mobileOpen && (
+        <>
+          <div className="md:hidden fixed inset-0 z-40 bg-black/40" onClick={() => setMobileOpen(false)} />
+          <div className="md:hidden fixed inset-y-0 left-0 z-50 w-56">{sidebar}</div>
+        </>
+      )}
+
+      {/* Main content */}
+      <main className="flex-1 overflow-y-auto md:pt-0 pt-14">
+        <div className="p-6 max-w-7xl mx-auto">
+          <Outlet />
         </div>
-
-        {/* Mobile dropdown */}
-        {menuOpen && (
-          <div className="md:hidden border-t border-brand-700 bg-brand-800">
-            <nav className="max-w-7xl mx-auto px-4 py-2 flex flex-col">
-              {visibleNavItems.map(({ to, label }) => (
-                <NavLink
-                  key={to}
-                  to={to}
-                  onClick={() => setMenuOpen(false)}
-                  className={({ isActive }) =>
-                    `px-4 py-3 rounded text-sm font-medium transition-colors ${
-                      isActive
-                        ? 'bg-white text-brand-800'
-                        : 'text-blue-100 hover:bg-brand-700 hover:text-white'
-                    }`
-                  }
-                >
-                  {label}
-                </NavLink>
-              ))}
-              {isProtected && authenticated && (
-                <button
-                  onClick={() => { setMenuOpen(false); logout(); }}
-                  className="mt-1 px-4 py-3 text-left text-sm font-medium text-blue-200 hover:bg-brand-700 hover:text-white rounded transition-colors"
-                >
-                  Lock
-                </button>
-              )}
-            </nav>
-          </div>
-        )}
-      </header>
-
-      <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6">
-        <Outlet />
       </main>
     </div>
   );
